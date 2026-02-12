@@ -1,0 +1,81 @@
+
+%%{init: {'theme':'forest'}}%%
+
+sequenceDiagram
+
+    Title Sequence diagram of .ingest_k_index_run() of /src/ingest/space_weather_k_index.py
+
+    participant p1 as ingest_k_index_run()<br>:ngest/space_weather_k_index.py/space_weather_k_index.py
+    participant p2 as <br>:ngest/space_weather_k_index.py/space_weather_k_index.py
+    participant p3 as <br>:o/atomic.py/atomic.py
+
+
+	p1 ->>+ p2: 1: _run_id_utc()
+	p2 -->>- p1: 1: return value
+	p1 ->>+ p2: 2: write_manifest( run_dir, sw_config=sw_config,<br>,        location=location,<br>start=start,        end=end,<br>,        run_id=run_id,<br>status="RUNNING",    )
+	p2 ->>+ p2: 2.1: _fmt_dt_for_api(sw_config, start)
+	p2 -->>- p2: 2.1: return value
+	p2 ->>+ p2: 2.2: _fmt_dt_for_api(sw_config, end)
+	p2 -->>- p2: 2.2: return value
+	p2 ->>+ p3: 2.3: _atomic_write_json(manifest_path, payload)
+	p3 -->>- p2: 2.3: return value
+	p2 -->>- p1: 2: return value
+	p1 ->>+ p2: 3: iter_k_index_chunks(sw_config, location, start=start,<br>end=end)
+	p2 ->>+ p2: 3.1: post_k_index(sw_config, location, start=start,<br>end=end)
+	p2 ->>+ p2: 3.1.1: _fmt_dt_for_api(sw_config, start)
+	p2 -->>- p2: 3.1.1: return value
+	p2 ->>+ p2: 3.1.2: _fmt_dt_for_api(sw_config, end)
+	p2 -->>- p2: 3.1.2: return value
+	p2 -->>- p2: 3.1: return value
+	p2 ->>+ p2: 3.2: _parse_dt(start)
+	p2 -->>- p2: 3.2: return value
+	p2 ->>+ p2: 3.3: _parse_dt(end)
+	p2 -->>- p2: 3.3: return value
+	p2 ->>+ p2: 3.4: _parse_dt(start)
+	p2 -->>- p2: 3.4: return value
+	p2 ->>+ p2: 3.5: _parse_dt(end)
+	p2 -->>- p2: 3.5: return value
+	p2 ->>+ p2: 3.6: post_k_index(sw_config, location, start=start_dt,<br>end=end_dt)
+	p2 ->>+ p2: 3.6.1: _fmt_dt_for_api(sw_config, start)
+	p2 -->>- p2: 3.6.1: return value
+	p2 ->>+ p2: 3.6.2: _fmt_dt_for_api(sw_config, end)
+	p2 -->>- p2: 3.6.2: return value
+	p2 -->>- p2: 3.6: return value
+	p2 ->>+ p2: 3.7: post_k_index(sw_config, location, start=current,<br>end=chunk_end)
+	p2 ->>+ p2: 3.7.1: _fmt_dt_for_api(sw_config, start)
+	p2 -->>- p2: 3.7.1: return value
+	p2 ->>+ p2: 3.7.2: _fmt_dt_for_api(sw_config, end)
+	p2 -->>- p2: 3.7.2: return value
+	p2 -->>- p2: 3.7: return value
+	p2 -->>- p1: 3: return value
+	p1 ->>+ p2: 4: tqdm(chunks_iter, desc="K-index chunks<br>processed",<br> unit=" chunks")
+	p2 -->>- p1: 4: return value
+	p1 ->>+ p2: 5: write_chunk_jsonl( run_dir,<br>chunk_start=chunk.chunk_start,<br>chunk_end=chunk.<br>.chunk_end,<br>chunk_data=chunk.data,<br> )
+	p2 ->>+ p2: 5.1: chunk_filename(chunk_start, chunk_end)
+	p2 ->>+ p2: 5.1.1: _chunk_token(chunk_start)
+	p2 -->>- p2: 5.1.1: return value
+	p2 ->>+ p2: 5.1.2: _chunk_token(chunk_end)
+	p2 -->>- p2: 5.1.2: return value
+	p2 -->>- p2: 5.1: return value
+	p2 -->>- p1: 5: return value
+	p1 ->>+ p3: 6: write_success(run_dir)
+	p3 -->>- p1: 6: return value
+	p1 ->>+ p2: 7: write_manifest( run_dir, sw_config=<br>=sw_config,            location=location,<br>,            start=start,<br>end=end,            run_id=run_id,<br>,            status="SUCCESS",<br>extra={"total_rows":<br>total_rows, "chunk_files": chunk_files},<br>        )
+	p2 ->>+ p2: 7.1: _fmt_dt_for_api(sw_config, start)
+	p2 -->>- p2: 7.1: return value
+	p2 ->>+ p2: 7.2: _fmt_dt_for_api(sw_config, end)
+	p2 -->>- p2: 7.2: return value
+	p2 ->>+ p3: 7.3: _atomic_write_json(manifest_path, payload)
+	p3 -->>- p2: 7.3: return value
+	p2 -->>- p1: 7: return value
+	p1 ->>+ p3: 8: write_failed(run_dir, repr(e))
+	p3 -->>- p1: 8: return value
+	p1 ->>+ p2: 9: write_manifest( run_dir, sw_config=<br>=sw_config,            location=location,<br>,            start=start,<br>end=end,            run_id=run_id,<br>,            status="FAILED",<br>extra={"error": repr(<br>e)},        )
+	p2 ->>+ p2: 9.1: _fmt_dt_for_api(sw_config, start)
+	p2 -->>- p2: 9.1: return value
+	p2 ->>+ p2: 9.2: _fmt_dt_for_api(sw_config, end)
+	p2 -->>- p2: 9.2: return value
+	p2 ->>+ p3: 9.3: _atomic_write_json(manifest_path, payload)
+	p3 -->>- p2: 9.3: return value
+	p2 -->>- p1: 9: return value
+        

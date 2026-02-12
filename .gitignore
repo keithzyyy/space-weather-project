@@ -1,0 +1,5 @@
+env/
+.env
+config/local.yaml
+data/
+models/
