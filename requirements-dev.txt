@@ -1,0 +1,22 @@
+# following versions are known to work together on Python 3.11 and Windows
+# core utilities
+pandas==2.2.0
+numpy==1.26.4
+requests==2.31.0
+pyyaml==6.0.1
+python-dotenv==1.0.0 # for hiding API keys
+
+# visualization
+matplotlib
+seaborn
+
+# modeling (you can add more later)
+scikit-learn==1.4.0
+
+# jupyter
+jupyter
+ipykernel
+
+# testing
+pytest==7.4.4
+  

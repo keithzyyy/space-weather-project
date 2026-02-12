@@ -1,0 +1,86 @@
+
+%%{init: {'theme':'forest'}}%%
+
+sequenceDiagram
+
+    Title Sequence diagram of .main() of /entrypoint/ingest_k_index.py
+
+    participant p1 as main()<br>:entrypointingest_k_index.py/ingest_k_index.py
+    participant p2 as <br>:srcioload_config.py/load_config.py
+    participant p3 as <br>:srcingestspace_weather_k_index.py/space_weather_k_index.py
+    participant p4 as <br>:srcioatomic.py/atomic.py
+
+
+	p1 ->>+ p2: 1: load_config(args.config_path)
+	p2 -->>- p1: 1: return value
+	p1 ->>+ p3: 2: ingest_k_index_run( sw_config, location=args.<br>.location,        start=start_args,<br>,        end=end_args,<br>raw_base_dir=args.raw_base_dir<br>   )
+	p3 ->>+ p3: 2.1: _run_id_utc()
+	p3 -->>- p3: 2.1: return value
+	p3 ->>+ p3: 2.2: write_manifest( run_dir, sw_config=sw_config,<br>,        location=location,<br>start=start,        end=end,<br>,        run_id=run_id,<br>status="RUNNING",    )
+	p3 ->>+ p3: 2.2.1: _fmt_dt_for_api(sw_config, start)
+	p3 -->>- p3: 2.2.1: return value
+	p3 ->>+ p3: 2.2.2: _fmt_dt_for_api(sw_config, end)
+	p3 -->>- p3: 2.2.2: return value
+	p3 ->>+ p4: 2.2.3: _atomic_write_json(manifest_path, payload)
+	p4 -->>- p3: 2.2.3: return value
+	p3 -->>- p3: 2.2: return value
+	p3 ->>+ p3: 2.3: iter_k_index_chunks(sw_config, location, start=start,<br>end=end)
+	p3 ->>+ p3: 2.3.1: post_k_index(sw_config, location, start=start,<br>end=end)
+	p3 ->>+ p3: 2.3.1.1: _fmt_dt_for_api(sw_config, start)
+	p3 -->>- p3: 2.3.1.1: return value
+	p3 ->>+ p3: 2.3.1.2: _fmt_dt_for_api(sw_config, end)
+	p3 -->>- p3: 2.3.1.2: return value
+	p3 -->>- p3: 2.3.1: return value
+	p3 ->>+ p3: 2.3.2: _parse_dt(start)
+	p3 -->>- p3: 2.3.2: return value
+	p3 ->>+ p3: 2.3.3: _parse_dt(end)
+	p3 -->>- p3: 2.3.3: return value
+	p3 ->>+ p3: 2.3.4: _parse_dt(start)
+	p3 -->>- p3: 2.3.4: return value
+	p3 ->>+ p3: 2.3.5: _parse_dt(end)
+	p3 -->>- p3: 2.3.5: return value
+	p3 ->>+ p3: 2.3.6: post_k_index(sw_config, location, start=start_dt,<br>end=end_dt)
+	p3 ->>+ p3: 2.3.6.1: _fmt_dt_for_api(sw_config, start)
+	p3 -->>- p3: 2.3.6.1: return value
+	p3 ->>+ p3: 2.3.6.2: _fmt_dt_for_api(sw_config, end)
+	p3 -->>- p3: 2.3.6.2: return value
+	p3 -->>- p3: 2.3.6: return value
+	p3 ->>+ p3: 2.3.7: post_k_index(sw_config, location, start=current,<br>end=chunk_end)
+	p3 ->>+ p3: 2.3.7.1: _fmt_dt_for_api(sw_config, start)
+	p3 -->>- p3: 2.3.7.1: return value
+	p3 ->>+ p3: 2.3.7.2: _fmt_dt_for_api(sw_config, end)
+	p3 -->>- p3: 2.3.7.2: return value
+	p3 -->>- p3: 2.3.7: return value
+	p3 -->>- p3: 2.3: return value
+	p3 ->>+ p3: 2.4: tqdm(chunks_iter, desc="K-index chunks<br>processed",<br> unit=" chunks")
+	p3 -->>- p3: 2.4: return value
+	p3 ->>+ p3: 2.5: write_chunk_jsonl( run_dir,<br>chunk_start=chunk.chunk_start,<br>chunk_end=chunk.<br>.chunk_end,<br>chunk_data=chunk.data,<br> )
+	p3 ->>+ p3: 2.5.1: chunk_filename(chunk_start, chunk_end)
+	p3 ->>+ p3: 2.5.1.1: _chunk_token(chunk_start)
+	p3 -->>- p3: 2.5.1.1: return value
+	p3 ->>+ p3: 2.5.1.2: _chunk_token(chunk_end)
+	p3 -->>- p3: 2.5.1.2: return value
+	p3 -->>- p3: 2.5.1: return value
+	p3 -->>- p3: 2.5: return value
+	p3 ->>+ p4: 2.6: write_success(run_dir)
+	p4 -->>- p3: 2.6: return value
+	p3 ->>+ p3: 2.7: write_manifest( run_dir, sw_config=<br>=sw_config,            location=location,<br>,            start=start,<br>end=end,            run_id=run_id,<br>,            status="SUCCESS",<br>extra={"total_rows":<br>total_rows, "chunk_files": chunk_files},<br>        )
+	p3 ->>+ p3: 2.7.1: _fmt_dt_for_api(sw_config, start)
+	p3 -->>- p3: 2.7.1: return value
+	p3 ->>+ p3: 2.7.2: _fmt_dt_for_api(sw_config, end)
+	p3 -->>- p3: 2.7.2: return value
+	p3 ->>+ p4: 2.7.3: _atomic_write_json(manifest_path, payload)
+	p4 -->>- p3: 2.7.3: return value
+	p3 -->>- p3: 2.7: return value
+	p3 ->>+ p4: 2.8: write_failed(run_dir, repr(e))
+	p4 -->>- p3: 2.8: return value
+	p3 ->>+ p3: 2.9: write_manifest( run_dir, sw_config=<br>=sw_config,            location=location,<br>,            start=start,<br>end=end,            run_id=run_id,<br>,            status="FAILED",<br>extra={"error": repr(<br>e)},        )
+	p3 ->>+ p3: 2.9.1: _fmt_dt_for_api(sw_config, start)
+	p3 -->>- p3: 2.9.1: return value
+	p3 ->>+ p3: 2.9.2: _fmt_dt_for_api(sw_config, end)
+	p3 -->>- p3: 2.9.2: return value
+	p3 ->>+ p4: 2.9.3: _atomic_write_json(manifest_path, payload)
+	p4 -->>- p3: 2.9.3: return value
+	p3 -->>- p3: 2.9: return value
+	p3 -->>- p1: 2: return value
+        
