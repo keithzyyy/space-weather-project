@@ -9,37 +9,32 @@ import argparse
 # use 1 testing class first.
 class TestKidxIngestion(unittest.TestCase):
 
-    # class attributes to store parsed values from CL arguments
-    sw_config = None
+    # 0. setting up the minimal set of configs needed for the ingestion module to run
+    @classmethod
+    def setUpClass(cls):
+        # a class attribute/static variable shared across all tests
+        cls.sw_config =  {
+            "api_key": "DUMMY",
+            "base_url": "https://example",
+            "endpoints": {"k_index": "/api/v1/get-k-index"},
+            "date_fmt": "%Y-%m-%d %H:%M:%S",
+            "ingestion": {"k_index": {"timeout_s": 60}}
+        }
 
     # 1. test that the config for SW API is not empty
     # (can be modified to accomodate other forms of checks, this is just to 
     # test that unittest framework is working)
     def test_config_existence(self):
         self.assertTrue(bool(self.sw_config), "Config should not be empty")
+
+
+    # 2. 
         
 
 
 # use the main() method from unittest to run the tests in CLI
 if __name__ == '__main__':
-
-    # 1. create the argument parser to read yaml config file path
-    # though this is not mandatory because load_config() already has a default argument
-    parser = argparse.ArgumentParser(description="Any CLI args for testing.")
-    parser.add_argument('--config_path', required=False, help="Optional file Path for YAML config")
-
-    # 2. unlike parse_args(), unrecognized arguments are left as it is (no errors)
-    # returns a two item tuple that contains the populated namespace and the list of any unrecognized arguments.
-    args, remaining = parser.parse_known_args()
-
-
-    # 3. initialize the config path to what is given as an attribute in the testing class
-    TestKidxIngestion.sw_config = load_config(path=args.config_path) if args.config_path else load_config()
-
-    # 4. Rebuild sys.argv for unittest: [script_name, ...unparsed_args]
-    sys.argv = [sys.argv[0]] + remaining
     
-
     unittest.main()
 
 
