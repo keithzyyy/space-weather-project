@@ -34,12 +34,11 @@ import argparse
 # `from module import function` then call `function()`
 # or `import module` (or `from library import module` for nested packages) then call module.function()
 
-print(__name__)
 
 from src.io.load_config import load_config
 from src.ingest.space_weather_k_index import ingest_k_index_run
 
-print(__name__)
+
 
 import logging
 logger = logging.getLogger(__name__)
@@ -63,10 +62,10 @@ def main():
     parser.add_argument('--location', required=True, help="String-based Location to Retrieve K-index From")
 
     # 3. add the start argument
-    parser.add_argument('--start', help="Optional Start Date for which the K-index observations are recorded")
+    parser.add_argument('--start', help="Optional UTC Start Date for which the K-index observations are recorded")
 
     # 4. add the end argument
-    parser.add_argument('--end', help="Optional End Date for which the K-index observations are recorded")
+    parser.add_argument('--end', help="Optional UTC End Date for which the K-index observations are recorded")
 
     # 5. add directory to save ingested K-index to
     parser.add_argument('--raw_base_dir', help="Optional relative path to save the K-index to, from the project root. If empty, read from config.")
@@ -91,17 +90,6 @@ def main():
         end=end_args,
         raw_base_dir=args.raw_base_dir
     )
-
-#     run_dir = ingest_k_index_run(
-#     sw_config,
-#     location="Australian region",
-#     start="2021-11-01 00:00:00",
-#     end="2022-01-01 00:00:00",
-# )
-
-# python entrypoint/ingest_k_index.py --config_path "config/local.yaml" --location "Australian region" --start "2021-11-01 00:00:00" --end "2022-01-01 00:00:00"
-
-print(__name__)
 
 if __name__ == "__main__":
     main()
