@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
 import requests
+from zoneinfo import ZoneInfo
 try:
     from tqdm import tqdm
 except ImportError:  # keep src light; tqdm is optional
@@ -33,48 +34,70 @@ logger = logging.getLogger(__name__)
 
 ### Time formatting
 def _fmt_dt_for_api(sw_config: Dict[str, Any], x: Optional[object]) -> Optional[str]:
+
     """
-    Returns a string in a format compatible to SW API, listed
-    in the config `sw_config`.
-    E.g. "YYYY-MM-DD HH:mm:ss" (UTC) if x is str/datetime.
+    Takes str/datetimes.
+    ALWAYS outputs a UTC string in sw_config["date_fmt"] format (strictly!).
+    - For e.g, sw_config["date_fmt"] = "YYYY-MM-DD HH:mm:ss"
     
     Returns None if x is None.
     Raises TypeError/ValueError for unsupported formats.
+
+    Use case: API request at post_k_index()
     """
+
     if x is None:
         return None
 
     _SW_API_DT_FMT = sw_config['date_fmt']
 
     if isinstance(x, datetime):
-        # assume already UTC-ish; if tz-aware, convert to UTC
+        # assume already UTC-ish; if tz-aware (tzinfo is not None), convert to UTC
         if x.tzinfo is not None:
             x = x.astimezone(timezone.utc).replace(tzinfo=None)
+
         return x.strftime(_SW_API_DT_FMT)
 
-    if isinstance(x, str):
-        # validate + normalize
-        dt = datetime.fromisoformat(x)  # may raise ValueError -> fail fast
-        if dt.tzinfo is not None:
-            dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
-        return dt.strftime(_SW_API_DT_FMT)
+    if isinstance(x, str): # if yes, then strdatetime ASSUMED to be UTC.
+ 
+        # validate against desired date format 
+        # crude method: convert to a datetime object. 
+        datetime.strptime(x, _SW_API_DT_FMT) # may raise ValueError -> fail fast
+
+        return x
+        # return dt.strftime(_SW_API_DT_FMT)
 
     raise TypeError(f"start/end must be str|datetime|None, got {type(x)}")
 
 
-def _parse_dt(x: object) -> datetime:
+def _parse_dt(sw_config: Dict[str, Any], x: object) -> datetime:
+
     """
-    Parse str/datetime into a naive datetime (assumed UTC) for arithmetic.
+    Parse str/datetimes; returns a UTC-naive datetime object for arithmetic. 
+    Naive = time zone info is null i.e. tzinfo=None, but interpreted as UTC
+
+    Use case: create date chunks in iter_k_index_chunks()
     """
+
     if isinstance(x, datetime):
         if x.tzinfo is not None:
             x = x.astimezone(timezone.utc).replace(tzinfo=None)
         return x
+    
     if isinstance(x, str):
-        dt = datetime.fromisoformat(x)
-        if dt.tzinfo is not None:
-            dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+        # convert "YY:MM:DD HH:MM:ss" to a datetime object,
+        # something like datetime.datetime(YY, MM, DD, HH, MM, ss)
+        dt = datetime.strptime(x, sw_config['date_fmt'])
+
+
+        # below is unnecessary because of how we already enforced string format
+        # into "YY:MM:DD HH:MM:ss", becoming a naive datetime
+        # if dt.tzinfo is not None:
+        #     dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+
         return dt
+    
     raise TypeError(f"Expected str|datetime, got {type(x)}")
 
 
@@ -91,15 +114,20 @@ def _run_id_utc() -> str:
 def _chunk_token(dt_: Optional[datetime]) -> str:
 
     """
-    Returns the provided in UTC format with non alphanumerics removed.
+    Returns the provided in datetime UTC format with non alphanumerics removed.
     
     Main use case is for chunk filenames
     """
 
     if dt_ is None:
         return "open"
+    
+    # defensive on the invariant that strdatetimes are UTC naive (no tzinfo)
+    if dt_.tzinfo is not None:
+        dt_ = dt_.astimezone(timezone.utc).replace(tzinfo=None)
+
     # Example: 20250101T000000Z
-    return dt_.replace(tzinfo=timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return dt_.strftime("%Y%m%dT%H%M%SZ")
 ## d
 # -----------------------------
 # Core HTTP call (single POST)
@@ -118,7 +146,7 @@ def post_k_index(
     """
 
     # 1. make the request body
-
+    # 
     start_s = _fmt_dt_for_api(sw_config, start)
     end_s = _fmt_dt_for_api(sw_config, end)
 
@@ -187,16 +215,18 @@ def iter_k_index_chunks(
         data = post_k_index(sw_config, location, start=start, end=end)
 
         # 1.2 return a custom KIndexChunk
-        chunk_start_dt = _parse_dt(start) if start is not None else None
-        chunk_end_dt = _parse_dt(end) if end is not None else None
+        # parses into UTC datetime objects
+        chunk_start_dt = _parse_dt(sw_config, start) if start is not None else None
+        chunk_end_dt = _parse_dt(sw_config, end) if end is not None else None
 
         logger.info(f"✔️ (Single-request) data fetched successfully!")
         yield KIndexChunk(chunk_start_dt, chunk_end_dt, data)
         return
 
     # 2. Chunking path for other cases
-    start_dt = _parse_dt(start)
-    end_dt = _parse_dt(end)
+    # parses into UTC datetime objects
+    start_dt = _parse_dt(sw_config, start)
+    end_dt = _parse_dt(sw_config, end)
 
     # 2.1 quickly handle invalid cases
     if start_dt > end_dt:
@@ -265,9 +295,36 @@ def write_manifest(
     """
     Writes/updates _manifest.json atomically.
     """
+
+    def date_utc_str_to_date_melb_str(x: Optional[str]) -> str:
+
+        """
+        A little helper to convert a UTC time "YY:MM:DD HH:MM:ss"
+        into Melbourne time "YY:MM:DD HH:MM:ss".
+        """
+        if x is None:
+            return None
+
+        # convert to datetime object, inject UTC timezone information
+        dt_utc = datetime.strptime(x, sw_config["date_fmt"])
+        dt_utc = dt_utc.replace(tzinfo=timezone.utc)
+
+        # convert to melb timezone, return datetime as str.
+        melb = ZoneInfo("Australia/Melbourne")
+        dt_melb = dt_utc.astimezone(melb)
+        return dt_melb.strftime("%Y-%m-%d %H:%M:%S %Z")
+
+    # create manifest json file
     run_dir.mkdir(parents=True, exist_ok=True)
     manifest_path = run_dir / "_manifest.json"
 
+    # also add melbourne start and date times to manifest
+    # (so that manifest is human readable)
+    start_utc_str = _fmt_dt_for_api(sw_config, start)
+    end_utc_str = _fmt_dt_for_api(sw_config, end)
+    start_melb_str = date_utc_str_to_date_melb_str(start_utc_str)
+    end_melb_str = date_utc_str_to_date_melb_str(end_utc_str)
+    
     payload: Dict[str, Any] = {
         "source": "space_weather",
         "dataset": "k_index",
@@ -275,8 +332,10 @@ def write_manifest(
         "created_at_utc": run_id,  # run_id is already a UTC timestamp string
         "status": status,          # RUNNING | SUCCESS | FAILED
         "location": location,
-        "start": _fmt_dt_for_api(sw_config, start),
-        "end": _fmt_dt_for_api(sw_config, end),
+        "start_utc_str": start_utc_str,
+        "end_utc_str": end_utc_str,
+        "start_melb_str": start_melb_str,
+        "end_melb_str": end_melb_str,
         "chunk_days": sw_config.get("ingestion", {}).get("k_index", {}).get("chunk_days"),
         "sleep_seconds": sw_config.get("ingestion", {}).get("k_index", {}).get("sleep_seconds"),
         "base_url": sw_config.get("base_url"),
