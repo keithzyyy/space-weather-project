@@ -1,3 +1,21 @@
+"""
+Module: space_weather_k_index ingestion
+
+High-level behavior:
+
+1. Fetch K-index data from BoM SW API in chunked intervals (except for open intervals, in which case data is fetched in one go).
+2. Write raw API responses to disk in run-scoped directories (i.e. each run has an id).
+3. Write a JSON manifest summarizing ingestion metadata.
+
+Invariants:
+- All internal datetimes are UTC-naive (naive: no timezone information).
+- API payload datetime format strictly follows config["date_fmt"], e.g. "YYYY-MM-DD HH:mm:ss".
+- Run IDs and chunk tokens are UTC-based.
+- Manifest includes BOTH UTC and Melbourne timestamps for readability.
+"""
+
+
+
 from __future__ import annotations
 import sys
 import json
@@ -43,7 +61,7 @@ def _fmt_dt_for_api(sw_config: Dict[str, Any], x: Optional[object]) -> Optional[
     Returns None if x is None.
     Raises TypeError/ValueError for unsupported formats.
 
-    Use case: API request at post_k_index()
+    Use case: validate date format for POST request at post_k_index()
     """
 
     if x is None:
@@ -76,7 +94,8 @@ def _parse_dt(sw_config: Dict[str, Any], x: object) -> datetime:
     Parse str/datetimes; returns a UTC-naive datetime object for arithmetic. 
     Naive = time zone info is null i.e. tzinfo=None, but interpreted as UTC
 
-    Use case: create date chunks in iter_k_index_chunks()
+    Use case: create date chunks in iter_k_index_chunks(), when start and
+    date are well-defined dates (not None)
     """
 
     if isinstance(x, datetime):
@@ -146,7 +165,6 @@ def post_k_index(
     """
 
     # 1. make the request body
-    # 
     start_s = _fmt_dt_for_api(sw_config, start)
     end_s = _fmt_dt_for_api(sw_config, end)
 
@@ -159,6 +177,7 @@ def post_k_index(
     if end_s is not None:
         options["end"] = end_s
 
+    # 2. make the request
     body = {"api_key": sw_config["api_key"], "options": options}
 
     try:
@@ -402,7 +421,7 @@ def ingest_k_index_run(
     raw_base_dir: Optional[object] = None,
 ) -> Path:
     """
-    End-to-end ingestion run:
+    Orchestrates an end-to-end K-index ingestion run:
       - creates run_dir under raw_base_dir/run_id=...
       - writes manifest (RUNNING)
       - iterates chunks (fetches) and writes chunk files

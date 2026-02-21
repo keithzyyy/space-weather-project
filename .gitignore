@@ -3,3 +3,5 @@ env/
 config/local.yaml
 data/
 models/
+__pycache__/
+*.pyc
