@@ -306,20 +306,50 @@ class TestPostKIndex(unittest.TestCase):
 
         cls.location = "Australian region"
 
+    # instance method
+    def _assert_post_called(self, mock_post, expected_url, expected_body):
+
+        """
+        Docstring for _assert_post_called
+        Assert the correctness of request body, url, and headers for making
+        POST requests in post_k_index(). Primarily to validate the logic
+        for date handling.
+        
+        :param self: automatically passed to this method
+        :param mock_post: a MagicMock() or Mock() object
+        :param expected_url: Description
+        :param expected_body: Description
+        """
+
+        mock_post.assert_called_once()
+        args, kwargs = mock_post.call_args
+        self.assertEqual(args[0], expected_url)
+        self.assertEqual(kwargs["json"], expected_body)
+        self.assertEqual(kwargs["timeout"], self.sw_config["ingestion"]["k_index"]["timeout_s"])
+        self.assertIn("application/json", kwargs["headers"]["Content-Type"])
+
 
     # since kidx module does `import requests` and we used `requests.post()`,
     # we replace the `post` attribute of the module object directly.
     @patch("src.ingest.space_weather_k_index.requests.post")
     # why mock_post? from the patch 
     def test_post_k_index_start_only(self, mock_post):
+
+        """
+        Docstring for test_post_k_index_start_only
+        test post_k_index() for defined start date.
         
-        # 0. create a fake Response returned from the mocked `requests.post()`
+        :param self: Description
+        :param mock_post: Description
+        """
+        
+        # 0. create a fake `Response`-like object returned from the mocked `requests.post()`
         fake_data = [{"index": 2,
                       "valid_time": "2026-02-18 00:00:00",
                       "analysis_time": "2026-02-18 16:20:22"}]
         mock_post.return_value = _FakeResp(200, {"data": fake_data})
 
-        # 1. create a test case
+        # 1. create a test case, and run the function (with requests.post being mocked)
         out = kidx.post_k_index(
             self.sw_config,
             location=self.location,
@@ -327,34 +357,120 @@ class TestPostKIndex(unittest.TestCase):
             end=None,
         )
 
-        # 2. CHECK equality of outputs
-        self.assertEqual(out, fake_data)
 
-        # 3. create expected request body from dummy config
+        # 2. assert request body, url, timeout, headers
         expected_url = self.sw_config["base_url"] + self.sw_config["endpoints"]["k_index"]
         expected_body = {
             "api_key": "DUMMY",
             "options": {"location": self.location, "start": "2026-02-18 00:00:00"},
         }
-
-        # Assert that the mock was called exactly once.
-        mock_post.assert_called_once()
-
-        # retrieve the arguments used to call the mocked `requests.post()` during step (1.)
-        # FYI:
-        # - We called: `requests.post(url, headers=headers, json=body, timeout=timeout_s)`
-        # - mock_post.call_args = (positional arguments, keyword args)
-        # - So url is positional arg and headers, json, timeout are keyword args. 
-        args, kwargs = mock_post.call_args
+        self._assert_post_called(mock_post, expected_url, expected_body)
 
 
-        # 4. CHECK that parameters in the request body created in post_k_index() match as expected
-        self.assertEqual(args[0], expected_url)       # only `url` is positional
-        self.assertEqual(kwargs["json"], expected_body)
-        self.assertEqual(kwargs["timeout"], 12)
-        self.assertIn("application/json", kwargs["headers"]["Content-Type"])
+        # 3. assert equality of outputs
+        self.assertEqual(out, fake_data)
 
-    
+ 
+
+
+
+    @patch("src.ingest.space_weather_k_index.requests.post")
+    def test_post_k_index_end_only(self, mock_post):
+
+        """
+        Docstring for test_post_k_index_end_only
+        Test post_k_index() for defined end date.
+        
+        :param self: Description
+        :param mock_post: Description
+        """
+
+        # 0. create a fake `Response`-like object returned from the mocked `requests.post()`
+        fake_data = [{"index": 4, "valid_time": "1999-03-10 00:00:00", "analysis_time": "1999-03-11 01:30:00"}]
+        mock_post.return_value = _FakeResp(200, {"data": fake_data})
+
+        # 1. create a test case, and run the function (with requests.post being mocked)
+        out = kidx.post_k_index(self.sw_config, self.location, start=None, end="1999-03-11 00:00:00")
+
+        # 2. assert request body, url, timeout, headers
+        expected_url = self.sw_config["base_url"] + self.sw_config["endpoints"]["k_index"]
+        expected_body = {
+            "api_key": "DUMMY",
+            "options": {"location": self.location, "end": "1999-03-11 00:00:00"},
+        }
+        self._assert_post_called(mock_post, expected_url, expected_body)
+
+        # 3. assert equality of outputs
+        self.assertEqual(out, fake_data)
+        
+
+
+
+    @patch("src.ingest.space_weather_k_index.requests.post")
+    def test_post_k_index_start_and_end(self, mock_post):
+
+        """
+        Docstring for test_post_k_index_start_and_end
+        Test post_k_index() for defined start and end dates.
+        
+        :param self: Description
+        :param mock_post: Description
+        """
+
+        # 0. create a fake `Response`-like object returned from the mocked `requests.post()`
+        fake_data = [{"index": 3, "valid_time": "2025-01-01 00:00:00", "analysis_time": "2025-01-02 03:53:49"}]
+        mock_post.return_value = _FakeResp(200, {"data": fake_data})
+
+        # 1. create a test case, and run the function (with requests.post being mocked)
+        out = kidx.post_k_index(
+            self.sw_config,
+            self.location,
+            start="2025-01-01 00:00:00",
+            end="2025-01-02 00:00:00",
+        )
+        
+        # 2. assert request body, url, timeout, headers
+        expected_url = self.sw_config["base_url"] + self.sw_config["endpoints"]["k_index"]
+        expected_body = {
+            "api_key": "DUMMY",
+            "options": {
+                "location": self.location,
+                "start": "2025-01-01 00:00:00",
+                "end": "2025-01-02 00:00:00",
+            },
+        }
+        self._assert_post_called(mock_post, expected_url, expected_body)
+
+        # 3. assert equality of outputs
+        self.assertEqual(out, fake_data)
+
+
+
+    @patch("src.ingest.space_weather_k_index.requests.post")
+    def test_post_k_index_latest_no_start_end(self, mock_post):
+
+        """
+        Docstring for test_post_k_index_latest_no_start_end
+        Test post_k_index() for null start and end dates.
+        
+        :param self: Description
+        :param mock_post: Description
+        """
+
+        # 0. create a fake `Response`-like object returned from the mocked `requests.post()`
+        fake_data = [{"index": 2, "valid_time": "2026-02-18 15:00:00", "analysis_time": "2026-02-18 16:29:23"}]
+        mock_post.return_value = _FakeResp(200, {"data": fake_data})
+
+        # 1. create a test case, and run the function (with requests.post being mocked)
+        out = kidx.post_k_index(self.sw_config, self.location, start=None, end=None)
+
+        # 2. assert request body, url, timeout, headers
+        expected_url = self.sw_config["base_url"] + self.sw_config["endpoints"]["k_index"]
+        expected_body = {"api_key": "DUMMY", "options": {"location": self.location}}
+        self._assert_post_called(mock_post, expected_url, expected_body)
+
+        # 3. assert equality of outputs
+        self.assertEqual(out, fake_data)
         
 
 
