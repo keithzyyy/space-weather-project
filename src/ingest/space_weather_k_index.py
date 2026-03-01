@@ -204,7 +204,7 @@ def post_k_index(
 # Chunk iterator: fetch + yield
 # -----------------------------
 
-@dataclass(frozen=True)
+@dataclass(frozen=True) # once created, its attributes cannot be modified
 class KIndexChunk:
     chunk_start: Optional[datetime]
     chunk_end: Optional[datetime]

@@ -1,9 +1,13 @@
 import unittest
 from unittest.mock import patch
-import src.ingest.space_weather_k_index as kidx # avoid importing all functions
 #from src.io.load_config import load_config
 import re
+import requests
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+
+import src.ingest.space_weather_k_index as kidx # avoid importing all functions
 
 
 # mock response 
@@ -306,7 +310,7 @@ class TestPostKIndex(unittest.TestCase):
 
         cls.location = "Australian region"
 
-    # instance method
+    # instance method -- no need to explicitly pass `self` when calling
     def _assert_post_called(self, mock_post, expected_url, expected_body):
 
         """
@@ -340,7 +344,8 @@ class TestPostKIndex(unittest.TestCase):
     # since kidx module does `import requests` and we used `requests.post()`,
     # we replace the `post` attribute of the module object directly.
     @patch("src.ingest.space_weather_k_index.requests.post")
-    # why mock_post? from the patch 
+    # why mock_post? return value of the mocked function
+    # (if not supplied in patch, it'll be an argument)
     def test_post_k_index_start_only(self, mock_post):
 
         """
@@ -519,6 +524,54 @@ class TestPostKIndex(unittest.TestCase):
 
         # 3. assert equality of outputs
         self.assertEqual(out, fake_data)
+
+
+    @patch("src.ingest.space_weather_k_index.requests.post")
+    def test_post_k_index_non_200_raises_runtime_error(self, mock_post):
+        """Rationale: if the server responds non-200, we must fail fast instead of silently accepting bad data."""
+
+        # 0. create a fake `Response`-like object returned from the mocked `requests.post()`
+        mock_post.return_value = _FakeResp(500, {"error": "nope"}, text="server error")
+
+        # 1. call the function (with requests.post being mocked)
+        # 2. assert that post_k_index does raise a RuntimeError
+        with self.assertRaises(RuntimeError):
+            kidx.post_k_index(self.sw_config, self.location, start=None, end=None)
+
+        mock_post.assert_called_once()
+
+
+    @patch("src.ingest.space_weather_k_index.requests.post")
+    def test_post_k_index_requests_exception_raises_runtime_error(self, mock_post):
+        """Rationale: network-layer failures should be surfaced as RuntimeError so callers can mark the run as FAILED."""
+        
+        # 0. create a fake Exception object raised (not returned) by requests.post,
+        # ultimately to simulate network failures
+        mock_post.side_effect = requests.RequestException("network down")
+
+        # 1. call the function (with requests.post being mocked)
+        # 2. assert that post_k_index does raise a RuntimeError
+        with self.assertRaises(RuntimeError):
+            kidx.post_k_index(self.sw_config, self.location, start=None, end=None)
+
+        mock_post.assert_called_once()
+
+
+    @patch("src.ingest.space_weather_k_index.requests.post")
+    def test_post_k_index_missing_data_returns_empty_list(self, mock_post):
+        """Rationale: a 200 response without a 'data' key should return [] to keep downstream logic simple."""
+        mock_post.return_value = _FakeResp(200, {"something_else": 1})
+
+        # 1. call the function (with requests.post being mocked)
+        out = kidx.post_k_index(self.sw_config, self.location, start=None, end=None)
+
+        mock_post.assert_called_once()
+
+        # 3. assert equality of outputs
+        self.assertEqual(out, [])
+
+
+    
 
 
 # use the main() method from unittest to run the tests in CLI
