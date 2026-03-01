@@ -298,7 +298,7 @@ class TestPostKIndex(unittest.TestCase):
         # again, these are 'static variables'
         cls.sw_config = {
             "api_key": "DUMMY",
-            "base_url": "https://sws-data.sws.bom.gov.au/api/v1/",
+            "base_url": "https://sws-data.sws.bom.gov.au/api/v1",
             "endpoints": {"k_index": "get-k-index"},
             "date_fmt": "%Y-%m-%d %H:%M:%S",
             "ingestion": {"k_index": {"timeout_s": 12}},
@@ -322,7 +322,15 @@ class TestPostKIndex(unittest.TestCase):
         """
 
         mock_post.assert_called_once()
+
+        # retrieve the arguments used to call the mocked `requests.post()` during step (1.)
+        # FYI:
+        # - We called: `requests.post(url, headers=headers, json=body, timeout=timeout_s)`
+        # - mock_post.call_args = (positional arguments, keyword args)
+        # - So url is positional arg and headers, json, timeout are keyword args. 
         args, kwargs = mock_post.call_args
+
+
         self.assertEqual(args[0], expected_url)
         self.assertEqual(kwargs["json"], expected_body)
         self.assertEqual(kwargs["timeout"], self.sw_config["ingestion"]["k_index"]["timeout_s"])
@@ -359,7 +367,7 @@ class TestPostKIndex(unittest.TestCase):
 
 
         # 2. assert request body, url, timeout, headers
-        expected_url = self.sw_config["base_url"] + self.sw_config["endpoints"]["k_index"]
+        expected_url = self.sw_config["base_url"].rstrip("/") + "/" + self.sw_config["endpoints"]["k_index"]
         expected_body = {
             "api_key": "DUMMY",
             "options": {"location": self.location, "start": "2026-02-18 00:00:00"},
@@ -393,7 +401,7 @@ class TestPostKIndex(unittest.TestCase):
         out = kidx.post_k_index(self.sw_config, self.location, start=None, end="1999-03-11 00:00:00")
 
         # 2. assert request body, url, timeout, headers
-        expected_url = self.sw_config["base_url"] + self.sw_config["endpoints"]["k_index"]
+        expected_url = self.sw_config["base_url"].rstrip("/") + "/" + self.sw_config["endpoints"]["k_index"]
         expected_body = {
             "api_key": "DUMMY",
             "options": {"location": self.location, "end": "1999-03-11 00:00:00"},
@@ -430,7 +438,7 @@ class TestPostKIndex(unittest.TestCase):
         )
         
         # 2. assert request body, url, timeout, headers
-        expected_url = self.sw_config["base_url"] + self.sw_config["endpoints"]["k_index"]
+        expected_url = self.sw_config["base_url"].rstrip("/") + "/" + self.sw_config["endpoints"]["k_index"]
         expected_body = {
             "api_key": "DUMMY",
             "options": {
@@ -465,13 +473,52 @@ class TestPostKIndex(unittest.TestCase):
         out = kidx.post_k_index(self.sw_config, self.location, start=None, end=None)
 
         # 2. assert request body, url, timeout, headers
-        expected_url = self.sw_config["base_url"] + self.sw_config["endpoints"]["k_index"]
+        expected_url = self.sw_config["base_url"].rstrip("/") + "/" + self.sw_config["endpoints"]["k_index"]
         expected_body = {"api_key": "DUMMY", "options": {"location": self.location}}
         self._assert_post_called(mock_post, expected_url, expected_body)
 
         # 3. assert equality of outputs
         self.assertEqual(out, fake_data)
+
+    @patch("src.ingest.space_weather_k_index.requests.post")
+    def test_post_k_index_datetime_inputs_are_formatted(self, mock_post):
+
+        """
+        Docstring for test_post_k_index_datetime_inputs_are_formatted
+        Test post_k_index() for `datetime` typed start and end dates.
+        Datetimes must be correctly parsed into the intended date format.
+
         
+        :param self: Description
+        :param mock_post: Description
+        """
+
+        # 0. create a fake `Response`-like object returned from the mocked `requests.post()`
+        fake_data = [{"index": 3, "valid_time": "2025-01-01 00:00:00", "analysis_time": "2025-01-02 03:53:49"}]
+        mock_post.return_value = _FakeResp(200, {"data": fake_data})
+
+        # 1. create a test case, and run the function (with requests.post being mocked)
+        out = kidx.post_k_index(
+            self.sw_config,
+            self.location,
+            start=datetime(2025, 1, 1, 0, 0, 0),
+            end=datetime(2025, 1, 2, 0, 0, 0),
+        )
+        
+        # 2. assert request body, url, timeout, headers
+        expected_url = self.sw_config["base_url"].rstrip("/") + "/" + self.sw_config["endpoints"]["k_index"]
+        expected_body = {
+            "api_key": "DUMMY",
+            "options": {
+                "location": self.location,
+                "start": "2025-01-01 00:00:00",
+                "end": "2025-01-02 00:00:00",
+            },
+        }
+        self._assert_post_called(mock_post, expected_url, expected_body)
+
+        # 3. assert equality of outputs
+        self.assertEqual(out, fake_data)
 
 
 # use the main() method from unittest to run the tests in CLI

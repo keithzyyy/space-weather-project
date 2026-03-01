@@ -168,6 +168,7 @@ def post_k_index(
     start_s = _fmt_dt_for_api(sw_config, start)
     end_s = _fmt_dt_for_api(sw_config, end)
 
+    # the .rstrip('/') and '/' so that url is robust to whether base_url ends in slash or not
     url = f"{sw_config['base_url'].rstrip('/')}/{sw_config['endpoints']['k_index']}"
     headers = {"Content-Type": "application/json; charset=UTF-8"}
 
