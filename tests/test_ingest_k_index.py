@@ -1,13 +1,20 @@
 import unittest
 from unittest.mock import patch
-#from src.io.load_config import load_config
 import re
 import requests
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-
+import tempfile
+import copy
+import json
 
 import src.ingest.space_weather_k_index as kidx # avoid importing all functions
+
+"""
+Pro tip: run the test either using:
+- `python -m tests.test_ingest_k_index -v` for verbosity (display status of each test), or just
+- `python -m tests.test_ingest_k_index` which only displays ok or not (and time it took to run all tests)
+"""
 
 
 # mock response 
@@ -571,7 +578,326 @@ class TestPostKIndex(unittest.TestCase):
         self.assertEqual(out, [])
 
 
+class TestIterKIndexChunks(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # Base config to deepcopy per test (nested dict).
+        cls.base_cfg = {
+            "api_key": "DUMMY",
+            "base_url": "https://sws-data.sws.bom.gov.au/api/v1",
+            "endpoints": {"k_index": "get-k-index"},
+            "date_fmt": "%Y-%m-%d %H:%M:%S",
+            "ingestion": {
+                "k_index": {
+                    "chunk_days": 1,
+                    "sleep_seconds": 0,  # keep 0 so no need to patch time.sleep
+                    "timeout_s": 12,
+                }
+            },
+        }
+        cls.location = "Australian region"
+
+    @patch("src.ingest.space_weather_k_index.post_k_index")
+    def test_iter_open_interval_start_only_yields_one_chunk(self, mock_post):
+
+        """Contract: if end is None (open interval),
+        iter_k_index_chunks makes exactly one request and yields exactly one KIndexChunk."""
+
+        # 0. deepcopy config + mock post_k_index
+        cfg = copy.deepcopy(self.base_cfg)
+        fake_data = [{"index": 2}]
+        mock_post.return_value = fake_data
+
+        # 1. call iter_k_index_chunks &
+        # materialize its output (an iterator) into a list so that it can be asserted
+        chunks = list(kidx.iter_k_index_chunks(cfg, self.location, start="2025-01-01 00:00:00", end=None))
+
+        # 2.1 assert that post_k_index is called only once
+        mock_post.assert_called_once()
+
+        # 2.2 assert the output to the expected output (e.g. only 1 chunk is returned)
+        # remember that each chunk is of type KIndexChunk, an immutable class we created!
+        self.assertEqual(len(chunks), 1)
+        self.assertEqual(chunks[0].chunk_start, datetime(2025, 1, 1, 0, 0, 0))
+        self.assertIsNone(chunks[0].chunk_end)
+        self.assertEqual(chunks[0].data, fake_data)
+
+    @patch("src.ingest.space_weather_k_index.post_k_index")
+    def test_iter_open_interval_end_only_yields_one_chunk(self, mock_post):
+        """Contract: if start is None (open interval),
+        iter_k_index_chunks makes exactly one request and yields exactly one KIndexChunk."""
+
+        # 0. deepcopy config + mock post_k_index
+        cfg = copy.deepcopy(self.base_cfg)
+        fake_data = [{"index": 2}]
+        mock_post.return_value = fake_data
+
+        # 1. call iter_k_index_chunks &
+        # materialize its output (an iterator) into a list so that it can be asserted
+        chunks = list(kidx.iter_k_index_chunks(cfg, self.location, start=None, end="2025-01-02 00:00:00"))
+
+        # 2.1 assert that post_k_index is called only once
+        mock_post.assert_called_once()
+
+        # 2.2 assert the output to the expected output (e.g. only 1 chunk is returned)
+        # remember that each chunk is of type KIndexChunk, an immutable class we created!
+        self.assertEqual(len(chunks), 1)
+        self.assertIsNone(chunks[0].chunk_start)
+        self.assertEqual(chunks[0].chunk_end, datetime(2025, 1, 2, 0, 0, 0))
+        self.assertEqual(chunks[0].data, fake_data)
+
+
+    @patch("src.ingest.space_weather_k_index.post_k_index")
+    def test_iter_open_interval_latest_yields_one_chunk(self, mock_post):
+        """Contract: if both start and end are None (retrieve latest data),
+        iter_k_index_chunks makes exactly one request and yields exactly one KIndexChunk."""
+
+        # 0. deepcopy config + mock post_k_index
+        cfg = copy.deepcopy(self.base_cfg)
+        fake_data = [{"index": 2}]
+        mock_post.return_value = fake_data
+
+        # 1. call iter_k_index_chunks &
+        # materialize its output (an iterator) into a list so that it can be asserted
+        chunks = list(kidx.iter_k_index_chunks(cfg, self.location, start=None, end=None))
+
+        # 2.1 assert that post_k_index is called only once
+        mock_post.assert_called_once()
+
+        # 2.2 assert the output to the expected output (e.g. only 1 chunk is returned)
+        # remember that each chunk is of type KIndexChunk, an immutable class we created!
+        self.assertEqual(len(chunks), 1)
+        self.assertIsNone(chunks[0].chunk_start)
+        self.assertIsNone(chunks[0].chunk_end)
+        self.assertEqual(chunks[0].data, fake_data)
+
+    @patch("src.ingest.space_weather_k_index.post_k_index")
+    def test_iter_start_equals_end_yields_one_chunk(self, mock_post):
+        """Contract: if start == end, iter_k_index_chunks makes exactly one request and yields exactly one chunk with those boundaries."""
+        
+        # 0. deepcopy config + mock post_k_index
+        cfg = copy.deepcopy(self.base_cfg)
+        fake_data = [{"index": 9}]
+        mock_post.return_value = fake_data
+
+        # 1. call iter_k_index_chunks &
+        # materialize its output (an iterator) into a list so that it can be asserted
+        chunks = list(
+            kidx.iter_k_index_chunks(cfg, self.location, start="2025-01-01 00:00:00", end="2025-01-01 00:00:00")
+        )
+
+        # 2.1 assert that post_k_index is called only once
+        mock_post.assert_called_once()
+
+        # 2.2 assert the output to the expected output (e.g. only 1 chunk is returned)
+        # remember that each chunk is of type KIndexChunk, an immutable class we created!
+        self.assertEqual(len(chunks), 1)
+        self.assertEqual(chunks[0].chunk_start, datetime(2025, 1, 1, 0, 0, 0))
+        self.assertEqual(chunks[0].chunk_end, datetime(2025, 1, 1, 0, 0, 0))
+        self.assertEqual(chunks[0].data, fake_data)
+
+
+    def test_iter_start_greater_than_end_raises(self):
+        """Contract: if start > end, iter_k_index_chunks must raise ValueError (invalid interval)."""
+        # 0. deepcopy config + mock post_k_index
+        cfg = copy.deepcopy(self.base_cfg)
+
+        # 1. assert that iter_k_index_chunks does raise the ValueError exception
+        with self.assertRaises(ValueError):
+            list(kidx.iter_k_index_chunks(cfg, self.location, start="2025-01-02 00:00:00", end="2025-01-01 00:00:00"))
+
+    def test_iter_invalid_chunk_days_raises(self):
+        """Contract: chunk_days must be a positive int when chunking (start and end provided)."""
+
+        # 0. deepcopy config + mock post_k_index & modify chunk_days into an invalid value
+        cfg = copy.deepcopy(self.base_cfg)
+        cfg["ingestion"]["k_index"]["chunk_days"] = 0
+
+        # 1. assert that iter_k_index_chunks does raise the ValueError exception
+        with self.assertRaises(ValueError):
+            list(kidx.iter_k_index_chunks(cfg, self.location, start="2025-01-01 00:00:00", end="2025-01-03 00:00:00"))
+
+    def test_iter_invalid_sleep_seconds_raises(self):
+        """Contract: sleep_seconds must be >= 0 when chunking (start and end provided)."""
+
+        # 0. deepcopy config + mock post_k_index & modify sleep_seconds into an invalid value
+        cfg = copy.deepcopy(self.base_cfg)
+
+        # 1. assert that iter_k_index_chunks does raise the ValueError exception
+        cfg["ingestion"]["k_index"]["sleep_seconds"] = -1
+        with self.assertRaises(ValueError):
+            list(kidx.iter_k_index_chunks(cfg, self.location, start="2025-01-01 00:00:00", end="2025-01-03 00:00:00"))
+
+
+    @patch("src.ingest.space_weather_k_index.post_k_index")
+    def test_iter_start_less_than_end_yields_multiple_chunks(self, mock_post):
+
+        """Contract: if start < end, iter_k_index_chunks yields sequential chunks
+        with end=min(current+chunk_days, end)."""
+
+        # 0. deepcopy config + mock post_k_index & modify chunking parameters
+        cfg = copy.deepcopy(self.base_cfg)
+        cfg["ingestion"]["k_index"]["chunk_days"] = 1
+        cfg["ingestion"]["k_index"]["sleep_seconds"] = 0
+
+        # here we do not mock a function (that returns the same value), we
+        # mock a GENERATOR that yields a stream of values, simulating repeated post_k_index() calls.
+        # Two chunks expected: [Jan1->Jan2], [Jan2->Jan3]
+        mock_post.side_effect = [
+            [{"row": 1}],
+            [{"row": 2}],
+        ]
+
+        # 1. call iter_k_index_chunks & materialize its output (an iterator)  so that it can be asserted.
+        # given the following test case, with chunk_days=1, we would expect exactly 2 chunks,
+        # where 1st one is data from 1 Jan to 2 Jan and 2nd one is from 2 Jan to 3 Jan
+        chunks = list(
+            kidx.iter_k_index_chunks(cfg, self.location, start="2025-01-01 00:00:00", end="2025-01-03 00:00:00")
+        )
+
+        # 2 assert the output to the expected output (e.g. here 2 chunks should be returned)
+        # remember that each chunk is of type KIndexChunk, an immutable class we created!
+
+        # 2.1 check that post_k_index is exactly called twice
+        self.assertEqual(mock_post.call_count, 2)
+        self.assertEqual(len(chunks), 2)
+
+        # 2.2 assert that the chunks (date endpoints and the data) match as expected.
+        self.assertEqual(chunks[0].chunk_start, datetime(2025, 1, 1, 0, 0, 0))
+        self.assertEqual(chunks[0].chunk_end, datetime(2025, 1, 2, 0, 0, 0))
+        self.assertEqual(chunks[0].data, [{"row": 1}])
+
+        self.assertEqual(chunks[1].chunk_start, datetime(2025, 1, 2, 0, 0, 0))
+        self.assertEqual(chunks[1].chunk_end, datetime(2025, 1, 3, 0, 0, 0))
+        self.assertEqual(chunks[1].data, [{"row": 2}])
     
+
+
+class TestManifestAndChunkWrites(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.sw_config = {
+            "api_key": "DUMMY",
+            "base_url": "https://sws-data.sws.bom.gov.au/api/v1",
+            "endpoints": {"k_index": "get-k-index"},
+            "date_fmt": "%Y-%m-%d %H:%M:%S",
+            "ingestion": {"k_index": {"chunk_days": 1, "sleep_seconds": 0}},
+        }
+        cls.location = "Australian region"
+
+
+    # although we already defined `from src.io.atomic import _atomic_write_json` in src.ingest.space_weather_k_index, 
+    # it is already loaded in the module namespace of space_weather_k_index (which uses it).
+    # Since we need to patch `_atomic_write_json` where it is used, we patch `src.ingest.space_weather_k_index._atomic_write_json`
+    # instead of `src.io.atomic._atomic_write_json`.
+    @patch("src.ingest.space_weather_k_index._atomic_write_json")
+    def test_write_manifest_calls_atomic_write_with_expected_payload(self, mock_atomic):
+
+        """Contract: write_manifest must write _manifest.json via _atomic_write_json and
+        include correctly parsed UTC+Melbourne timestamp fields in the JSON payload."""
+        
+        # tempfile.TemporaryDirectory(): a secure, unique, temporary directory and
+        # automatically deletes it along with all its contents,
+        # when the `with` statement has ended.
+        #
+        # here `td` is a proxy of the `data/01-raw/space_weather/k_index/` directory
+        # 
+        # we need it because write_manifest creates the run directory as follows:
+        # run_dir.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory() as td:
+
+            # 0. turn directory into a Path() object
+            # note we do not test _run_id_utc() anymore
+            run_dir = Path(td) / "run_id=TEST"
+
+            # 1. call the function
+            kidx.write_manifest(
+                run_dir,
+                sw_config=self.sw_config,
+                location=self.location,
+                start="2025-01-01 00:00:00",
+                end="2025-01-02 00:00:00",
+                run_id="20250101T000000Z",
+                status="RUNNING",
+            )
+
+            # 2. mock _atomic_write_json(manifest_path, payload) in write_manifest()
+            mock_atomic.assert_called_once()
+
+            # 2.1 remember the call_args attribute from Mock()! first one is pos args, second is kwargs
+            # but in this case there is no keyword arguments.
+            args, _ = mock_atomic.call_args
+            manifest_path, payload = args[0], args[1]
+
+
+            # 2.2 assert correct filename for the payload
+            self.assertEqual(manifest_path, run_dir / "_manifest.json")
+
+            # 2.3 assert payload values: run_id, status, location
+            self.assertEqual(payload["run_id"], "20250101T000000Z")
+            self.assertEqual(payload["status"], "RUNNING")
+            self.assertEqual(payload["location"], self.location)
+
+            # 2.3.1 assert UTC strings
+            self.assertEqual(payload["start_utc_str"], "2025-01-01 00:00:00")
+            self.assertEqual(payload["end_utc_str"], "2025-01-02 00:00:00")
+
+            # 2.3.2 assert Melbourne strings: must exist and end with timezone label (AEST/AEDT)
+            self.assertIsInstance(payload["start_melb_str"], str)
+            self.assertIsInstance(payload["end_melb_str"], str)
+            self.assertTrue(payload["start_melb_str"].endswith(("AEST", "AEDT")))
+            self.assertTrue(payload["end_melb_str"].endswith(("AEST", "AEDT")))
+
+    def test_chunk_filename_convention(self):
+        """Contract: chunk_filename naming follows 'latest' and 'open' token rules for None boundaries."""
+
+        # test case: no dates provided, name chunk as the following
+        self.assertEqual(kidx.chunk_filename(None, None), "chunk_latest.jsonl")
+
+        # start and end dates of a chunk in datetime format
+        s = datetime(2025, 1, 1, 0, 0, 0)
+        e = datetime(2025, 1, 2, 0, 0, 0)
+
+        # remaining test cases: at least one valid date is provided
+        # name as f"chunk_{_chunk_token(chunk_start)}__{_chunk_token(chunk_end)}.jsonl"
+        # NOTE: Only checks basic shape; token formatting is already unit-tested via _chunk_token.
+        self.assertTrue(kidx.chunk_filename(s, None).startswith("chunk_"))
+        self.assertTrue(kidx.chunk_filename(None, e).startswith("chunk_"))
+        self.assertTrue(kidx.chunk_filename(s, e).startswith("chunk_"))
+        self.assertTrue(kidx.chunk_filename(s, e).endswith(".jsonl"))
+
+    def test_write_chunk_jsonl_success_creates_file_with_jsonl_and_no_tmp(self):
+        """Contract: write_chunk_jsonl writes one JSON object per line and leaves no .tmp behind on success."""
+        with tempfile.TemporaryDirectory() as td:
+            
+            # turn directory into a Path() object
+            run_dir = Path(td)
+
+            # 0. define the following attributes of a toy KIndexChunk object
+            s = datetime(2025, 1, 1, 0, 0, 0)
+            e = datetime(2025, 1, 2, 0, 0, 0)
+            rows = [{"a": 1}, {"b": 2}, {"c": "x"}]
+
+            # 1. call write_chunk_jsonl, which writes the above chunk in the temporary directory td
+            out_path = kidx.write_chunk_jsonl(run_dir, chunk_start=s, chunk_end=e, chunk_data=rows)
+
+            # 2.1 assert that the file does exist
+            self.assertTrue(out_path.exists())
+
+            # 2.2 assert that no .tmp files are written 
+            tmp_path = out_path.with_suffix(out_path.suffix + ".tmp")
+            self.assertFalse(tmp_path.exists())
+
+            # 2.3 assert correctness of the written JSONL chunk to the actual data
+            lines = out_path.read_text(encoding="utf-8").splitlines()
+
+            # 2.3.1 assert that jsonl file has the correct number of rows
+            self.assertEqual(len(lines), len(rows))
+
+            # 2.3.2 assert that parsed jsonl data are correct
+            parsed = [json.loads(line) for line in lines]
+            self.assertEqual(parsed, rows)
 
 
 # use the main() method from unittest to run the tests in CLI
