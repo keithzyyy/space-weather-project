@@ -1,3 +1,21 @@
+"""
+Module: space_weather_k_index ingestion
+
+High-level behavior:
+
+1. Fetch K-index data from BoM SW API in chunked intervals (except for open intervals, in which case data is fetched in one go).
+2. Write raw API responses to disk in run-scoped directories (i.e. each run has an id).
+3. Write a JSON manifest summarizing ingestion metadata.
+
+Invariants:
+- All internal datetimes are UTC-naive (naive: no timezone information).
+- API payload datetime format strictly follows config["date_fmt"], e.g. "YYYY-MM-DD HH:mm:ss".
+- Run IDs and chunk tokens are UTC-based.
+- Manifest includes BOTH UTC and Melbourne timestamps for readability.
+"""
+
+
+
 from __future__ import annotations
 import sys
 import json
@@ -43,7 +61,7 @@ def _fmt_dt_for_api(sw_config: Dict[str, Any], x: Optional[object]) -> Optional[
     Returns None if x is None.
     Raises TypeError/ValueError for unsupported formats.
 
-    Use case: API request at post_k_index()
+    Use case: validate date format for POST request at post_k_index()
     """
 
     if x is None:
@@ -76,7 +94,8 @@ def _parse_dt(sw_config: Dict[str, Any], x: object) -> datetime:
     Parse str/datetimes; returns a UTC-naive datetime object for arithmetic. 
     Naive = time zone info is null i.e. tzinfo=None, but interpreted as UTC
 
-    Use case: create date chunks in iter_k_index_chunks()
+    Use case: create date chunks in iter_k_index_chunks(), when start and
+    date are well-defined dates (not None)
     """
 
     if isinstance(x, datetime):
@@ -146,10 +165,10 @@ def post_k_index(
     """
 
     # 1. make the request body
-    # 
     start_s = _fmt_dt_for_api(sw_config, start)
     end_s = _fmt_dt_for_api(sw_config, end)
 
+    # the .rstrip('/') and '/' so that url is robust to whether base_url ends in slash or not
     url = f"{sw_config['base_url'].rstrip('/')}/{sw_config['endpoints']['k_index']}"
     headers = {"Content-Type": "application/json; charset=UTF-8"}
 
@@ -159,6 +178,7 @@ def post_k_index(
     if end_s is not None:
         options["end"] = end_s
 
+    # 2. make the request
     body = {"api_key": sw_config["api_key"], "options": options}
 
     try:
@@ -184,7 +204,7 @@ def post_k_index(
 # Chunk iterator: fetch + yield
 # -----------------------------
 
-@dataclass(frozen=True)
+@dataclass(frozen=True) # once created, its attributes cannot be modified
 class KIndexChunk:
     chunk_start: Optional[datetime]
     chunk_end: Optional[datetime]
@@ -402,12 +422,12 @@ def ingest_k_index_run(
     raw_base_dir: Optional[object] = None,
 ) -> Path:
     """
-    End-to-end ingestion run:
-      - creates run_dir under raw_base_dir/run_id=...
-      - writes manifest (RUNNING)
-      - iterates chunks (fetches) and writes chunk files
-      - writes _SUCCESS + manifest (SUCCESS)
-      - if exception: writes _FAILED + manifest (FAILED), then re-raises
+    Orchestrates an end-to-end K-index ingestion run:
+      1. creates run_dir under raw_base_dir/run_id=...
+      2.  writes manifest (RUNNING)
+      3. iterates chunks (fetches) and writes chunk files
+      4. writes _SUCCESS + manifest (SUCCESS)
+      5. if exception: writes _FAILED + manifest (FAILED), then re-raises
 
     Notes:
     - As per SW API, datetimes, if provided, must be at UTC format.
@@ -435,6 +455,7 @@ def ingest_k_index_run(
 
     logger.info(f"Writing initial metadata..")
 
+    # 2. write initial manifest
     write_manifest(
         run_dir,
         sw_config=sw_config,
@@ -447,10 +468,13 @@ def ingest_k_index_run(
 
     logger.info(f"✔️ Initial metadata written.\n")
 
+    
+
     try:
-        # 2.a.1 fetch chunks and store & write one at a time 
+        # 3. iterates chunks (fetches) and writes chunk files
+        # fetch chunks and store & write one at a time 
         total_rows = 0
-        chunk_files: List[str] = []
+        chunk_files: List[str] = [] # only the chunk filenames
 
         # will stream a List of KIndexChunks w attributes e.g. chunk_start, chunk_end, data
         chunks_iter = iter_k_index_chunks(sw_config, location, start=start, end=end)
@@ -465,7 +489,7 @@ def ingest_k_index_run(
                           unit=" chunks"):            
             
             logger.info(f'Writing this chunk to disk..')
-            out_path = write_chunk_jsonl(
+            out_path = write_chunk_jsonl( # returns a Path 
                 run_dir,
                 chunk_start=chunk.chunk_start,
                 chunk_end=chunk.chunk_end,
@@ -473,17 +497,17 @@ def ingest_k_index_run(
             )
             logger.info(f'Write succeeded.')
 
-            chunk_files.append(out_path.name)
+            chunk_files.append(out_path.name) # .name attribute from a Path object
             
             total_rows += len(chunk.data)
 
             logger.info(f'# observations so far: {total_rows}.')
 
-        # 2.a.2 confirm success of ingestion
+        # 4. confirm success of ingestion
 
         write_success(run_dir)
 
-        # 2.a.3 update the manifest/metadata
+        # update the manifest/metadata
         write_manifest(
             run_dir,
             sw_config=sw_config,
@@ -501,10 +525,9 @@ def ingest_k_index_run(
 
     except Exception as e:
         
-        # 2.b.1 if any Exception occurs, fail fast 
+        # 5. if any Exception occurs, fail fast 
         write_failed(run_dir, repr(e))
 
-        # 2.b.2
         write_manifest(
             run_dir,
             sw_config=sw_config,
@@ -515,4 +538,6 @@ def ingest_k_index_run(
             status="FAILED",
             extra={"error": repr(e)},
         )
+
+        # reraise the original exception with full traceback.
         raise
