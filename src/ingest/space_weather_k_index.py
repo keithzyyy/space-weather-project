@@ -423,11 +423,11 @@ def ingest_k_index_run(
 ) -> Path:
     """
     Orchestrates an end-to-end K-index ingestion run:
-      - creates run_dir under raw_base_dir/run_id=...
-      - writes manifest (RUNNING)
-      - iterates chunks (fetches) and writes chunk files
-      - writes _SUCCESS + manifest (SUCCESS)
-      - if exception: writes _FAILED + manifest (FAILED), then re-raises
+      1. creates run_dir under raw_base_dir/run_id=...
+      2.  writes manifest (RUNNING)
+      3. iterates chunks (fetches) and writes chunk files
+      4. writes _SUCCESS + manifest (SUCCESS)
+      5. if exception: writes _FAILED + manifest (FAILED), then re-raises
 
     Notes:
     - As per SW API, datetimes, if provided, must be at UTC format.
@@ -455,6 +455,7 @@ def ingest_k_index_run(
 
     logger.info(f"Writing initial metadata..")
 
+    # 2. write initial manifest
     write_manifest(
         run_dir,
         sw_config=sw_config,
@@ -467,10 +468,13 @@ def ingest_k_index_run(
 
     logger.info(f"✔️ Initial metadata written.\n")
 
+    
+
     try:
-        # 2.a.1 fetch chunks and store & write one at a time 
+        # 3. iterates chunks (fetches) and writes chunk files
+        # fetch chunks and store & write one at a time 
         total_rows = 0
-        chunk_files: List[str] = []
+        chunk_files: List[str] = [] # only the chunk filenames
 
         # will stream a List of KIndexChunks w attributes e.g. chunk_start, chunk_end, data
         chunks_iter = iter_k_index_chunks(sw_config, location, start=start, end=end)
@@ -485,7 +489,7 @@ def ingest_k_index_run(
                           unit=" chunks"):            
             
             logger.info(f'Writing this chunk to disk..')
-            out_path = write_chunk_jsonl(
+            out_path = write_chunk_jsonl( # returns a Path 
                 run_dir,
                 chunk_start=chunk.chunk_start,
                 chunk_end=chunk.chunk_end,
@@ -493,17 +497,17 @@ def ingest_k_index_run(
             )
             logger.info(f'Write succeeded.')
 
-            chunk_files.append(out_path.name)
+            chunk_files.append(out_path.name) # .name attribute from a Path object
             
             total_rows += len(chunk.data)
 
             logger.info(f'# observations so far: {total_rows}.')
 
-        # 2.a.2 confirm success of ingestion
+        # 4. confirm success of ingestion
 
         write_success(run_dir)
 
-        # 2.a.3 update the manifest/metadata
+        # update the manifest/metadata
         write_manifest(
             run_dir,
             sw_config=sw_config,
@@ -521,10 +525,9 @@ def ingest_k_index_run(
 
     except Exception as e:
         
-        # 2.b.1 if any Exception occurs, fail fast 
+        # 5. if any Exception occurs, fail fast 
         write_failed(run_dir, repr(e))
 
-        # 2.b.2
         write_manifest(
             run_dir,
             sw_config=sw_config,
@@ -535,4 +538,6 @@ def ingest_k_index_run(
             status="FAILED",
             extra={"error": repr(e)},
         )
+
+        # reraise the original exception with full traceback.
         raise

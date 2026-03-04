@@ -899,6 +899,404 @@ class TestManifestAndChunkWrites(unittest.TestCase):
             parsed = [json.loads(line) for line in lines]
             self.assertEqual(parsed, rows)
 
+class TestIngestKIndexRunUnit(unittest.TestCase):
+    """
+    Unit test the `ingest_k_index_run` "orchestrator" function to 
+    ingest K-index data, following the AAA format. 
+
+    Arrange: patch helpers that do I/O/network/time (iter_k_index_chunks, write_manifest,
+    write_chunk_jsonl, write_success, write_failed, _run_id_utc), provide minimal config.
+
+    Act: call ingest_k_index_run(...).
+
+    Assert the following invariants:
+    - run_dir format correct
+    - manifest written at least twice with statuses RUNNING and SUCCESS (or FAILED)
+    - iter_k_index_chunks called once
+    - write_chunk_jsonl called N times (N = number of yielded chunks)
+    - write_success called once on success; write_failed called once on failure
+    - on failure: re-raises
+
+    I.e. `Assert` in this case does not check output directly (since `ingest_k_index_run` mainly
+    outputs side effects).
+    - So it mainly asserts the correct number of function calls and the parameters 
+    passed to them are also correct
+    """
+
+    @classmethod # can only access static variables -- executed once before all tests. 
+    def setUpClass(cls):
+        cls.base_cfg = {
+            "date_fmt": "%Y-%m-%d %H:%M:%S",
+            "ingestion": {
+                "k_index": {
+                    "raw_base_dir": "data/01-raw/space_weather/k_index"
+                }
+            },
+        }
+        cls.location = "Australian region"
+
+    def _arrange_success_two_chunks(self):
+        """
+        Helper for success-path setup.
+        Returns:
+            cfg, run_id, chunks, returned_paths
+        """
+        cfg = copy.deepcopy(self.base_cfg)
+
+        run_id = "20250101T000000Z"
+
+        chunk1 = kidx.KIndexChunk(
+            chunk_start=datetime(2025,1,1,0,0,0),
+            chunk_end=datetime(2025,1,2,0,0,0),
+            data=[{"a":1}]
+        )
+
+        chunk2 = kidx.KIndexChunk(
+            chunk_start=datetime(2025,1,2,0,0,0),
+            chunk_end=datetime(2025,1,3,0,0,0),
+            data=[{"b":2},{"c":3}]
+        )
+
+        chunks = [chunk1, chunk2]
+
+        # note that write_chunk_jsonl returns a Path -- during ingestion write_chunk_jsonl is executed in a loop,
+        # returning multiple values (will be supplied to the `side_effect` attribute in the relevant mock)
+        returned_paths = [
+            Path("chunk_1.jsonl"),
+            Path("chunk_2.jsonl")
+        ]
+
+        return cfg, run_id, chunks, returned_paths
+    
+
+
+    @patch("src.ingest.space_weather_k_index.tqdm", side_effect=lambda it, **k: it) #tqdm is patched -- simply returns the iterable/iterator
+    @patch("src.ingest.space_weather_k_index.write_success")
+    @patch("src.ingest.space_weather_k_index.write_chunk_jsonl")
+    @patch("src.ingest.space_weather_k_index.iter_k_index_chunks")
+    @patch("src.ingest.space_weather_k_index.write_manifest")
+    @patch("src.ingest.space_weather_k_index._run_id_utc")
+    def test_ingest_k_index_run_success_contract(
+        self,
+        mock_run_id,
+        mock_write_manifest,
+        mock_iter_chunks,
+        mock_write_chunk_jsonl,
+        mock_write_success,
+        mock_tqdm,
+    ):
+        """
+        Contract:
+        - run_dir = raw_base_dir/run_id=<run_id>
+        - manifest written RUNNING then SUCCESS
+        - chunks iterated and written via write_chunk_jsonl
+        - _SUCCESS marker written
+        """
+
+        # ----------------
+        # Arrange
+        # ----------------
+        cfg, run_id, chunks, returned_paths = self._arrange_success_two_chunks()
+
+        mock_run_id.return_value = run_id
+        mock_iter_chunks.return_value = iter(chunks)
+        mock_write_chunk_jsonl.side_effect = returned_paths
+
+        expected_run_dir = (
+            Path(cfg["ingestion"]["k_index"]["raw_base_dir"])
+            / f"run_id={run_id}"
+        )
+
+        # ----------------
+        # Act
+        # ----------------
+        out_run_dir = kidx.ingest_k_index_run(
+            cfg,
+            location=self.location,
+            start="2025-01-01 00:00:00",
+            end="2025-01-03 00:00:00",
+        )
+
+        # ----------------
+        # Assert
+        # ----------------
+
+        # return value
+        self.assertEqual(out_run_dir, expected_run_dir)
+
+        # iter called once
+        mock_iter_chunks.assert_called_once()
+
+        # chunk writes: called exactly N times (N = number of yielded chunks)
+        self.assertEqual(
+            mock_write_chunk_jsonl.call_count,
+            len(chunks)
+        )
+
+        # validate parameters passed to each call of write_chunk_jsonl
+        # i.e. validate that chunk is written in the correct run directory
+        for call, expected_chunk in zip(mock_write_chunk_jsonl.call_args_list, chunks):
+            args, kwargs = call
+            self.assertEqual(args[0], expected_run_dir)
+            self.assertEqual(kwargs["chunk_start"], expected_chunk.chunk_start)
+            self.assertEqual(kwargs["chunk_end"], expected_chunk.chunk_end)
+            self.assertEqual(kwargs["chunk_data"], expected_chunk.data)
+
+        # success marker written
+        mock_write_success.assert_called_once_with(expected_run_dir)
+
+        # manifest written twice
+        self.assertEqual(mock_write_manifest.call_count, 2)
+
+        # first write_manifest call: RUNNING
+        args0, kwargs0 = mock_write_manifest.call_args_list[0]
+
+        self.assertEqual(args0[0], expected_run_dir)
+        self.assertEqual(kwargs0["status"], "RUNNING")
+        self.assertEqual(kwargs0["location"], self.location)
+
+        # second write_manifest call: SUCCESS
+        args1, kwargs1 = mock_write_manifest.call_args_list[1]
+
+        self.assertEqual(args1[0], expected_run_dir)
+        self.assertEqual(kwargs1["status"], "SUCCESS")
+
+        # validate summary metadata (`extra` parameter in write_manifest)
+        expected_total_rows = sum(len(c.data) for c in chunks)
+
+        self.assertEqual(
+            kwargs1["extra"]["total_rows"],
+            expected_total_rows
+        )
+
+        self.assertEqual(
+            kwargs1["extra"]["chunk_files"],
+            [p.name for p in returned_paths]
+        )
+
+    @patch("src.ingest.space_weather_k_index.tqdm", side_effect=lambda it, **k: it)
+    @patch("src.ingest.space_weather_k_index.write_failed")
+    @patch("src.ingest.space_weather_k_index.write_success")
+    @patch("src.ingest.space_weather_k_index.write_chunk_jsonl")
+    @patch("src.ingest.space_weather_k_index.iter_k_index_chunks")
+    @patch("src.ingest.space_weather_k_index.write_manifest")
+    @patch("src.ingest.space_weather_k_index._run_id_utc")
+    def test_ingest_k_index_run_failure_contract(
+        self,
+        mock_run_id,
+        mock_write_manifest,
+        mock_iter_chunks,
+        mock_write_chunk_jsonl,
+        mock_write_success,
+        mock_write_failed,
+        mock_tqdm,
+    ):
+        """
+        Contract (failure path):
+        - manifest written RUNNING
+        - if an exception occurs, for instance, during chunk writing:
+            - write_failed is called
+            - manifest is written FAILED with error info
+            - exception is re-raised 
+        """
+
+        # ----------------
+        # Arrange
+        # ----------------
+        cfg = copy.deepcopy(self.base_cfg)
+        run_id = "20250101T000000Z"
+        mock_run_id.return_value = run_id
+
+        chunk1 = kidx.KIndexChunk(
+            chunk_start=datetime(2025, 1, 1, 0, 0, 0),
+            chunk_end=datetime(2025, 1, 2, 0, 0, 0),
+            data=[{"a": 1}],
+        )
+        mock_iter_chunks.return_value = iter([chunk1])
+
+        # Force failure during write
+        mock_write_chunk_jsonl.side_effect = RuntimeError("disk write failed")
+
+        expected_run_dir = (
+            Path(cfg["ingestion"]["k_index"]["raw_base_dir"])
+            / f"run_id={run_id}"
+        )
+
+        # ----------------
+        # Act + Assert (re-raise)
+        # ----------------
+        with self.assertRaises(RuntimeError):
+            kidx.ingest_k_index_run(
+                cfg,
+                location=self.location,
+                start="2025-01-01 00:00:00",
+                end="2025-01-02 00:00:00",
+            )
+
+        # ----------------
+        # Assert (effects)
+        # ----------------
+
+        # success marker must NOT be written
+        mock_write_success.assert_not_called()
+
+        # failed marker must be written for this run_dir
+        mock_write_failed.assert_called_once()
+        args_failed, _ = mock_write_failed.call_args
+        self.assertEqual(args_failed[0], expected_run_dir)
+
+        # manifest must be written at least twice: RUNNING then FAILED
+        self.assertGreaterEqual(mock_write_manifest.call_count, 2)
+
+        # first write_manifest call should be RUNNING and use correct run_dir
+        args0, kwargs0 = mock_write_manifest.call_args_list[0]
+        self.assertEqual(args0[0], expected_run_dir)
+        self.assertEqual(kwargs0["status"], "RUNNING")
+
+        # last write_manifest call should be FAILED and contain error info
+        args_last, kwargs_last = mock_write_manifest.call_args_list[-1]
+        self.assertEqual(args_last[0], expected_run_dir)
+        self.assertEqual(kwargs_last["status"], "FAILED")
+        self.assertIn("extra", kwargs_last)
+        self.assertIn("error", kwargs_last["extra"])
+
+
+class TestIngestKIndexRunIntegration(unittest.TestCase):
+
+    """
+
+    Arrange: temp directory, dummy config, patch only the network boundary
+    (e.g. post_k_index or requests.post) so it’s deterministic.
+
+    Act: call ingest_k_index_run(...).
+
+    Assert created filesystem artifacts:
+    - run_dir exists
+    - _manifest.json exists + fields (status, start/end, melb/utc strings)
+    - chunk .jsonl files exist + line counts + JSON parses
+    - _SUCCESS exists (or _FAILED for failure case)
+
+    """
+
+
+    @classmethod
+    def setUpClass(cls):
+        cls.location = "Australian region"
+        cls.run_id = "20250101T000000Z"
+
+        # Keep chunking simple: 2 chunks for Jan1->Jan3 with chunk_days=1
+        cls.start = "2025-01-01 00:00:00"
+        cls.end = "2025-01-03 00:00:00"
+
+
+    @patch("src.ingest.space_weather_k_index.tqdm", side_effect=lambda it, **k: it)
+    @patch("src.ingest.space_weather_k_index._run_id_utc")
+    @patch("src.ingest.space_weather_k_index.post_k_index")
+    def test_ingest_k_index_run_writes_expected_artifacts(
+        self,
+        mock_post_k_index,
+        mock_run_id,
+        mock_tqdm,
+    ):
+        """
+        This integration test:
+        - uses tempfile.TemporaryDirectory() as the raw base dir
+        - patches _run_id_utc so the run folder name is deterministic
+        - patches post_k_index to return deterministic rows per chunk (via side_effect)
+        - does REAL write_manifest, write_chunk_jsonl, write_success
+
+        Integration-ish contract:
+        - creates run_dir under raw_base_dir/run_id=...
+        - writes _manifest.json (RUNNING then SUCCESS)
+        - writes chunk JSONL files
+        - writes _SUCCESS marker
+        - all artifacts exist and have expected minimal content
+        """
+
+        # ------------------
+        # Arrange
+        # ------------------
+
+        mock_run_id.return_value = self.run_id
+
+        # Simulate two chunk fetches (because Jan1->Jan3 with chunk_days=1 yields 2 chunks).
+        mock_post_k_index.side_effect = [
+            [{"row": 1}],                 # chunk 1 data
+            [{"row": 2}, {"row": 3}],     # chunk 2 data
+        ]
+
+        with tempfile.TemporaryDirectory() as td:
+            raw_base_dir = Path(td) / "k_index_raw"
+            cfg = {
+                "api_key": "DUMMY",
+                "base_url": "https://sws-data.sws.bom.gov.au/api/v1",
+                "endpoints": {"k_index": "get-k-index"},
+                "date_fmt": "%Y-%m-%d %H:%M:%S",
+                "ingestion": {
+                    "k_index": {
+                        "raw_base_dir": str(raw_base_dir),
+                        "chunk_days": 1,
+                        "sleep_seconds": 0,
+                        "timeout_s": 12,
+                    }
+                },
+            }
+
+            # ------------------
+            # Act
+            # ------------------
+            run_dir = kidx.ingest_k_index_run(
+                cfg,
+                location=self.location,
+                start=self.start,
+                end=self.end,
+            )
+
+            # ------------------
+            # Assert
+            # ------------------
+            expected_run_dir = raw_base_dir / f"run_id={self.run_id}"
+            self.assertEqual(run_dir, expected_run_dir)
+            self.assertTrue(run_dir.exists())
+
+            # Success marker exists in temp directory
+            self.assertTrue((run_dir / "_SUCCESS").exists())
+            self.assertFalse((run_dir / "_FAILED").exists())
+
+            # Manifest exists and status SUCCESS in temp directory
+            manifest_path = run_dir / "_manifest.json"
+            self.assertTrue(manifest_path.exists())
+
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(manifest["status"], "SUCCESS")
+            self.assertEqual(manifest["run_id"], self.run_id)
+            self.assertEqual(manifest["location"], self.location)
+
+            # Minimal: chunk files recorded and total_rows correct
+            self.assertIn("extra", manifest)
+            self.assertEqual(manifest["extra"]["total_rows"], 3)
+            chunk_files = manifest["extra"]["chunk_files"]
+            self.assertEqual(len(chunk_files), 2)
+
+            # Each chunk file exists in temp directory and is a valid JSONL
+            for fname in chunk_files:
+
+                p = run_dir / fname
+                self.assertTrue(p.exists())
+
+                lines = p.read_text(encoding="utf-8").splitlines()
+                # each line must be valid JSON object
+                for line in lines:
+                    obj = json.loads(line)
+                    self.assertIsInstance(obj, dict)
+
+            # Also assert we didn't leave .tmp artifacts behind
+            tmp_files = list(run_dir.glob("*.tmp"))
+            self.assertEqual(tmp_files, [])
+
+            # Network mocked: ensure we called it twice (two chunks)
+            self.assertEqual(mock_post_k_index.call_count, 2)
+
 
 # use the main() method from unittest to run the tests in CLI
 if __name__ == '__main__':
