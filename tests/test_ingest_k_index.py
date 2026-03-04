@@ -1273,9 +1273,8 @@ class TestIngestKIndexRunIntegration(unittest.TestCase):
             self.assertEqual(manifest["location"], self.location)
 
             # Minimal: chunk files recorded and total_rows correct
-            self.assertIn("extra", manifest)
-            self.assertEqual(manifest["extra"]["total_rows"], 3)
-            chunk_files = manifest["extra"]["chunk_files"]
+            self.assertEqual(manifest["total_rows"], 3)
+            chunk_files = manifest["chunk_files"]
             self.assertEqual(len(chunk_files), 2)
 
             # Each chunk file exists in temp directory and is a valid JSONL
