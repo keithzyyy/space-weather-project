@@ -10,7 +10,7 @@ python-dotenv==1.0.0 # for hiding API keys
 matplotlib
 seaborn
 
-# modeling (you can add more later)
+# modeling (we can add more later)
 scikit-learn==1.4.0
 
 # jupyter
