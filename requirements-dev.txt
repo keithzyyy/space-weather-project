@@ -1,5 +1,9 @@
+# NOTE: this text file represents the required dependencies only, not a snapshot of the entire environment.
+# So do not run `pip freeze > requirements-dev.txt`. 
+
 # following versions are known to work together on Python 3.11 and Windows
-# core utilities
+# core utilities (e.g. preprocessing)
+duckdb
 pandas==2.2.0
 numpy==1.26.4
 requests==2.31.0
@@ -20,3 +24,5 @@ ipykernel
 # testing
 pytest==7.4.4
   
+
+
