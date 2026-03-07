@@ -8,11 +8,16 @@
     - A `_SUCCESS.txt` or `_FAILURE.txt` indicating status of ingestion
 
 
-## Preliminary thoughts
+## Preprocessing approach
+1. Create a table `T1` where one row = one fetched K-index datum from one run with columns: `location`, `valid_time`, `analysis_time`, `kindex`, `run_id`. Here `valid_time`, `analysis_time` are defined from the SW API specification: start of 3 hour period and exact timestamp of measurement respectively.
+2. Construct a canonical ML-ready table `T2` where one row = one canonical K-index observation for modelling with columns: `location`, `observed_time`, `kindex`. Here, `observed_time` is defined as `valid_time`
+
+
+## Preliminary thoughts on inefficiencies
 - Retrieving/querying the data lake directly to parse historical/latest K-index data would not be efficient (reading directly from disk).
 
 
-## What do you want the final data to look like
-- A table with the fields `(location, observed_time, kindex)`
-    - What to decide for `observed_time`? There are 2 time fields returned: `valid_time` (start of 3hour period) and `analysis_time` (exact timestamp when the K-index is calculated).
-    - Simplest option is to use `analysis_time`, but since our goal is ML prediction, would it make more sense to say "predict K-index in the next 3 hours"? So we use the `valid_time` field value, but treat it as a 3hour window (e.g. `2015-02-27 15:00:00` means K-index retrieved in the time window `(2015-02-27 15:00:00, 2015-02-27 18:00:00)`).  
+## Duplicate definition
+
+## Conflict resolution on duplicates
+
