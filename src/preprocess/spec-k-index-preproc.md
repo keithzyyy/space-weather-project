@@ -46,10 +46,11 @@
 
 - Maintain a JSON index file to track run IDs that have been processed.
 - P1 performs a linear scan of run IDs in the data lake, pick the **oldest** run (not on the JSON index) to be appended to T1, and update the index. Why oldest? so that old data do not sit on the lake forever.
-- P2 wipes the JSON index file, overwrites `T1` and builds from scratch, and populate the JSON index file with all successful runIDs.
+- P2 wipes the contents JSON index file, overwrites `T1` and builds from scratch, and populate the JSON index file with all successful runIDs.
 
 ## 3. Important edge cases
-- Do not process data from an unsuccessful run. 
+- Do not process data from an unsuccessful run.
+- What if successful run returns empty data (no `jsonl` chunks)? no need to append empty data. 
 
 ## 4. Failure modes
 
