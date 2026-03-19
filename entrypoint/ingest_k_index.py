@@ -1,7 +1,7 @@
 """
 How to run `entrypoint/ingest_k_index.py in the terminal:
 
-`python -m entrypoint.ingest_k_index --config_path "config/local.yaml" -- location "Australian region" --start .. --end ..`
+`python -m entrypoint.ingest_k_index --config_path "config/local.yaml" --location "Australian regionnnn" --start "2025-01-01 00:00:00" --end "2025-02-02 00:00:00"`
 
 Why use `-m`?
 > We agreed that importing custom modules must start from the root (e.g. src.io.load_config, src.ingest.space_weather_k_index)
