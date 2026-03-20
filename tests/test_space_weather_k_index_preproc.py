@@ -82,6 +82,8 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
 
         self.raw_dir.mkdir(parents=True, exist_ok=True)
 
+        self.manifest_file_name = "_manifest.json"
+
         # Named fixture cases.
         # These names are what tests refer to, so assertions read like intent.
         self.run_cases: dict[str, dict[str, Any]] = {
@@ -148,7 +150,7 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
             "location": location,
             "status": status,
         }
-        (run_dir / "_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+        (run_dir / f"{self.manifest_file_name}").write_text(json.dumps(manifest), encoding="utf-8")
 
         marker_name = "_SUCCESS.txt" if status == "SUCCESS" else "_FAILURE.txt"
         (run_dir / marker_name).write_text(status, encoding="utf-8")
@@ -386,7 +388,7 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
            - failed runs must contribute no rows
         """
 
-        manifest_paths = sorted(str(p.as_posix()) for p in self.raw_dir.rglob("_manifest.json"))
+        manifest_paths = sorted(str(p.as_posix()) for p in self.raw_dir.rglob(self.manifest_file_name))
         jsonl_paths = sorted(str(p.as_posix()) for p in self.raw_dir.rglob("*.jsonl"))
 
         select_sql = build_t1_select_sql(
@@ -452,6 +454,7 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
         rebuild_successful_runs(
             fetched_k_index_relative_dir=str(self.raw_dir),
             T1_output_path=str(self.t1_dir),
+            manifest_file_name=self.manifest_file_name
         )
 
         # Assertion enforcing the materialized dataset schema contract.
@@ -506,6 +509,7 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
         first_oldest = pick_oldest_successful_run_preproc(
             fetched_k_index_relative_dir=str(self.raw_dir),
             T1_path=str(self.t1_dir),
+            manifest_file_name=self.manifest_file_name
         )
         self.assertEqual(
             first_oldest,
@@ -516,6 +520,7 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
         increment_successful_run(
             fetched_k_index_relative_dir=str(self.raw_dir),
             T1_path=str(self.t1_dir),
+            manifest_file_name=self.manifest_file_name
         )
 
         actual_after_first_increment = self._read_t1_json_records()
@@ -534,6 +539,7 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
         second_oldest = pick_oldest_successful_run_preproc(
             fetched_k_index_relative_dir=str(self.raw_dir),
             T1_path=str(self.t1_dir),
+            manifest_file_name=self.manifest_file_name
         )
 
         self.assertEqual(
@@ -547,6 +553,7 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
         increment_successful_run(
             fetched_k_index_relative_dir=str(self.raw_dir),
             T1_path=str(self.t1_dir),
+            manifest_file_name=self.manifest_file_name
         )
 
         actual_after_second_increment = self._read_t1_json_records()
@@ -566,6 +573,7 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
         no_more = pick_oldest_successful_run_preproc(
             fetched_k_index_relative_dir=str(self.raw_dir),
             T1_path=str(self.t1_dir),
+            manifest_file_name=self.manifest_file_name
         )
 
         # Assertion enforcing the "nothing left to process" contract.
