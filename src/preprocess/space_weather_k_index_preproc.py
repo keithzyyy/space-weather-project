@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import Iterable, Optional, Sequence
 
 import duckdb
-
+import logging
+logger = logging.getLogger(__name__)
 
 """
 TLDR explanation of this module:
@@ -29,9 +30,9 @@ properly closed after use.
 """
 
 
-DEFAULT_RAW_DIR = "data/01-raw/space_weather/k_index"
-DEFAULT_T1_DIR = "data/02-preproc/space_weather/k_index/T1"
-DEFAULT_MANIFEST_FILE_NAME = "_manifest.json"
+# DEFAULT_RAW_DIR = "data/01-raw/space_weather/k_index"
+# DEFAULT_T1_DIR = "data/02-preproc/space_weather/k_index/T1"
+# DEFAULT_MANIFEST_FILE_NAME = "_manifest.json"
 RUN_DIR_PATTERN = r".*/run_id=([^/]+)/.*"
 
 
@@ -77,7 +78,7 @@ def _extract_run_id_from_path(path: Path) -> str:
 
 def _discover_manifest_paths(
     fetched_k_index_relative_dir: str | Path,
-    manifest_file_name: str = DEFAULT_MANIFEST_FILE_NAME,
+    manifest_file_name: str,
 ) -> list[Path]:
     
     """Discover all manifest file paths under the fetched K-index raw directory."""
@@ -88,7 +89,7 @@ def _discover_manifest_paths(
 
 def _discover_successful_manifests(
     fetched_k_index_relative_dir: str | Path,
-    manifest_file_name: str = DEFAULT_MANIFEST_FILE_NAME,
+    manifest_file_name: str,
     success_status: str = "SUCCESS",
 ) -> list[Path]:
     
@@ -146,9 +147,9 @@ def _read_processed_run_ids(T1_path: str | Path, con: Optional[duckdb.DuckDBPyCo
 
 
 def pick_oldest_successful_run_preproc(
-    fetched_k_index_relative_dir: str = DEFAULT_RAW_DIR,
-    T1_path: str = DEFAULT_T1_DIR,
-    manifest_file_name: str = DEFAULT_MANIFEST_FILE_NAME,
+    fetched_k_index_relative_dir: str,
+    T1_path: str,
+    manifest_file_name: str,
 ) -> str:
     
 
@@ -250,7 +251,7 @@ ON s.run_id = o.run_id
 
 def write_t1(
     select_sql: str,
-    T1_output_path: str = DEFAULT_T1_DIR,
+    T1_output_path: str,
     mode: str = "append",
     partition_by: Sequence[str] = ("run_id",),
     con: Optional[duckdb.DuckDBPyConnection] = None,
@@ -312,14 +313,15 @@ TO '{tmp_output.as_posix()}'
 
 
 def increment_successful_run(
-    fetched_k_index_relative_dir: str = DEFAULT_RAW_DIR,
-    T1_path: str = DEFAULT_T1_DIR,
-    manifest_file_name: str = DEFAULT_MANIFEST_FILE_NAME,
+    fetched_k_index_relative_dir: str,
+    T1_path: str,
+    manifest_file_name: str,
 ) -> Optional[Path]:
     """Process one oldest successful-unprocessed run into T1.
 
     Returns the T1 path when a run is processed, or None when there is nothing to do.
     """
+    logger.info(" Starting incremental preprocessing of new ingested K-index data since the last successful run...")
 
     # 1. find the oldest successful run_id not yet present in T1
     run_id = pick_oldest_successful_run_preproc(
@@ -328,6 +330,7 @@ def increment_successful_run(
         manifest_file_name=manifest_file_name,
     )
     if not run_id:
+        logger.info(" 🏁 No new successful runs found for incremental preprocessing. T1 is up to date.")
         return None
 
     # 2. find corresponding run manifest (for location info) and jsonl paths (for kindex obs)
@@ -343,6 +346,7 @@ def increment_successful_run(
     )
 
     # 3. write to T1 in append mode partitioned by run_id
+    logger.info(f" Found successful run_id={run_id} for incremental preprocessing. Writing to T1...")
     return write_t1(select_sql,
                     T1_output_path=T1_path,
                     mode="append",
@@ -350,11 +354,13 @@ def increment_successful_run(
 
 
 def rebuild_successful_runs(
-    fetched_k_index_relative_dir: str = DEFAULT_RAW_DIR,
-    T1_output_path: str = DEFAULT_T1_DIR,
-    manifest_file_name: str = DEFAULT_MANIFEST_FILE_NAME,
+    fetched_k_index_relative_dir: str,
+    T1_output_path: str,
+    manifest_file_name: str,
 ) -> Path:
     """Rebuild T1 from all successful runs, including successful empty runs."""
+
+    logger.info(" Starting to rebuild the T1 preprocessed K-index dataset from scratch by reprocessing all raw ingested K-index jsonl files...")
 
     # 1. find all successful manifests (via manifests' status), sorted by created_at_utc ascending
     successful_manifests = _discover_successful_manifests(
@@ -381,6 +387,7 @@ def rebuild_successful_runs(
     )
 
     # 4. write to T1 in overwrite mode partitioned by run_id
+    logger.info(f" Found {len(successful_manifests)} successful runs for rebuilding T1. Writing to T1 with overwrite mode...")
     return write_t1(select_sql,
                     T1_output_path=T1_output_path,
                     mode="overwrite",
