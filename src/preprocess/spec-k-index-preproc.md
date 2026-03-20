@@ -225,5 +225,14 @@ transform(
 ---
 
 
-## 6. Any remarks?
+## 6. ⚠️ Important remark on unit tests
+Unit tests **must be derived from the spec** of each function:
+1. expected behavior
+2. invariants / schema contracts
+3. important edge cases
+4. failure modes
+
+Assertions **should validate those contracts directly**, not incidental ordering, formatting, or hardcoded fixture details unless those are explicitly part of the contract.
+
+## 7. Finally, any remarks?
 - An alternative way to handle successful run with empty data is to write an empty jsonl during ingestion, so that no data does not mean "no jsonl chunks" but rather an empty json, which is more intuitive. But for now, simply work with what we have. 
