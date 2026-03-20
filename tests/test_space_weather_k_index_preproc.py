@@ -24,10 +24,15 @@ Why these tests use a temporary directory:
 - Each test gets its own fake raw data lake and fake T1 output directory.
 - This keeps tests isolated from the real project files and from each other.
 
-How unittest works here:
-- setUp():
+How unittest works here (aligning with AAA testing framework):
+- setUp(): 
+    The arrange-like step for each test.
     Runs BEFORE EACH test method.
     Creates a fresh temporary directory and populates it with fake ingestion runs.
+
+- test*():
+    The act and assert steps for each test case.
+    Each method prefixed with "test" is a separate test case.
 
 - tearDown():
     Runs AFTER EACH test method.
@@ -60,8 +65,9 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
     def setUp(self) -> None:
         """
         Create a fresh fake raw lake and fake T1 output location for each test.
+        The "Arrange"-like step for each test (based on AAA framework)
 
-        The fixture is stored as named case metadata so tests do not need to
+        The fixture is stored as named case metadata (e.g. "success_with_data") so tests do not need to
         hardcode magic run_ids and then mentally cross-reference setUp().
         """
 
@@ -185,7 +191,8 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
 
     def _expected_t1_records_for_cases(self, case_names: list[str]) -> list[dict[str, Any]]:
         """
-        Build the expected JSON-like T1 records for the named fixture cases.
+        Build the expected JSON-like T1 records for the named fixture cases,
+        For e.g. "success_with_data" and "success_empty", see run_cases in setUp().
 
         For successful runs with rows:
         - one T1 row per raw observation row
@@ -392,8 +399,9 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
 
         actual_records = self._query_to_json_records(select_sql)
 
+        # keys as per self.run_cases, not hardcoded run_ids (to avoid brittle tests) 
         expected_records = self._expected_t1_records_for_cases(
-            ["success_with_data", "success_empty"]
+            ["success_with_data", "success_empty"] 
         )
 
         # Assertion enforcing content contract:
@@ -439,7 +447,8 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
         4. Edge case:
            - failed runs are excluded
         """
-
+        # Act step: run the P2 rebuild function to materialize T1 from the raw runs.
+        # no output because it writes a parquet dataset, which we will read and assert against below.
         rebuild_successful_runs(
             fetched_k_index_relative_dir=str(self.raw_dir),
             T1_output_path=str(self.t1_dir),
@@ -474,6 +483,11 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
         """
         Test P1 incremental behavior.
 
+        Note BOTH pick_oldest_successful_run_preproc and increment_successful_run are tested together here
+        because they are tightly coupled:
+        - the picker identifies which run to process, and the
+        - increment function processes it and updates T1, which in turn affects the next pick.
+
         Contracts enforced:
         1. Expected behavior:
            - pick_oldest_successful_run_preproc returns the oldest successful unprocessed run
@@ -487,7 +501,8 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
 
         expected_success_run_ids = self._expected_success_run_ids()
 
-        # Assertion enforcing the oldest-first selection rule from the spec.
+        # 1. FIRST OLDEST PICK + INCREMENT
+        # Act + Assertion enforcing the oldest-first selection rule from the spec.
         first_oldest = pick_oldest_successful_run_preproc(
             fetched_k_index_relative_dir=str(self.raw_dir),
             T1_path=str(self.t1_dir),
@@ -515,16 +530,20 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
             msg="After first P1 increment, T1 must contain only the oldest successful run.",
         )
 
+        # 2. SECOND OLDEST PICK + INCREMENT
         second_oldest = pick_oldest_successful_run_preproc(
             fetched_k_index_relative_dir=str(self.raw_dir),
             T1_path=str(self.t1_dir),
         )
+
         self.assertEqual(
             second_oldest,
             expected_success_run_ids[1],
             msg="After processing the first run, P1 must pick the next oldest successful run.",
         )
 
+        # no output, side effect is that the second run is now processed and appended to T1,
+        # which we will assert against below.
         increment_successful_run(
             fetched_k_index_relative_dir=str(self.raw_dir),
             T1_path=str(self.t1_dir),
@@ -541,6 +560,8 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
             self._canonical_json_strings(expected_after_second_increment),
             msg="After second P1 increment, T1 must also contain the empty-run sentinel row.",
         )
+
+        # 3. PICK WHEN ALL PROCESSED
 
         no_more = pick_oldest_successful_run_preproc(
             fetched_k_index_relative_dir=str(self.raw_dir),
