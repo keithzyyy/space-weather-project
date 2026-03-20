@@ -31,3 +31,13 @@ Below is an example:
         * *Behavior:* Orchestrates the two-step squashing approach.
 ```
 
+## 6. ⚠️ Important remark on unit tests
+Unit tests **must be derived from the spec** of each function:
+1. expected behavior
+2. invariants / schema contracts
+3. important edge cases
+4. failure modes
+
+Assertions **should validate those contracts directly**, not incidental ordering, formatting, or hardcoded fixture details unless those are explicitly part of the contract.
+
+## 7. Finally, any remarks?
