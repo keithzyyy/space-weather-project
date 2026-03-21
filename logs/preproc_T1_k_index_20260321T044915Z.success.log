@@ -1,0 +1,3 @@
+[2026-03-21 15:49:15,197 - INFO]  Rebuild flag is not set.
+[2026-03-21 15:49:15,197 - INFO]  Starting incremental preprocessing of new ingested K-index data since the last successful run...
+[2026-03-21 15:49:15,641 - INFO]  🏁 No new successful runs found for incremental preprocessing. T1 is up to date.
