@@ -1,0 +1,22 @@
+[2026-03-21 15:29:34,550 - INFO]  Rebuild flag is set.
+[2026-03-21 15:29:34,550 - INFO]  Starting to rebuild the T1 preprocessed K-index dataset from scratch by reprocessing all raw ingested K-index jsonl files...
+[2026-03-21 15:29:34,559 - INFO]  Found 8 successful runs for rebuilding T1. Writing to T1 with overwrite mode...
+[2026-03-21 15:29:34,791 - ERROR] Unhandled failure during entrypoint execution.
+Traceback (most recent call last):
+  File "C:\Users\Keith\OneDrive\Post uni\Personal projects\space-weather-project\entrypoint\preproc_T1_k_index.py", line 174, in main
+    rebuild_successful_runs(
+  File "C:\Users\Keith\OneDrive\Post uni\Personal projects\space-weather-project\src\preprocess\space_weather_k_index_preproc.py", line 400, in rebuild_successful_runs
+    return write_t1(select_sql,
+           ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Keith\OneDrive\Post uni\Personal projects\space-weather-project\src\preprocess\space_weather_k_index_preproc.py", line 311, in write_t1
+    shutil.rmtree(output_path)
+  File "D:\OneDrive\Documents\anaconda\envs\space-weather-project\Lib\shutil.py", line 787, in rmtree
+    return _rmtree_unsafe(path, onerror)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\OneDrive\Documents\anaconda\envs\space-weather-project\Lib\shutil.py", line 629, in _rmtree_unsafe
+    _rmtree_unsafe(fullname, onerror)
+  File "D:\OneDrive\Documents\anaconda\envs\space-weather-project\Lib\shutil.py", line 638, in _rmtree_unsafe
+    onerror(os.rmdir, path, sys.exc_info())
+  File "D:\OneDrive\Documents\anaconda\envs\space-weather-project\Lib\shutil.py", line 636, in _rmtree_unsafe
+    os.rmdir(path)
+PermissionError: [WinError 5] Access is denied: 'data\\02-preprocessed\\space_weather\\k_index\\run_id=20260307T050056Z'

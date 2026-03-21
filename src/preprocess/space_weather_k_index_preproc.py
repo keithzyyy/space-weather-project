@@ -29,10 +29,6 @@ properly closed after use.
 
 """
 
-
-# DEFAULT_RAW_DIR = "data/01-raw/space_weather/k_index"
-# DEFAULT_T1_DIR = "data/02-preproc/space_weather/k_index/T1"
-# DEFAULT_MANIFEST_FILE_NAME = "_manifest.json"
 RUN_DIR_PATTERN = r".*/run_id=([^/]+)/.*"
 
 
@@ -198,8 +194,7 @@ def build_t1_select_sql(
     manifest_paths = [Path(p).as_posix() for p in manifest_paths]
     jsonl_paths = [Path(p).as_posix() for p in jsonl_paths]
 
-    # 1. construct the jsonl source SQL. If jsonl_paths is empty,
-    # construct a dummy source with the same schema but no rows.
+    # 1. construct the jsonl source SQL.
     if jsonl_paths:
         jsonl_source_sql = (
             "SELECT "
@@ -209,7 +204,9 @@ def build_t1_select_sql(
             'CAST(index AS INTEGER) AS kindex '\
             f"FROM read_json_auto({repr(jsonl_paths)}, union_by_name=true)"
         )
-    else:
+    # if absolutely no jsonl paths, use a dummy SELECT with the same schema but no rows, so that
+    # the LEFT JOIN still works and yields exactly one row with NULL obs values for successful empty runs
+    else: 
         jsonl_source_sql = (
             "SELECT "
             "CAST(NULL AS VARCHAR) AS run_id, "
