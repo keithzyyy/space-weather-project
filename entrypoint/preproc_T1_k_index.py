@@ -26,7 +26,7 @@ import argparse
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-
+from typing import Callable
 from src.io.load_config import load_config
 from src.preprocess.space_weather_k_index_preproc import (
     increment_successful_run,
@@ -70,6 +70,28 @@ def setup_logging(log_dir: str | Path, entrypoint_name: str) -> tuple[logging.Lo
     logger = logging.getLogger(__name__)
 
     return logger, log_path
+
+def run_entrypoint_with_logging(
+    entrypoint_name: str,
+    main_logic: Callable[[logging.Logger], None],
+    log_dir: str | Path = "logs",
+) -> None:
+    
+    """Utility function to run any entrypoint logic with standardized logging setup and final log file renaming."""
+
+    logger, log_path = setup_logging(log_dir=log_dir, entrypoint_name=entrypoint_name)
+    status = "running"
+
+    try:
+        main_logic(logger)
+        status = "success"
+    except Exception:
+        logger.exception(f" [{entrypoint_name}] Fatal error during entrypoint execution.")
+        status = "error"
+        raise
+    finally:
+        final_log_path = finalize_log_file(log_path, status)
+        print(f"Log written to: {final_log_path}")
 
 
 def finalize_log_file(log_path: str | Path, status: str) -> Path:
@@ -145,11 +167,13 @@ def main():
     # Parse all arguments as strings into NameSpace(config_path=..., preproc_base_dir=...)
     args = parse_args()
 
-    # Configure logging as early as possible.
-    logger, log_path = setup_logging(log_dir="logs", entrypoint_name="preproc_T1_k_index")
-    status = "running"
+    def _main_logic(logger: logging.Logger) -> None:
 
-    try:
+        """
+        Main logic for T1 K-index preprocessing,
+        separated out to allow for standardized logging setup in the entrypoint.
+        """
+
         # 0. preproc args
         # load the YAML config and defaults
         config = load_config(args.config_path)
@@ -189,19 +213,12 @@ def main():
             if result is not None:
                 logger.info("✅ Incremental preprocessing completed successfully.")
 
-        status = "success"
-
-    except Exception:
-        # 2. catch any unhandled exceptions, log them, and set status to error for log file renaming.
-        # The exception will still be raised after logging, so that it can be surfaced to any external orchestrators (e.g. Airflow) that are monitoring the exit code of this script.
-        logger.exception("Fatal error during entrypoint execution.")
-        status = "error"
-        raise
-
-    finally: 
-        # 3. regardless of outcome, rename the log file to indicate final status (success or error).
-        final_log_path = finalize_log_file(log_path, status)
-        print(f"Log written to: {final_log_path}")
+    # run the main logic with standardized logging setup and final log file renaming
+    run_entrypoint_with_logging(
+        entrypoint_name="preproc_T1_k_index",
+        main_logic=_main_logic,
+        log_dir="logs",
+    )
 
 if __name__ == "__main__":
     main()
