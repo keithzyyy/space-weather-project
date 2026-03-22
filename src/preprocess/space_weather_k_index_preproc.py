@@ -4,9 +4,10 @@ import json
 import shutil
 import tempfile
 from pathlib import Path
+import time
 from typing import Iterable, Optional, Sequence
 
-import duckdb
+import duckdb 
 import logging
 logger = logging.getLogger(__name__)
 
@@ -298,7 +299,15 @@ TO '{tmp_output.as_posix()}'
 
             # Move the temp output to the final output path atomically
             if output_path.exists():
-                shutil.rmtree(output_path)
+                logger.info(f" Removing existing output path before moving new output from temp directory: {output_path}")
+                # possible delay in releasing external lock on output_path,
+                # so we retry a few times with a short sleep in between if we get a PermissionError
+                for _ in range(3):
+                    try:
+                        shutil.rmtree(output_path)
+                        break
+                    except PermissionError:
+                        time.sleep(0.2)
             shutil.move(str(tmp_output), str(output_path))
 
         return output_path

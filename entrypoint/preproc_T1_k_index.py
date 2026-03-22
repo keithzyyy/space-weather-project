@@ -180,7 +180,7 @@ def main():
         sw_config = config['space_weather']
         fetched_k_index_relative_dir_default = sw_config['ingestion']['k_index']['raw_base_dir']
         manifest_file_name_default = sw_config['ingestion']['k_index']['manifest_file_name']
-        T1_relative_dir_default = sw_config['preprocessing']['k_index']['output_dir']
+        T1_relative_dir_default = sw_config['preprocessing']['k_index']['T1_output_dir']
 
         # parse the arguments with fallback to config defaults if not provided
         fetched_k_index_relative_dir = args.fetched_k_index_relative_dir if args.fetched_k_index_relative_dir else fetched_k_index_relative_dir_default
