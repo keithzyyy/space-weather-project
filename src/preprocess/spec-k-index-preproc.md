@@ -83,7 +83,7 @@ Preprocessing pathways
 - P1, P2: Unsuccessful run (RUNNING, FAILURE) outputs jsonl chunks.
     - Action: These should be carefully excluded when constructing T1.
 
-- P1, P2: What if successful run returns empty data (no `jsonl` chunks)?
+- P1, P2: What if successful run returns empty data (<font color="red">empty `jsonl` chunks, BUT they still exist</font> )?
     - Action: **Include only one row with entry: `(location=<manifest>, valid_time=None, analysis_time=None, kindex=None, run_id=...)`** 
 
 - P3: T1 is empty
@@ -155,7 +155,7 @@ build_t1_select_sql(
 ```
 - *Behavior:* Build a DuckDB SELECT query that produces T1 rows from raw successful runs; uses successful manifests as the driving table
 - *Output schema:* `(run_id, location, valid_time, analysis_time, kindex)`
-- *Edge case:* Includes one NULL-observation row `(location=<from manifest>, valid_time=NULL, analysis_time=NULL, kindex=NULL, run_id=...)` for successful runs with no jsonl data, primarily because successful runs with no data yields no jsonl chunks.
+- *Edge case:* Includes one NULL-observation row `(location=<from manifest>, valid_time=NULL, analysis_time=NULL, kindex=NULL, run_id=...)` for successful runs with empty data, primarily because successful runs with no data yields <font color="red">empty `jsonl` chunks</font>.
 - *Use case:* helper for P1 and P2
 
 ---
