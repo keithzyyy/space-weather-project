@@ -397,7 +397,7 @@ def write_chunk_jsonl(
     run_dir.mkdir(parents=True, exist_ok=True)
     fname = chunk_filename(chunk_start, chunk_end)
     path = run_dir / fname
-
+    logger.info(f"Writing chunk to {path} with {len(chunk_data)} observations..")
     # Atomic-ish write for chunk files too
     tmp = path.with_suffix(path.suffix + ".tmp")
     with tmp.open("w", encoding="utf-8") as f:
