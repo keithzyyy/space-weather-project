@@ -15,6 +15,8 @@ from src.preprocess.space_weather_k_index_preproc import (
 
 
 """
+HOW to run test: python -m tests.test_space_weather_k_index_preproc -v
+
 TLDR for this test module
 ------------------------
 Goal:
@@ -129,12 +131,15 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
 
     def _make_run(self, case: dict[str, Any]) -> None:
         """
-        Create one fake ingestion run directory from a case specification.
+        Create one fake ingestion run directory from a case specification (2nd parameter).
+
+        This mimics the real ingestion output structure from the kindex ingest module,
+        which the preprocess module expects as input.
 
         A run directory contains:
         - _manifest.json
         - _SUCCESS.txt or _FAILURE.txt
-        - optional chunk-0001.jsonl if rows are present
+        - chunk-0001.jsonl (if no data this is simply an empty file, but it still exist regardsless)
         """
 
         run_id = case["run_id"]
@@ -145,20 +150,21 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
         run_dir = self.raw_dir / f"run_id={run_id}"
         run_dir.mkdir(parents=True, exist_ok=True)
 
+        # dump manifest and markers
         manifest = {
             "created_at_utc": run_id,
             "location": location,
             "status": status,
         }
         (run_dir / f"{self.manifest_file_name}").write_text(json.dumps(manifest), encoding="utf-8")
-
         marker_name = "_SUCCESS.txt" if status == "SUCCESS" else "_FAILURE.txt"
         (run_dir / marker_name).write_text(status, encoding="utf-8")
 
-        if rows:
-            chunk_path = run_dir / "chunk-0001.jsonl"
-            chunk_text = "\n".join(json.dumps(row) for row in rows)
-            chunk_path.write_text(chunk_text, encoding="utf-8")
+        # note that empty runs STILL yield json files,
+        # just with no rows (updated edge case contract)
+        chunk_path = run_dir / "chunk-0001.jsonl"
+        chunk_text = "\n".join(json.dumps(row) for row in rows)
+        chunk_path.write_text(chunk_text, encoding="utf-8")
 
     def _expected_success_run_ids(self) -> list[str]:
         """
@@ -445,7 +451,7 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
         2. Invariant:
            - materialized T1 dataset preserves the T1 schema
         3. Edge case:
-           - successful-empty runs become one sentinel row
+           - successful-empty runs (i.e. those yield empty jsonl chunks) become one sentinel row
         4. Edge case:
            - failed runs are excluded
         """
@@ -497,7 +503,7 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
         2. Expected behavior:
            - increment_successful_run appends exactly one run into T1 each time
         3. Edge case:
-           - the successful-empty run must still be tracked via a sentinel row
+           - the successful-empty run (i.e. empty jsonl chunks) must still be tracked via a sentinel row
         4. Edge case:
            - once all successful runs are processed, picker returns an empty string sentinel
         """

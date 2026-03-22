@@ -347,8 +347,8 @@ def increment_successful_run(
         raise PreprocessSpecError(f"Missing manifest for run_id={run_id}: {manifest_path}")
 
     select_sql = build_t1_select_sql(
-        manifest_paths=[manifest_path.as_posix()],
-        jsonl_paths=[p.as_posix() for p in _discover_jsonl_paths_for_run(run_dir)],
+        manifest_paths=[manifest_path.as_posix()], # just one manifest for the oldest run.
+        jsonl_paths=[p.as_posix() for p in _discover_jsonl_paths_for_run(run_dir)], # all jsonl paths for the oldest run
     )
 
     # 3. write to T1 in append mode partitioned by run_id
