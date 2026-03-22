@@ -58,11 +58,12 @@ Preprocessing pathways
     3. Compute successful_unprocessed = A \ B
     4. Pick the oldest run in successful_unprocessed
     5. If the run has jsonl chunks, append its rows to T1
-    6. If the run has no jsonl chunks, append one row `(location=<from manifest>, valid_time=None, analysis_time=None, kindex=None, run_id=...)` to T1 so that T1 remains a reliable source for tracking all successful runs (including those yielding empty jsonl chunks)
+    6. If the run has <font color="red">empty `jsonl` chunks (BUT they still exist)</font>, append one row `(location=<from manifest>, valid_time=None, analysis_time=None, kindex=None, run_id=...)` to T1 so that T1 remains a reliable source for tracking all successful runs (including those yielding <font color="red">empty `jsonl` chunks</font>)
 
 - P2 (T1 rebuild)
     1. Build T1 in an intermediate parquet table from all successful runIDs (**success is defined as `STATUS=SUCESSS` in json manifest**)
     2. Overwrites T1 output dir (default is `data/02-preproc/space_weather/k_index/T1/`) with the above table, partitioned by run id
+    - Edge case of empty data from successful runs must also be accounted for.
 
 - P3 (T1 to T2 transform)
     1. reads T1
@@ -179,7 +180,7 @@ increment_successful_run(
 )
 ```
 - *Behavior:* pick the oldest successful run not yet processed to T1
-- *Edge case:* if successful run yields no data, append a NULL sentinel row as follows: `(location=<from manifest>, valid_time=NULL, analysis_time=NULL, kindex=NULL, run_id=...)`, primarily because successful runs with no data yields no jsonl chunks.
+- *Edge case:* if successful run yields no data, append a NULL sentinel row as follows: `(location=<from manifest>, valid_time=NULL, analysis_time=NULL, kindex=NULL, run_id=...)`, primarily because successful runs with no data yields <font color="red">empty `jsonl` chunks</font>.
 - *Use case:* orchestrating P1 
 
 ---
@@ -195,7 +196,7 @@ rebuild_successful_runs(
 - *Preconditions:* `location`, `status`, `created_at_utc` are required preconditions for T1 construction.
 - *Use case:* orchestrating P2  
 - *Likely approach:* glob all json run manifests `manifest_file_name` with `status=SUCCESS`, retrieve all jsonl chunks, and do a `LEFT JOIN` 
-- *Edge case:* successful runs with empty data results in a NULL sentinel row like so: `(location=<from manifest>, valid_time=NULL, analysis_time=NULL, kindex=NULL, run_id=...)`
+- *Edge case:* successful runs with empty data (<font color="red">clarification: empty `jsonl` chunks</font>) results in a NULL sentinel row like so: `(location=<from manifest>, valid_time=NULL, analysis_time=NULL, kindex=NULL, run_id=...)`
 
 ---
 ---
