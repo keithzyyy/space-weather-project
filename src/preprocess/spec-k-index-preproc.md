@@ -85,7 +85,12 @@ Preprocessing pathways
     - Action: These should be carefully excluded when constructing T1.
 
 - P1, P2: What if successful run returns empty data (<font color="red">empty `jsonl` chunks, BUT they still exist</font> )?
-    - Action: **Include only one row with entry: `(location=<manifest>, valid_time=None, analysis_time=None, kindex=None, run_id=...)`** 
+    - Action: For a successful run whose parsed observation rows are empty across all its chunk files, include **exactly one** sentinel row as follows: `(location=<from manifest>, valid_time=NULL, analysis_time=NULL, kindex=NULL, run_id=...)`, primarily because successful runs with no data yields <font color="red">empty `jsonl` chunks</font>.
+        - E.g. if a run has 5 empty chunks, producing 5 sentinel rows gives no extra information; we only care that the run existed & successful & contributed no extra observations!
+  
+- P1: incremental processing; Chunk files for the picked non-null oldest run, which is the **only** files read in this pathway, is **empty**.
+  - Action: Make sure that a predefined kindex schema is provided. Do not infer schema from completely empty inputs!
+  - For example, using `duckdb`'s `read_json_auto(..., union_by_name=true)` is not sufficient. Need to specify column schema as well via its `column` param!
 
 - P3: T1 is empty
     - Action: employ a check upfront; if T1 is empty/doesn't exist, exit and output a clear message. 
@@ -156,7 +161,8 @@ build_t1_select_sql(
 ```
 - *Behavior:* Build a DuckDB SELECT query that produces T1 rows from raw successful runs; uses successful manifests as the driving table
 - *Output schema:* `(run_id, location, valid_time, analysis_time, kindex)`
-- *Edge case:* Includes one NULL-observation row `(location=<from manifest>, valid_time=NULL, analysis_time=NULL, kindex=NULL, run_id=...)` for successful runs with empty data, primarily because successful runs with no data yields <font color="red">empty `jsonl` chunks</font>.
+- *Edge case:* For a successful run whose parsed observation rows are empty across all its chunk files, include **exactly one** sentinel row as follows: `(location=<from manifest>, valid_time=NULL, analysis_time=NULL, kindex=NULL, run_id=...)`, primarily because successful runs with no data yields <font color="red">empty `jsonl` chunks</font>.
+  - E.g. if a run has 5 empty chunks, producing 5 sentinel rows gives no extra information; we only care that the run existed & successful & contributed no extra observations!
 - *Use case:* helper for P1 and P2
 
 ---
@@ -180,7 +186,10 @@ increment_successful_run(
 )
 ```
 - *Behavior:* pick the oldest successful run not yet processed to T1
-- *Edge case:* if successful run yields no data, append a NULL sentinel row as follows: `(location=<from manifest>, valid_time=NULL, analysis_time=NULL, kindex=NULL, run_id=...)`, primarily because successful runs with no data yields <font color="red">empty `jsonl` chunks</font>.
+- *Edge cases:*
+  1. For a successful run whose parsed observation rows are empty across all its chunk files, include **exactly one** sentinel row as follows: `(location=<from manifest>, valid_time=NULL, analysis_time=NULL, kindex=NULL, run_id=...)`, primarily because successful runs with no data yields <font color="red">empty `jsonl` chunks</font>.
+     - E.g. if a run has 5 empty chunks, producing 5 sentinel rows gives no extra information; we only care that the run existed & successful & contributed no extra observations!
+   2. Chunk files for the picked non-null oldest run, which is the **only** files read in this pathway,  is **empty**. In such case, make sure that a predefined kindex schema is provided (do not infer schema from completely empty inputs!)
 - *Use case:* orchestrating P1 
 
 ---

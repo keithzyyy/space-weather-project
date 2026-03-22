@@ -190,6 +190,8 @@ def build_t1_select_sql(
     if not manifest_paths:
         raise ValueError("manifest_paths must not be empty")
 
+    # for SQL command need to e.g. '["path1", "path2"]'
+    # so we use repr to get the correct string representation of the list of paths
     manifest_list_sql = repr(manifest_paths)
 
     # use as_posix to ensure paths are in forward-slash format '/' for SQL, regardless of OS
@@ -197,18 +199,37 @@ def build_t1_select_sql(
     jsonl_paths = [Path(p).as_posix() for p in jsonl_paths]
 
     # 1. construct the jsonl source SQL.
+    # IMPORTANT: need to specify columns in addition to union_by_name
+    # cuz what if incremental processing encounters a successful
+    # run with completely empty jsonl files?
+
+    # this way notice that a completely empty successful run (with jsonl files but no rows)
+    # will still yield EXACTLY one row with NULL obs values. Why?
+
+    # Since all the files contain zero data rows, obs contributes zero rows for that run.
+    # because in the LEFT JOIN successful_runs is the left table (1 row = 1 successful run),
+    # it will still yield ONE row for that run, but with NULL obs values.
     if jsonl_paths:
         jsonl_source_sql = (
             "SELECT "
             f"regexp_extract(filename, '{RUN_DIR_PATTERN}', 1) AS run_id, "
             "CAST(valid_time AS TIMESTAMP) AS valid_time, "
             "CAST(analysis_time AS TIMESTAMP) AS analysis_time, "
-            'CAST(index AS INTEGER) AS kindex '\
-            f"FROM read_json_auto({repr(jsonl_paths)}, union_by_name=true)"
+            "CAST(index AS INTEGER) AS kindex "
+            f"FROM read_json_auto("
+            f"  {repr(jsonl_paths)}, "
+            f"  columns={{'valid_time': 'TIMESTAMP', 'analysis_time': 'TIMESTAMP', 'index': 'INTEGER'}}, "
+            "  union_by_name=true"
+            ")"
         )
-    # if absolutely no jsonl paths, use a dummy SELECT with the same schema but no rows, so that
-    # the LEFT JOIN still works and yields exactly one row with NULL obs values for successful empty runs
+    # just a simple guardrail: if there is no jsonl files for the successful runs (somehow),
+    # we still want to yield exactly one row per successful run with NULL obs values,
+    # so we can LEFT JOIN on it in the main SQL and get NULLs for obs columns for successful
+    # empty runs.
+    # No need to fail fast just because of missing jsonl files,
+    # as long as we can still produce the correct T1 output contract.
     else: 
+        logger.warning("⚠️ No jsonl files found for the successful runs. The resulting T1 will contain only NULL obs values for these runs.") 
         jsonl_source_sql = (
             "SELECT "
             "CAST(NULL AS VARCHAR) AS run_id, "
@@ -304,6 +325,7 @@ TO '{tmp_output.as_posix()}'
                 # why this loop
                 # possible delay in releasing external lock on output_path, 
                 # so we retry a few times with a short sleep in between if we get a PermissionError
+                # git commit message: "handle potential PermissionError when deleting existing output path in overwrite mode, by retrying a few times with short sleep in between"
                 for _ in range(3):
                     try:
                         shutil.rmtree(output_path)
@@ -314,7 +336,10 @@ TO '{tmp_output.as_posix()}'
 
         return output_path
     
-    # 
+    # Note that we do NOT catch exceptions here,
+    # to allow them to propagate up and be handled by the caller
+    # (e.g. for logging and marking preprocess status),
+    # but we still ensure that any connection we own is properly closed in the finally block.
     finally:
         if owns_connection:
             con.close()
@@ -352,7 +377,6 @@ def increment_successful_run(
         manifest_paths=[manifest_path.as_posix()], # just one manifest for the oldest run.
         jsonl_paths=[p.as_posix() for p in _discover_jsonl_paths_for_run(run_dir)], # all jsonl paths for the oldest run
     )
-
     # 3. write to T1 in append mode partitioned by run_id
     logger.info(f" Found successful run_id={run_id} for incremental preprocessing. Writing to T1...")
     return write_t1(select_sql,
