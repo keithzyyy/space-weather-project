@@ -88,6 +88,10 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
 
         # Named fixture cases.
         # These names are what tests refer to, so assertions read like intent.
+        
+        # note only 1 chunk per run for simplicity,
+        # but the code should work regardless of chunk count
+        # as long as the manifest and marker files are present.
         self.run_cases: dict[str, dict[str, Any]] = {
             "success_with_data": {
                 "run_id": "20260318T010000Z",
@@ -522,7 +526,7 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
             expected_success_run_ids[0],
             msg="P1 must pick the oldest successful unprocessed run first.",
         )
-
+        
         increment_successful_run(
             fetched_k_index_relative_dir=str(self.raw_dir),
             T1_path=str(self.t1_dir),
@@ -540,7 +544,7 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
             self._canonical_json_strings(expected_after_first_increment),
             msg="After first P1 increment, T1 must contain only the oldest successful run.",
         )
-
+        print("✅ test_pick_oldest_successful_run_preproc_and_increment_process_runs_oldest_first: first increment successful.")
         # 2. SECOND OLDEST PICK + INCREMENT
         second_oldest = pick_oldest_successful_run_preproc(
             fetched_k_index_relative_dir=str(self.raw_dir),
@@ -573,7 +577,7 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
             self._canonical_json_strings(expected_after_second_increment),
             msg="After second P1 increment, T1 must also contain the empty-run sentinel row.",
         )
-
+        print("✅ test_pick_oldest_successful_run_preproc_and_increment_process_runs_oldest_first: 2nd increment successful.")
         # 3. PICK WHEN ALL PROCESSED
 
         no_more = pick_oldest_successful_run_preproc(
@@ -581,6 +585,7 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
             T1_path=str(self.t1_dir),
             manifest_file_name=self.manifest_file_name
         )
+        
 
         # Assertion enforcing the "nothing left to process" contract.
         self.assertEqual(
@@ -588,6 +593,8 @@ class TestSpaceWeatherKIndexPreproc(unittest.TestCase):
             "",
             msg='When all successful runs are already in T1, picker must return "".',
         )
+
+        print("✅ test_pick_oldest_successful_run_preproc_and_increment_process_runs_oldest_first: all runs processed.")
 
 
 if __name__ == "__main__":
