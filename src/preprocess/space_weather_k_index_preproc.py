@@ -181,7 +181,8 @@ def build_t1_select_sql(
 ) -> str:
     """Build a SELECT statement producing T1 rows.
 
-    Uses successful manifests as the driving table (also to extract location) so that successful empty runs
+    Uses successful manifests as the driving table (also to extract location) so that
+    successful empty runs (STILL has jsonl files but with no rows) will
     still yield exactly one NULL-observation sentinel row.
     """
 
@@ -300,7 +301,8 @@ TO '{tmp_output.as_posix()}'
             # Move the temp output to the final output path atomically
             if output_path.exists():
                 logger.info(f" Removing existing output path before moving new output from temp directory: {output_path}")
-                # possible delay in releasing external lock on output_path,
+                # why this loop
+                # possible delay in releasing external lock on output_path, 
                 # so we retry a few times with a short sleep in between if we get a PermissionError
                 for _ in range(3):
                     try:
