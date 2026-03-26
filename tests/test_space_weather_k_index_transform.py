@@ -72,10 +72,10 @@ class TestSpaceWeatherKIndexTransform(unittest.TestCase):
         self.root = Path(self.tmpdir.name)
 
         # Fake T1 parquet dataset directory.
-        self.t1_dir = self.root / "data/02-preproc/space_weather/k_index/T1"
+        self.t1_dir = self.root / "data/02-preprocessed/space_weather/k_index/T1"
 
         # Fake T2 parquet output directory.
-        self.t2_dir = self.root / "data/02-preproc/space_weather/k_index/T2"
+        self.t2_dir = self.root / "data/02-preprocessed/space_weather/k_index/T2"
 
         self.t1_dir.mkdir(parents=True, exist_ok=True)
 
@@ -231,7 +231,8 @@ class TestSpaceWeatherKIndexTransform(unittest.TestCase):
         - valid_time is normalized to string ONLY for readable comparison.
         - Schema/type contracts are tested separately via _assert_t2_schema_from_dataset().
         """
-        parquet_glob = (self.t2_dir / "*.parquet").as_posix()
+        parquet_glob = (self.t2_dir).as_posix()
+
 
         sql = f"""
         SELECT
@@ -289,7 +290,7 @@ class TestSpaceWeatherKIndexTransform(unittest.TestCase):
         Contract enforced from the spec:
         - T2(location: string, valid_time: datetime, kindex: int, flag: bool)
         """
-        parquet_glob = (self.t2_dir / "*.parquet").as_posix()
+        parquet_glob = (self.t2_dir).as_posix()
 
         describe_sql = f"""
         DESCRIBE
@@ -327,7 +328,7 @@ class TestSpaceWeatherKIndexTransform(unittest.TestCase):
 
     def test_transform_latest_run_and_flag_and_drop_nulls(self) -> None:
         """
-        Test the main transform behavior from T1 to T2.
+        🧪 Test the main transform behavior from T1 to T2.
 
         Contracts enforced:
         1. Expected behavior:
@@ -366,7 +367,7 @@ class TestSpaceWeatherKIndexTransform(unittest.TestCase):
 
     def test_transform_output_has_unique_location_valid_time(self) -> None:
         """
-        Test the T2 uniqueness invariant.
+        🧪 Test the T2 uniqueness invariant.
 
         Contract enforced:
         - (location, valid_time) should be unique in T2
@@ -384,7 +385,7 @@ class TestSpaceWeatherKIndexTransform(unittest.TestCase):
 
     def test_transform_schema_written_to_disk(self) -> None:
         """
-        Test the written T2 schema contract.
+        🧪 Test the written T2 schema contract.
 
         Contract enforced:
         - T2 schema written to disk must align with the spec:
@@ -401,7 +402,7 @@ class TestSpaceWeatherKIndexTransform(unittest.TestCase):
 
     def test_transform_t1_missing_exits_cleanly(self) -> None:
         """
-        Test the missing-T1 edge case.
+        🧪 Test the missing-T1 edge case.
 
         Contracts enforced:
         1. Edge case:
@@ -411,7 +412,7 @@ class TestSpaceWeatherKIndexTransform(unittest.TestCase):
         3. Expected behavior:
            - no T2 output should be written
         """
-        missing_t1_dir = self.root / "data/02-preproc/space_weather/k_index/T1_missing"
+        missing_t1_dir = self.root / "data/02-preprocessed/space_weather/k_index/T1_missing"
         self.assertFalse(missing_t1_dir.exists(), "Test setup assumption failed: missing T1 path should not exist.")
 
         # Act + Assert on log behavior:

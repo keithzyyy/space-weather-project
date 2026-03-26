@@ -12,8 +12,8 @@ import duckdb
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_T1_DIR = "data/02-preproc/space_weather/k_index/T1/"
-DEFAULT_T2_DIR = "data/02-preproc/space_weather/k_index/T2/"
+DEFAULT_T1_DIR = "data/02-preprocessed/space_weather/k_index/T1/"
+DEFAULT_T2_DIR = "data/02-preprocessed/space_weather/k_index/T2/"
 DEFAULT_T2_FILE_NAME = "t2.parquet"
 
 # Expected run_id shape, used only for warning-level validation.
@@ -70,8 +70,8 @@ def _warn_on_suspicious_run_ids(
         for (run_id,) in rows:
             if not isinstance(run_id, str) or not RUN_ID_REGEX.match(run_id):
                 logger.warning(
-                    "Suspicious run_id format encountered during transform: %r. "
-                    "Proceeding anyway because transform() only requires sortable strings.",
+                    "\n🤔 Suspicious run_id format encountered during transform: %r. "
+                    "\n✔️ Proceeding anyway because transform() only requires sortable strings.",
                     run_id,
                 )
     finally:
@@ -172,6 +172,7 @@ def write_t2(
             if output_path.exists():
                 shutil.rmtree(output_path)
             shutil.move(str(tmp_output), str(output_path))
+
 
         return output_path
 
