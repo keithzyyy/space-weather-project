@@ -219,8 +219,11 @@ transform(
 )
 ```
 - *Behavior:* consolidate duplicates from T1 such that one row = one canonical K-index observation in principle, and writes it into a table T2.
-- *Duplicate handling:* If multiple kindex observations across the same `(valid_time, location)` exists, pick the kindex from the latest run (i.e. choose the kindex with maximum run id)
-- *Edge case:* in addition to the above, if at least 2 kindex values differ across different runs for the same `(valid_time, location)`, set `flag=True` for that `(valid_time, location)`.
+- *Duplicate handling:* If multiple kindex observations across the same `(valid_time, location)` exists, pick the kindex from the latest run (i.e. choose the kindex with maximum run id). **Rows with `valid_time IS NULL` are excluded from T2 before duplicate consolidation!**
+- *Edge cases:*
+  1. In addition to the above, if at least 2 kindex values differ across different runs for the same `(valid_time, location)`, set `flag=True` for that `(valid_time, location)`.
+  2. T1 does not exist yet: simply return `None` and print a log message.
+  3. `run_id` format is inconsistent somehow (not `YYYYMMDDTHHMMSSZ`): no need to fail fast, just provide a `logger.warning` in the implementation -- `transform()` only has to make sure `run_id` are proper strings to be sorted.
 - *Output schema:* `T2(location: string, valid_time: datetime, kindex: int, flag: bool)`, where `(valid_time, location)` **should be unique**.
 - *Use case:* orchestrating P3  
 
