@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 import shutil
+import time
 
 import duckdb
 
@@ -169,8 +170,19 @@ def write_t2(
             con.execute(copy_sql)
 
             # atomic-ish directory replace
+            # (either output_path is fully there with new data,
+            # or old data remains untouched; no half-written states)
             if output_path.exists():
-                shutil.rmtree(output_path)
+                # why this loop
+                # possible delay in releasing external lock on output_path, 
+                # so we retry a few times with a short sleep in between if we get a PermissionError
+                # git commit message: "handle potential PermissionError when deleting existing output path in overwrite mode, by retrying a few times with short sleep in between"
+                for _ in range(3):
+                    try:
+                        shutil.rmtree(output_path)
+                        break
+                    except PermissionError:
+                        time.sleep(0.2)
             shutil.move(str(tmp_output), str(output_path))
 
 
