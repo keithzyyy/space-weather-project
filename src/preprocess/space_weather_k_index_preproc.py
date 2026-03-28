@@ -286,6 +286,8 @@ def write_t1(
         raise ValueError("partition_by must not be empty")
 
     # 1. prepare output path and partitioning info
+    # output_path e.g. data/02-preprocessed/space_weather/k_index/T1/,
+    # so that the parent is data/02-preprocessed/space_weather/k_index/ where we want to ensure the directory exists before writing
     output_path = Path(T1_output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     partition_sql = ", ".join(partition_by)
@@ -310,13 +312,16 @@ TO '{output_path.as_posix()}'
         # then move to the output path to achieve atomic overwrite
         parent = output_path.parent
         with tempfile.TemporaryDirectory(dir=parent) as tmp_dir:
-
+                # NOTE: with PARTITION BY DuckDB treats the TO path as a *directory*.
+                # If that directory doesn't exist,
+                # DuckDB creates it AUTOMATICALLY before it starts writing the hive-partitioned subfolders,
+                # so no need to worry about `output_path.name` subfolder not yet being created.
             tmp_output = Path(tmp_dir) / output_path.name
             copy_sql = f"""
-COPY ({select_sql})
-TO '{tmp_output.as_posix()}'
-(FORMAT PARQUET, PARTITION_BY ({partition_sql}))
-"""
+                    COPY ({select_sql})
+                    TO '{tmp_output.as_posix()}'
+                    (FORMAT PARQUET, PARTITION_BY ({partition_sql}))
+                    """
             con.execute(copy_sql)
 
             # Move the temp output to the final output path atomically

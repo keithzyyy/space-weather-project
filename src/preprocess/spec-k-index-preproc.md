@@ -211,6 +211,26 @@ rebuild_successful_runs(
 ---
 **Module:** `src/preprocess/space_weather_k_index_transform.py` (transforming T1 to T2)
 
+```
+build_t2_select_sql(
+    T1_path: str | Path
+) -> str
+```
+- *Behavior:* Build a DuckDB SELECT query that transforms T1 into canonical T2 rows, with requirements detailed in the `transform()` function.
+
+```
+write_t2(
+    select_sql: str,
+    T2_output_path: str,
+    partition_by: Sequence[str] = (),
+    con: Optional[duckdb.DuckDBPyConnection] = None,
+)
+```
+- *Behavior:* Materialize a T2 SELECT query into a parquet dataset directory (assumed to be `T2_output_path`).
+  - T2 **always overwrites** any existing T2 dataset.
+- *Partition by logic*:
+    - If `partition_by` is not empty, run `COPY ... TO T2_output_path (FORMAT PARQUET, PARTITION_BY (...))` 
+    - Otherwise, we write a single parquet file inside `T2_output_path`, i.e. `{T2_output_path}/T2.parquet`
 
 ```
 transform(
@@ -219,8 +239,11 @@ transform(
 )
 ```
 - *Behavior:* consolidate duplicates from T1 such that one row = one canonical K-index observation in principle, and writes it into a table T2.
-- *Duplicate handling:* If multiple kindex observations across the same `(valid_time, location)` exists, pick the kindex from the latest run (i.e. choose the kindex with maximum run id)
-- *Edge case:* in addition to the above, if at least 2 kindex values differ across different runs for the same `(valid_time, location)`, set `flag=True` for that `(valid_time, location)`.
+- *Duplicate handling:* If multiple kindex observations across the same `(valid_time, location)` exists, pick the kindex from the latest run (i.e. choose the kindex with maximum run id). **Rows with `valid_time IS NULL` are excluded from T2 before duplicate consolidation!**
+- *Edge cases:*
+  1. In addition to the above, if at least 2 kindex values differ across different runs for the same `(valid_time, location)`, set `flag=True` for that `(valid_time, location)`.
+  2. T1 does not exist yet: simply return `None` and print a log message.
+  3. `run_id` format is inconsistent somehow (not `YYYYMMDDTHHMMSSZ`): no need to fail fast, just provide a `logger.warning` in the implementation -- `transform()` only has to make sure `run_id` are proper strings to be sorted.
 - *Output schema:* `T2(location: string, valid_time: datetime, kindex: int, flag: bool)`, where `(valid_time, location)` **should be unique**.
 - *Use case:* orchestrating P3  
 
@@ -245,4 +268,3 @@ Unit tests **must be derived from the spec** of each function:
 Assertions **should validate those contracts directly**, not incidental ordering, formatting, or hardcoded fixture details unless those are explicitly part of the contract.
 
 ## 7. Finally, any remarks?
-- An alternative way to handle successful run with empty data is to write an empty jsonl during ingestion, so that no data does not mean "no jsonl chunks" but rather an empty json, which is more intuitive. But for now, simply work with what we have. 
