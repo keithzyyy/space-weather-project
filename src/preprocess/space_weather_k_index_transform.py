@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+from typing import Sequence, Optional
 import logging
 import re
 import tempfile
@@ -7,15 +7,26 @@ from pathlib import Path
 from typing import Optional
 import shutil
 import time
-
 import duckdb
-
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_T1_DIR = "data/02-preprocessed/space_weather/k_index/T1/"
-DEFAULT_T2_DIR = "data/02-preprocessed/space_weather/k_index/T2/"
-DEFAULT_T2_FILE_NAME = "t2.parquet"
+
+"""
+TLDR
+- T1 -> T2 transform for space weather K-index data
+- Reads T1 parquet files, applies transformations, and writes out T2 parquet files
+
+DuckDB connection explanation:
+- We use DuckDB to read and transform the parquet files
+because it allows us to express complex transformations in SQL,
+which is more concise and easier to maintain than doing the same logic in Python.
+- The connection is managed within the functions, and we ensure that we close it if
+we created it ourselves.
+"""
+
+# DEFAULT_T1_DIR = "data/02-preprocessed/space_weather/k_index/T1/"
+# DEFAULT_T2_DIR = "data/02-preprocessed/space_weather/k_index/T2/"
 
 # Expected run_id shape, used only for warning-level validation.
 # We do NOT fail fast on malformed run_id because transform() only needs sortable strings.
@@ -93,6 +104,15 @@ def build_t2_select_sql(T1_path: str | Path) -> str:
     """
     parquet_glob = (Path(T1_path) / "**/*.parquet").as_posix()
 
+
+    # note: technically NULL comparisons do NOT return TRUE in SQL
+    # (context: sentinel rows return everything as NULL except run_ids)
+    # and that 'WHERE valid_time IS NOT NULL' and the additional
+    # 'FILTER (WHERE kindex IS NOT NULL)' wont be needed since NULLs
+    # are not considered equal to each other in SQL,
+    # REGARDLESS we include them for clarity and explicitness around the
+    # intent to exclude NULLs from the relevant logic.
+
     return f"""
 WITH filtered_t1 AS (
     SELECT
@@ -138,11 +158,18 @@ FROM t2_rows
 
 def write_t2(
     select_sql: str,
-    T2_output_path: str | Path = DEFAULT_T2_DIR,
+    T2_output_path: str,
+    partition_by: Sequence[str] = (),
     con: Optional[duckdb.DuckDBPyConnection] = None,
 ) -> Path:
     """
     Materialize a T2 SELECT query into a parquet dataset directory.
+
+    Why optional partition_by? because now there is no meaningful column to partition by. So,
+    - Since the SELECT query already consolidates duplicates across all runs,
+    so we write to a single parquet file (`T2.parquet`) within the output directory unless
+    future refactor introduces a partitioning column.
+    - We can revisit partitioning if we later find a need to optimize for certain query patterns on T2.
 
     Behavior (MVP):
     - T2_output_path is treated as a directory
@@ -150,29 +177,61 @@ def write_t2(
         write to temp dir -> replace final dir
     """
 
+    # Regardless of partition_by we will ALWAYS write TO the T2_output_path directory, 
+    # but make sure its parent exists first.
+    # For example, if T2_output_path is "data/02-preprocessed/space_weather/k_index/T2/",
+    # we want to ensure its parent "data/02-preprocessed/space_weather/k_index/" exists before
     output_path = Path(T2_output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.parent.mkdir(parents=True,
+                             exist_ok=True)
+    parent = output_path.parent
 
     owns_connection = con is None
     con = con or duckdb.connect()
 
     try:
-        # write to temporary directory first
-        parent = output_path.parent
+        # write to a temp directory first, then move to final location to achieve atomicity at the directory level
+        # (either old T2 remains or new T2 is fully there, no half-written states)
         with tempfile.TemporaryDirectory(dir=parent) as tmp_dir:
+
+            # tmp_output is "/tmp_xyz/T2"
             tmp_output = Path(tmp_dir) / output_path.name
 
-            copy_sql = f"""
-            COPY ({select_sql})
-            TO '{tmp_output.as_posix()}'
-            (FORMAT PARQUET)
-            """
+            # With PARTITION BY, the `output_path.name` (e.g. T2) subfolder will be automatically created by DuckDB,
+            # however this is not the case without PARTITION BY (it has to be explicitly created).
+            # Regardless, always safe to explicitly create the "/tmp_xyz/T2" subfolder irrespective of partition_by
+            tmp_output.mkdir(parents=True, exist_ok=True)
+
+            if partition_by:
+                # NOTE: with PARTITION BY DuckDB treats the TO path as a *directory*.
+                # If that directory doesn't exist, DuckDB creates it AUTOMATICALLY before it starts writing the hive-partitioned subfolders
+                logger.info("Partitioning T2 output by columns: %s", partition_by)  
+                partition_sql = ", ".join(partition_by)
+
+                # DuckDB writes hive-partitioned folders INSIDE the subfolder
+                copy_sql = f"""
+                COPY ({select_sql})
+                TO '{tmp_output.as_posix()}'
+                (FORMAT PARQUET, PARTITION_BY ({partition_sql}))
+                """
+            else:
+                # NOTE: without PARTITION BY DuckDB treats the TO path as a *file destination*.
+                # so DuckDB expects "{Path(tmp_dir)} / {output_path.name}", namely "tmp_dir/T2/" to already exist.
+                # If it doesn't, it will usually throw an error because it won't recursively create parent folders for a single file write.
+                # DuckDB writes a single file INSIDE the subfolder
+                tmp_target = tmp_output / "T2.parquet"
+                copy_sql = f"""
+                COPY ({select_sql})
+                TO '{tmp_target.as_posix()}'
+                (FORMAT PARQUET)
+                """
             con.execute(copy_sql)
 
             # atomic-ish directory replace
             # (either output_path is fully there with new data,
             # or old data remains untouched; no half-written states)
             if output_path.exists():
+                logger.info(f"Output path {output_path} already exists. Deleting it before moving new T2 output to the location for overwrite...")
                 # why this loop
                 # possible delay in releasing external lock on output_path, 
                 # so we retry a few times with a short sleep in between if we get a PermissionError
@@ -183,9 +242,11 @@ def write_t2(
                         break
                     except PermissionError:
                         time.sleep(0.2)
+
+            logger.info(f"Writing T2 parquet dataset to {output_path}...")
             shutil.move(str(tmp_output), str(output_path))
 
-
+        logger.info(f"T2 parquet dataset successfully written to {output_path}")
         return output_path
 
     finally:
@@ -194,8 +255,8 @@ def write_t2(
 
 
 def transform(
-    T1_path: str | Path = DEFAULT_T1_DIR,
-    T2_output_path: str | Path = DEFAULT_T2_DIR,
+    T1_path: str,
+    T2_output_path: str,
 ) -> Optional[Path]:
     """
     Transform T1 into canonical T2.
@@ -236,7 +297,7 @@ def transform(
 
     t2_file = write_t2(
         select_sql=select_sql,
-        T2_output_path=T2_output_path,
+        T2_output_path=T2_output_path
     )
 
     logger.info("Finished T1 -> T2 transform. Wrote T2 to %s", t2_file)

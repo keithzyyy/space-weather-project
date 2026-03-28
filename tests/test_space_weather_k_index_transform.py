@@ -244,6 +244,7 @@ class TestSpaceWeatherKIndexTransform(unittest.TestCase):
         """
 
         rows = duckdb.execute(sql).fetchall()
+        print(f"💻 {len(rows)} rows read from T2 parquet dataset for testing.")
         columns = [desc[0] for desc in duckdb.execute(sql).description]
 
         return [dict(zip(columns, row)) for row in rows]
