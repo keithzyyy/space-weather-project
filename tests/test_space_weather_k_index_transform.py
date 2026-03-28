@@ -11,7 +11,7 @@ from src.preprocess.space_weather_k_index_transform import transform
 
 
 """
-HOW to run test: python -m tests.test_space_weather_k_index_transform -v
+HOW to run this test: python -m tests.test_space_weather_k_index_transform -v
 
 TLDR for this test module
 -------------------------
