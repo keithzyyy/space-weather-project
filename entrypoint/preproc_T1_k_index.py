@@ -31,7 +31,7 @@ from src.preprocess.space_weather_k_index_preproc import (
     increment_successful_run,
     rebuild_successful_runs,
 )
-
+from src.utils.logging import setup_logging, run_entrypoint_with_logging
 # --------------
 # LOGGING SETUP
 # --------------
