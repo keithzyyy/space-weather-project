@@ -9,6 +9,8 @@ from src.io.load_config import load_config
 
 from src.preprocess.space_weather_k_index_transform import transform
 
+from src.utils.logging import setup_logging, run_entrypoint_with_logging
+
 """
 Entry point for T1 to T2 transform of K-index data.
 How to run this CLI: python -m entrypoint.transform_T1_k_index --config_path config/local.yaml
@@ -147,8 +149,8 @@ def main():
         """
         # load the YAML config and defaults
         config = load_config(args.config_path)
-        T1_relative_dir_default = args.T1_relative_dir if args.T1_relative_dir else config['space_weather']['preprocessing']['k_index']['T1_output_dir']
-        T2_relative_dir_default = args.T2_relative_dir if args.T2_relative_dir else config['space_weather']['transform']['k_index']['T2_output_dir']
+        T1_relative_dir_default = config['space_weather']['preprocessing']['k_index']['T1_output_dir']
+        T2_relative_dir_default = config['space_weather']['transform']['k_index']['T2_output_dir']
 
         # parse arguments with fallback to config values
         T1_relative_dir = args.T1_relative_dir if args.T1_relative_dir else T1_relative_dir_default
