@@ -56,12 +56,15 @@ def run_entrypoint_with_logging(
         main_logic(logger)
         status = "success"
     except Exception:
+        # with logger.exception (not logger.error), full stack trace will be logged, so we can log it and rename the log file accordingly,
+        # but still re-raise it after logging so that e.g. Airflow can detect the failure and trigger retries if configured.
         logger.exception(f" [{entrypoint_name}] Fatal error during entrypoint execution.")
         status = "error"
         raise # exception still propagates up after logging, which is important for e.g. Airflow to detect the failure and trigger retries if configured.
     finally:
-        final_log_path = finalize_log_file(log_path, status)
-        logger.info(f"Log written to: {final_log_path}")
+        logger.info(f"Finalizing log file with status: '{status}'")
+        finalize_log_file(log_path, status)
+        #logger.info(f"Log written to: {final_log_path}")
 
 
 def finalize_log_file(log_path: str | Path, status: str) -> Path:
@@ -74,8 +77,10 @@ def finalize_log_file(log_path: str | Path, status: str) -> Path:
     """
     log_path = Path(log_path)
     final_path = Path(str(log_path).replace(".running.log", f".{status}.log"))
+    print(f"Log written to: {final_path}")
 
     # Ensure all handlers are flushed/closed before renaming.
+    # ensuring all buffered log records are written to the file
     logging.shutdown()
 
     if log_path.exists():

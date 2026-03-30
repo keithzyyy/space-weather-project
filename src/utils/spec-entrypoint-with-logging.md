@@ -9,20 +9,30 @@ Employ a standardized logging approach for CLI entrypoints (e.g. ingest, preproc
 - Each log file name is of the form `<entrypoint name>_<UTC id>.<status>.log` where `<status>` can be either `success, error, running`. 
   
 - A log file has an `error` status if an `Exception` or `Error` is raised, including BOTH that are deliberately raised, indicating a logic error, and most importantly unhandled ones.
+    - The logging module **will print the stack trace using `logger.execption` so that source code only needs to `raise` so that printed stack traces are not duplicated**.
   
-- For this reason, all source code must be consistent to their expected behavior so that relevant `Exceptions` or `Errors` can be raised if any such behavior is violated in any way (e.g. include `logger.exception, logger.error` in the src), emphasizing the need for a *Spec-Driven Development*.
+- For this reason, all source code must be consistent to their expected behavior so that relevant `Exceptions` or `Errors` can be raised if any such behavior is violated in any way.
+    - Again, source code only need to do a `raise` 
 
 ## 3. Important edge cases
 
 
 ## 4. Failure modes
-- 
+- Src explicitly raises `Exception`: log the exception via its stack trace
+- An unhandled `Exception` is raised: log the exception via its stack trace
 
 ## 5. Key modules/classes/function signatures
 Create a logging module `src/utils/logging.py` that have the following functions:
-- `setup_logging` that sets up the logging console and file logging for one entrypoint execution
+- `setup_logging` that sets up the logging console and file logging for one entrypoint execution.
+  - Ensure that `logs/` directory is present (create if not present),
+  - `*.running.log` file is created
+
 - A `run_entrypoint_with_logging` generic function to accept the entrypoint logic baked with the logging config set up above.
-- `finalize_log_file` which determines the status of the entrypoint execution and including it at the `.log` file name, before closing down any write streams.
+  - Any exceptions should be reraised
+  - Assigns success/error status correctly to be written at `finalize_log_file`
+
+
+- `finalize_log_file` which receives status of the entrypoint execution and modifying the `.log` file name accordingly, before closing down any write streams/flushing down handlers.
 
 ```
 from __future__ import annotations
@@ -148,5 +158,8 @@ Unit tests **must be derived from the spec** of each function:
 Assertions **should validate those contracts directly**, not incidental ordering, formatting, or hardcoded fixture details unless those are explicitly part of the contract.
 
 ## 7. Finally, any remarks?
+1. This module uses Python’s built-in `logging` library and assumes standard logger methods (`info`, `exception`, etc.).
+    - Choice of logging libraries are not of ultimate concern, as one only needs reliable and debuggable entrypoint logs. So I find `logging` library sufficient for my needs.
 
-
+2. Ideal behavior for `src/`
+   - **Only the wrapper log the fatal exceptions itself, so that src code only needs to `raise`. Otherwise stack traces are duplicated.** We do not need to test this as this goes beyond the scope of our logging module, but this could be a useful advice for developing code in `src/`.
