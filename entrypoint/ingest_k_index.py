@@ -1,7 +1,7 @@
 """
 How to run `entrypoint/ingest_k_index.py in the terminal:
 
-`python -m entrypoint.ingest_k_index_with_logging --config_path "config/local.yaml" --location "Australian region" --start "2018-01-01 00:00:00" --end "2019-02-02 00:00:00"`
+`python -m entrypoint.ingest_k_index --config_path "config/local.yaml" --location "Australian region" --start "2017-01-01 00:00:00" --end "2018-01-01 00:00:00"`
 
 Why use `-m`?
 > We agreed that importing custom modules must start from the root (e.g. src.io.load_config, src.ingest.space_weather_k_index)
@@ -33,16 +33,11 @@ if __name__ == "__main__":
 import argparse
 # `from module import function` then call `function()`
 # or `import module` (or `from library import module` for nested packages) then call module.function()
-
-
 from src.io.load_config import load_config
 from src.ingest.space_weather_k_index import ingest_k_index_run
 from src.utils.logging import run_entrypoint_with_logging
-
-
 import logging
-logger = logging.getLogger(__name__)
-
+# logger = logging.getLogger(__name__)
 
 def parse_args() -> argparse.Namespace:
 
