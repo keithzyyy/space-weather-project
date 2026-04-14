@@ -3,7 +3,10 @@
 ## Recall these things if necessary
 
 ## 1. High-level approach
-
+- build a dataset of station metadata from World Data Center pages
+include at least station name + geographic coordinates
+define a canonical station key suitable for joining to K-index observations
+fail fast if required fields cannot be extracted from a station page
 
 ## 2. Expected behavior & Invariants
 
