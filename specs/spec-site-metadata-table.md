@@ -76,11 +76,13 @@ For the station metadata table:
   - WDC station names have changed, making lookup table outdated. 
   - When joining, An API location in `T2.location` does not have a match in the lookup table (joining algorithm in 5 step 2). 
 
+- Error at parsing coordinates to floats (cell value for `Geographic` is a string taking formats other than `'Lat. -31.54 Long. 159.08E'`).
+  - Fail fast, because we don't know how to parse it so no need to risk incorrectly parsing it.
+
 ## 4. Failure modes
 - Cannot make GET request to WDC web pages. 
   - Fail fast and exit the program. 
-- Error at parsing coordinates (we receive other forms than `'Lat. -31.54 Long. 159.08E'`) to floats.
-  - Fail fast and exit the program.
+
 
 ## 5. Key modules/classes/function signatures
 Below is an example:
@@ -109,7 +111,9 @@ Below is an example:
   * *Edge case:* if there is no cell in the row following the header cell (`<tr><td>Geographic</td></tr>` instead of `<tr><td>Geographic</td><td>Lat. -23.81 Long. 133.90E</td> </tr>`), simply output a warning message, leave the value as null, and continue parsing.
 
 * `parse_geographic(geometry_raw: str | None) -> tuple[float | None, float | None, str | None]`
-  * *Behavior:* helper to parse textual station coordinates. For example `parse_geographic('Lat. -30.28 Long. 149.58E')` returns `(-30.28, 149.58, 'POINT (149.58 -30.28)' )`.
+  * *Behavior:* helper to parse textual station coordinates from WDC station detail pages. For example `parse_geographic('Lat. -30.28 Long. 149.58E')` returns `(-30.28, 149.58, 'POINT (149.58 -30.28)' )`.
+  * *Edge case:* (unlikely since WDC page is likely static) What if geographical coordinate is not null but is not formatted like `'Lat. -31.54 Long. 159.08E'`? Fail fast, because we don't know how to parse it, other than risking incorrectly parsing the coordinates.
+  * *Edge case:* (unlikely since WDC page is likely static) What if geographical coordinate is `None` (i.e. `extract_key_value_rows` cannot parse any cell containing coordinates)?  Just return `(None, None, None)`, we treat the station as not having a defined geographical coordinate.
 
 * `extract_station_metadata(base_url: str, map_page_url: str, metadata_file_path: str = 'data/02-preprocessed/space_weather/k_index/site-metadata.parquet') -> str`
     * *Behavior:* The orchestrator to build one canonical metadata row per station from the WDC map page as shown in `map_page_url` and saves as a parquet file. Outputs the file path.
@@ -131,7 +135,10 @@ Below is an example:
     * Read `T2` and site metadata table
     * Read the API-location lookup table
     * Match each `T2` row with the site metadata via the lookup table, as per the join algorithm in 2.5
-    * Emit diagnostics for unmapped locations
+    * Emit diagnostics for unmapped locations:
+      * If `T2.location` does not exist in the lookup table, specify as `'unmapped_api_location'`
+      * If a known API location (e.g. `Australian region`) is allowed but it is known that no station can be matched (e.g. lookup table includes `{"api_location": "Australian region", "canonical_station_name": None}`), specify as `'known_without_station'`
+      * If the station name mapped in the lookup table is not present in the metadata (e.g. WDC web page has changed), specify as `'lookup_target_missing_in_metadata'`.
   * **Joining station metadata to T2 must not remove, duplicate, or modify existing T2 observations.**
   * *Edge cases:*
     * T2 and the site metadata path must be defined. If either one is not present in disk, exit the program without outputting or writing anything.
