@@ -25,5 +25,5 @@ ipykernel
 # testing
 pytest==7.4.4
   
-
-
+# scraping
+beautifulsoup4
