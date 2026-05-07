@@ -119,7 +119,7 @@ Below is an example:
   * *Edge case:* a row does not contain any value, taking this as an example: `<tr><td>Geographic</td></tr>` instead of `<tr><td>Geographic</td><td>Lat. -23.81 Long. 133.90E</td> </tr>`. As per contract for `parse_geographic`, assign dict value to `None`.
 
 * `extract_station_metadata(base_url: str, map_page_url: str, metadata_file_path: str = 'data/02-preprocessed/space_weather/k_index/site-metadata.parquet') -> str`
-    * *Behavior:* The orchestrator to build one canonical metadata row per station from the WDC map page as shown in `map_page_url` and saves as a parquet file. Outputs the file path.
+    * *Behavior:* The orchestrator to build one canonical metadata row per station from the WDC map page as shown in `map_page_url` and saves as a **parquet** file. Outputs the file path.
       * Scrapes all `href` links for each station
       * Navigate to each station's URL constructed by `base_url + href`
       * Navigate through the station metadata and parse the following metadata into the following variables:
