@@ -45,15 +45,14 @@ For the station metadata table:
     metadata(
           station_name: str,
           alternative_name_raw: str | null,
-          geometry_raw: str,
-          lat: float,
-          lon: float,
-          geometry_txt: str,
+          lat: float | null,
+          lon: float | null,
+          geometry_raw: str | null,
           source_url: str,
           retrieved_at_utc: str
       )
     ```
-   - `geometry_txt` is a human readable coorodinate. For example, `geometry_raw='Lat. -31.54 Long. 159.08E' -> geometry_txt='POINT (159.08 -31.54)'`
+   - `geometry_raw` is either `None` (if no value can be detected), or the raw coordinate string itself.
 
 5. How do we **join** each T2 location to obtain its geographical metadata? **For now, use a lookup table that maps `api_location -> canonical_station_name`** where `api_location` is the allowed location in the `get-k-index` API, and `canonical_station_name` is the `Station Name` that matches with the K-index API location.
     - Why the lookup table? 
@@ -77,7 +76,7 @@ For the station metadata table:
   - When joining, An API location in `T2.location` does not have a match in the lookup table (joining algorithm in 5 step 2). 
 
 - Error at parsing coordinates to floats (cell value for `Geographic` is a string taking formats other than `'Lat. -31.54 Long. 159.08E'`).
-  - Fail fast, because we don't know how to parse it so no need to risk incorrectly parsing it.
+  - return nulls for lat and long, but still store the raw string.
 
 ## 4. Failure modes
 - Cannot make GET request to WDC web pages. 
@@ -104,16 +103,20 @@ Below is an example:
 **Module:** `src/metadata/site_location.py`
 
 * `get_soup_content(url: str, timeout: int = 30) -> BeautifulSoup`
-  * *Behavior:* helper to perform a GET request to a web page (e.g. WDC map page or a station detail page) and parse its HTML content into a `BeautifulSoup` object
+  * *Behavior:* helper for `extract_station_metadata` to perform a GET request to a web page (e.g. WDC map page or a station detail page) and parse its HTML content into a `BeautifulSoup` object
+  * *Failure Mode:* Cannot make GET request to WDC web pages. In that case, fail fast and exit the program.
   
-* `extract_key_value_rows(soup: BeautifulSoup) -> dict[str, str]`
-  * *Behavior:* helper to extract all 2-column table rows from a station detail page into a flat Python dict.
-  * *Edge case:* if there is no cell in the row following the header cell (`<tr><td>Geographic</td></tr>` instead of `<tr><td>Geographic</td><td>Lat. -23.81 Long. 133.90E</td> </tr>`), simply output a warning message, leave the value as null, and continue parsing.
-
 * `parse_geographic(geometry_raw: str | None) -> tuple[float | None, float | None, str | None]`
-  * *Behavior:* helper to parse textual station coordinates from WDC station detail pages. For example `parse_geographic('Lat. -30.28 Long. 149.58E')` returns `(-30.28, 149.58, 'POINT (149.58 -30.28)' )`.
-  * *Edge case:* (unlikely since WDC page is likely static) What if geographical coordinate is not null but is not formatted like `'Lat. -31.54 Long. 159.08E'`? Fail fast, because we don't know how to parse it, other than risking incorrectly parsing the coordinates.
-  * *Edge case:* (unlikely since WDC page is likely static) What if geographical coordinate is `None` (i.e. `extract_key_value_rows` cannot parse any cell containing coordinates)?  Just return `(None, None, None)`, we treat the station as not having a defined geographical coordinate.
+  * *Behavior:* helper for `extract_station_metadata` to parse textual station coordinates from WDC station detail pages. For example `parse_geographic('Lat. -30.28 Long. 149.58E')` returns `(-30.28, 149.58, 'Lat. -30.28 Long. 149.58E' )`.
+  * *Edge case:* (unlikely since WDC page is likely static) What if geographical coordinate is not null but is not formatted like `'Lat. -31.54 Long. 159.08E'`?
+    * Simply return `(None, None, geometry_raw)`.
+  * *Edge case:* (unlikely since WDC page is likely static) What if geographical coordinate is `None` (i.e. `extract_key_value_rows` cannot parse any cell containing coordinates)?
+    * Just return `(None, None, None)`, we treat the station as not having a defined geographical coordinate.
+
+* `extract_key_value_rows(soup: BeautifulSoup) -> dict[str, str | None]`
+  * *Behavior:* helper for `extract_station_metadata` to extract all 2-column table rows from a station detail page into a flat Python dict. Dict values are allowed to be `None`, for example if geographical coordinates are not present.
+  * *Edge case:* if there is no cell in the row following the header cell (for example, `<tr><td>Geographic</td></tr>` instead of `<tr><td>Geographic</td><td>Lat. -23.81 Long. 133.90E</td> </tr>`), simply output a warning message, leave the value as null, and continue parsing.
+  * *Edge case:* a row does not contain any value, taking this as an example: `<tr><td>Geographic</td></tr>` instead of `<tr><td>Geographic</td><td>Lat. -23.81 Long. 133.90E</td> </tr>`. As per contract for `parse_geographic`, assign dict value to `None`.
 
 * `extract_station_metadata(base_url: str, map_page_url: str, metadata_file_path: str = 'data/02-preprocessed/space_weather/k_index/site-metadata.parquet') -> str`
     * *Behavior:* The orchestrator to build one canonical metadata row per station from the WDC map page as shown in `map_page_url` and saves as a parquet file. Outputs the file path.
@@ -122,7 +125,7 @@ Below is an example:
       * Navigate through the station metadata and parse the following metadata into the following variables:
         * `Station Name` into `station_name`,
         * `Alternative Name` into `alternative_name_raw`
-        * and `Geographic` into floats `lat`, `lon` and a human readable point coordinate `geometry_txt`. 
+        * and `Geographic` into floats `lat`, `lon` and the raw coordinate string `geometry_raw`. 
         * In addition, add the `source_url` corresponding to the station detail (e.g. https://sws.bom.gov.au/World_Data_Centre/2/1/27)
         * Also add a retrieved at UTC date `retrieved_at_utc`
       * Store the variables as a canonical row of a station's metadata
@@ -130,7 +133,7 @@ Below is an example:
 
 **Module:** `src/preprocess/space_weather_k_index_transform_with_metadata.py`
 * `append_kindex_with_loc_metadata(T2_path: str, site_metadata_path: str) -> str`
-  * *Behavior:* Given T2, a preprocessed K-index table `T2(location: string, valid_time: datetime, kindex: int, flag: bool)` as written in the current version of `specs/spec-k-index-preproc.md`, and the path to the site metadata table, perform a left join to match each T2 row with its location metadata, dictated by the lookup table that maps `T2.location` to a station name in the location metadata. Each row in T2 will have these additional fields: `(station_name:str, alternative_name_raw:str, lat:float , lon:float)`.
+  * *Behavior:* Given T2, a preprocessed K-index table `T2(location: string, valid_time: datetime, kindex: int, flag: bool)` as written in the current version of `specs/spec-k-index-preproc.md`, and the path to the site metadata table, perform a left join to match each T2 row with its location metadata, dictated by the lookup table that maps `T2.location` to a station name in the location metadata. Each row in T2 will have these additional fields: `(station_name:str, alternative_name_raw:str, lat:float|null , lon:float|null, geometry_raw:str|null)`.
   * *High-level steps*
     * Read `T2` and site metadata table
     * Read the API-location lookup table
@@ -144,7 +147,7 @@ Below is an example:
     * T2 and the site metadata path must be defined. If either one is not present in disk, exit the program without outputting or writing anything.
     * T2 locations cannot be matched (either false positives or there is truly no match) 
       * For example, API locations like `Australian region` and `Melbourne` are not defined (former averages kindices all over stations, latter does not exist as a station).
-      * Simply leave `(station_name:str, alternative_name_raw:str, lat:float , lon:float)` with nulls and print/log a diagnostic message. 
+      * Simply leave `(station_name, alternative_name_raw, lat, lon)` with nulls and print/log a diagnostic message. 
 
 
 ## 6. ⚠️ Important remark on unit tests
