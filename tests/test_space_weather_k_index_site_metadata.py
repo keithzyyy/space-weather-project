@@ -45,6 +45,7 @@ class TestGetSoupContent(unittest.TestCase):
     # remember mock the object at the location where it's used, not where it's defined!
     def test_returns_beautifulsoup_on_successful_get_request(self, mock_get):
         """
+        🧪Successful request to a WDC webpage should return soup object.
         Spec relation:
         - `get_soup_content` should perform a GET request and parse HTML into BeautifulSoup.
         """
@@ -73,6 +74,7 @@ class TestGetSoupContent(unittest.TestCase):
     # remember mock the object at the location where it's used, not where it's defined!
     def test_fail_fast_on_request_failure(self, mock_get):
         """
+        🧪Unsuccessful get request to WDC webpages should fail fast.
         Spec relation:
         - Failure mode: if the GET request to the WDC page fails, fail fast.
         """
@@ -91,6 +93,7 @@ class TestParseGeographic(unittest.TestCase):
 
     def test_parses_standard_east_longitude(self):
         """
+        🧪Parse coordinates for well defined input.
         Spec relation:
         - Expected format example: 'Lat. -30.28 Long. 149.58E'
         - On success, return parsed lat/lon and preserve the raw coordinate string.
@@ -118,6 +121,7 @@ class TestParseGeographic(unittest.TestCase):
 
     def test_returns_nulls_and_preserves_raw_string_on_changed_coordinate_format(self):
         """
+        🧪Return null for non-empty but malformed coordinate text.
         Spec relation:
         - Edge case: if `Geographic` is non-null but not in the expected WDC format,
           do not fail fast anymore; return null lat/lon and preserve the raw string.
@@ -131,6 +135,7 @@ class TestParseGeographic(unittest.TestCase):
 
     def test_returns_nulls_or_raises_for_missing_input_based_on_speced_behavior(self):
         """
+        🧪Return null for empty coordinate text.
         Spec relation:
         - Edge case: if `geometry_raw` is None (e.g. jagged HTML row upstream),
           return (None, None, None).
@@ -194,6 +199,7 @@ class TestExtractKeyValueRows(unittest.TestCase):
 
     def test_extracts_station_name_alternative_name_and_geographic(self):
         """
+        🧪Extract well defined station info and coordinates.
         Spec relation:
         - Expected behavior: extract cell values after
           Station Name, Alternative Name, and Geographic.
@@ -212,6 +218,7 @@ class TestExtractKeyValueRows(unittest.TestCase):
 
     def test_warns_and_sets_null_for_jagged_geographic_row(self):
         """
+        🧪Extract station info with not defined coordinates.
         Spec relation:
         - Important edge case:
           <tr><td>Geographic</td></tr>
@@ -393,6 +400,7 @@ class TestExtractStationMetadata(unittest.TestCase):
 
     def test_builds_expected_metadata_table_for_three_stations(self):
         """
+        🧪Build metadata table for well defined stations.
         Spec relation:
         - Scrape `<area>` links from the WDC map page.
         - Visit each station detail page.
@@ -454,7 +462,7 @@ class TestExtractStationMetadata(unittest.TestCase):
 
     def test_returns_null_lat_lon_and_preserves_raw_string_when_geographic_format_changes(self):
         """
-        Edge case: if `Geographic` is a non-null string but not in the expected format, preserve the raw string and return null lat/lon.
+        🧪Edge case: if `Geographic` is a non-null string but not in the expected format, preserve the raw string and return null lat/lon.
         - This should not fail fast.
         """
         def mock_get_soup_content_with_bad_cocos(url: str, timeout: int = 30) -> BeautifulSoup:
