@@ -46,13 +46,14 @@ The location for which the K index data is required. Australian region, or an Au
 ```
 
 📌A feature (ingestion, preprocessing, training pipeline, etc) is built from these processes:
-1. Expect an initial `spec-*.md` file on the Sources part of this project. Here, a "spec" is defined as high-level approaches and invariants needed for the whole program, namely (a template can be found at `spec-template.md` in Source):
+1. Expect an initial `spec-*.md` file. Here, a "spec" is defined as high-level approaches and invariants needed for the whole program, namely (a template can be found at `spec-template.md` in Source):
 1.1 High level approach (e.g. for preprocessing, we employ a two step approach to squash all runs to a neat table including duplicate measurements across runs, before parsing it to a ML-ready dataset)
+1.1.1 Optional but important: whenever feasible, identify any decisions made in the previous `spec-*.md` files that could impact future decisions, for example, keep naming conventions to be consistent.
 1.2 invariants / expected behavior
 1.3 Important edge cases
-1.4 Failure modes: how do we want the code to fail? (e.g. custom exceptions, logging, fail fast, etc)
+1.4 Failure modes: how do we want the code to fail? (e.g. custom exceptions, log warnings, fail fast, etc)
 1.5 Key modules/classes/function but just on a signature level (e.g. function arguments and return values and very brief description of its expected behavior, python module components, CLI arguments, etc) and no finer. Otherwise the spec becomes too rigid. This is an example:
-Below is an example:
+
 ```
 **Module:** `src/ingestion/loader.py`
 
