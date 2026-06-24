@@ -47,6 +47,7 @@ https://app.notion.com/p/2ee946dd9bca80cc9ea8e68abb2eac72
 - Prefer a single run-oriented ingestion routine that writes to disk and delegates responsibilities to small helpers such as chunk generation, chunk writing, manifest writing, and success/failure marking.
 - Run CLI entrypoints as modules with `python -m ...` from the project root.
 
+
 Source ADRs:
 - `Enforce Strict UTC Datetime Contract for Ingestion`
   https://app.notion.com/p/306946dd9bca801087b8df13d6692689
@@ -74,10 +75,17 @@ https://app.notion.com/p/2ee946dd9bca80f0a696c9a34048f6aa
 
 - Use a staged preprocessing pipeline for K-index observations.
 - Stage T1 consolidates successful raw ingestion runs into an intermediate audit-friendly layer.
+  - For preprocessing, manifest status is the source of truth for successful raw runs, not _SUCCESS.txt alone.
+  - Successful K-index ingestion runs with empty JSONL chunks must still be represented in T1 with exactly one sentinel row using null observation fields, so successful-but-empty runs remain auditable.
 - Stage T2 canonicalizes observations, handles deduplication, and records consistency flags.
+  - When multiple K-index values exist for the same (location, valid_time), T2 should take the value from the latest run_id and set flag=True if values ever differ. Rows with valid_time IS NULL are excluded from T2.
+- T1 is audit-oriented and may contain duplicates across runs; T2 is canonical observational data for downstream feature engineering and should be unique by (location, valid_time).
 - Keep preprocessing stages separated as preprocess, transform, and load responsibilities where practical.
 - Use DuckDB for local preprocessing over JSONL/Parquet when working with larger raw datasets.
 - Do not jump directly from raw files to model-ready features if an intermediate audit layer is required by the spec.
+- Station metadata is a slow-changing reference dataset built by a separate entrypoint, not part of dynamic K-index ingestion.
+  - Join K-index observations to station metadata through an explicit api_location -> canonical_station_name lookup, not inferred string matching. Known special cases include Narrabri -> Culgoora and Cocos Island -> Cocos Islands.
+  - Appending station metadata to T2 must not remove, duplicate, or modify existing T2 observations; unmatched metadata should remain null with diagnostics.
 
 Source ADRs:
 - `High level preprocessing approach`
@@ -86,16 +94,48 @@ Source ADRs:
   https://app.notion.com/p/32a946dd9bca80129c08dfe640b769af
 
 ## Testing Automation Guardrails
+**Test library**
+- Use built-in `unittest` for new tests unless a future ADR explicitly changes the test framework. Do not introduce `pytest` style fixtures, `pytest.raises`, or `conftest.py` patterns by default.
 
-- Tests should be contract-driven.
-- Validate expected behavior, invariants, schema contracts, edge cases, and failure modes.
+**Test disciplines/best practices**
+- Tests should be contract driven. Always review the spec's test matrix before writing test code. Each generated test should trace back to expected behavior, an invariant, a schema contract, an edge case, or a failure mode.
 - Avoid relying on incidental row ordering, brittle string formatting, or broad snapshot-style assertions unless the ordering or formatting is itself part of the contract.
-- Mock external API calls in unit tests. Do not require live BoM API access for normal unit test runs.
+- Mock external APIs, network calls, sleeps, clocks, progress bars, and other nondeterministic boundaries. Patch objects where they are used, not where they are originally defined.
+- When testing orchestrators, mock lower-level I/O/network helpers and assert observable coordination contracts: calls made, statuses written, exceptions re-raised, and output paths returned.
+- Although test matrix should have been crystal clear on what to test, it is reminded to not over-test implementation details. Private helpers may be tested when they encode important contracts, but tests should primarily protect public behavior and project data contracts.
 - Add or update tests when changing ingestion, preprocessing, config parsing, or CLI behavior.
+
+
+**Test files and code structure**
+- Name test files after the behavior/module under test, following the existing `tests/test_*.py` pattern.
+- Name test classes as `Test<ComponentOrFunctionName>` and test methods as `test_<unit>_<scenario>_<expected_behavior>`, for example `test_transform_t1_missing_exits_cleanly`.
+- Keep test function docstrings short and contract-focused. Prefer one or two sentences explaining the boundary being tested; avoid long tutorial-style docstrings unless the setup is genuinely complex.
+- Use the Arrange / Act / Assert structure for multi-step tests. Add `# Arrange`, `# Act`, and `# Assert` comments when they improve scanning, but avoid excessive comments that merely restate obvious code.
+- Prefer small named fixtures and helper methods such as `_make_*`, `_read_*`, `_assert_*`, and `_canonical_*` when they make assertions easier to understand.
+- Prefer explicit dictionaries, rows, and small DataFrames over opaque snapshots or large fixture blobs.
+- For tabular assertions, compare by named fields rather than tuple positions. Use order-independent comparisons such as canonical JSON strings plus `assertCountEqual` unless row order is part of the contract.
+- For filesystem behavior, use `tempfile.TemporaryDirectory()` or equivalent temporary paths. Do not read from or write to real `data/`, `logs/`, `models/`, or other ignored runtime directories in tests.
+- Avoid `print()` statements, emojis, and noisy success messages in new tests. Let `unittest -v` provide test progress; assertion messages should explain failures.
+
+**Test boundary selection**
+- For pure helpers, test direct inputs and outputs with small explicit cases.
+- For orchestrators, mock lower-level collaborators and assert coordination contracts rather than real I/O.
+- For filesystem, parquet, DuckDB, or logging lifecycle behavior, use real operations inside `tempfile.TemporaryDirectory()` when disk side effects are the contract.
+- For scraper/HTML parsing behavior, use miniature HTML fixtures and real parser objects; mock only the network retrieval boundary unless the spec says otherwise.
+- For time-dependent behavior, patch clocks/run IDs/retrieval timestamps to deterministic values and assert the resulting observable fields or paths.
+- For progress bars or sleeps, patch them out so tests stay deterministic and quiet.
+
+**Spec test matrix completeness**
+- Each test matrix row should identify the function/entrypoint under test, test level (`pure`, `orchestrator`, `filesystem integration`, `parser`, or `CLI/logging lifecycle`), fixtures needed, mocks/patch targets, and minimum assertions.
+- If the exact patch target matters, write the import path explicitly in the spec, for example `src.ingest.space_weather_k_index.post_k_index`.
+- If a test uses real temporary disk writes, DuckDB, parquet, pandas, or BeautifulSoup, say so explicitly in the test matrix instead of leaving the agent to infer it.
 
 
 Source ADR: `Unit testing philosophy (contract-driven)`
 https://app.notion.com/p/32a946dd9bca80e2bba8e762e98c781f
+
+## Entrypoints
+All future entrypoints should use the shared logging wrapper pattern: create .running.log, rename to .success.log or .error.log, log fatal stack traces only in the wrapper, and re-raise exceptions. Source code in src/ should generally just raise, not duplicate fatal logging.
 
 
 ## ADR Supersession Semantics
