@@ -111,6 +111,44 @@ Examples:
 This keeps the model in a real forecasting posture. It prevents the model from seeing solar-wind or ground-response information that would only be available after the target K interval has started.
 
 
+### Resources to data documentation (OMNI, HAPI)
+- [CDAWeb OMNI dataset notes](https://cdaweb.gsfc.nasa.gov/misc/NotesO.html#OMNI_HRO2_1MIN)
+- [OMNI data documentation](https://omniweb.gsfc.nasa.gov/html/ow_data.html) 
+- [HAPI data specification repo](https://github.com/hapi-server/data-specification/tree/master)
+  - For example, For OMNI via HAPI, the key documentation is the dataset-specific HAPI `/info` endpoint:
+    ```
+    https://cdaweb.gsfc.nasa.gov/hapi/info?id=OMNI_HRO2_1MIN
+    ```
+    - That endpoint returns JSON metadata for the dataset, including each parameter’s `name`, `description`, `units`, `type`, and `fill`
+
+### Missing values/fill values: how to identify them
+- fetch those fill values dynamically from /info instead of hardcoding them (e.g. `99.99`):
+```python
+import requests
+
+def fetch_hapi_fill_values(dataset_id: str, parameter_names: list[str]) -> dict[str, float | int | str | None]:
+    url = "https://cdaweb.gsfc.nasa.gov/hapi/info"
+    response = requests.get(url, params={"id": dataset_id}, timeout=60)
+    response.raise_for_status()
+
+    info = response.json()
+    fills = {}
+
+    for parameter in info["parameters"]:
+        name = parameter["name"]
+        if name in parameter_names:
+            fills[name] = parameter.get("fill")
+
+    return fills
+
+fills = fetch_hapi_fill_values(
+    "OMNI_HRO2_1MIN",
+    ["F", "BX_GSE", "BY_GSM", "BZ_GSM", "flow_speed", "proton_density", "Pressure"],
+)
+```
+
+### Suggested invariant to handle missing values
+- Fill values must be read from the HAPI /info metadata for the selected dataset and parameters, then converted to missing values before feature aggregation. That keeps the pipeline robust if we later switch from OMNI_HRO2_1MIN to another OMNI product.
 
 
 ## Remarks
