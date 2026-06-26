@@ -2,6 +2,9 @@
 
 This file is the compact operational "current truth" for future agents working on this repository. It summarizes durable decisions from the Notion ADR-like database for the Space Weather K-index prediction project.
 
+## Gitignore
+Do not access anything in `.gitignore` except the `.agent/` directory, or unless otherwise explicitly specified. 
+
 ## Project Workflow
 
 Typical workflow to create a new feature
@@ -51,7 +54,7 @@ Source ADR: `Read the BoM SW API key from a env variable`
 https://app.notion.com/p/2ee946dd9bca80cc9ea8e68abb2eac72
 
 ## Ingestion
-
+- [BoM Space Weather API documentation](https://sws-data.sws.bom.gov.au/)
 - BoM ingestion datetime strings must follow the strict UTC format configured for the API, currently `YYYY-MM-DD HH:mm:ss`.
 - Treat parsed ingestion datetimes as UTC-naive by contract.
 - Reject flexible ISO variants, `T` separators, or timezone offsets unless a future ADR supersedes this rule.
