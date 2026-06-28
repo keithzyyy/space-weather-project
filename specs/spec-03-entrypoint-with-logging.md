@@ -1,165 +1,456 @@
-# Entrypoint logic with standardized logging
-## Recall these things if necessary
+---
+status: Draft
+owner: Keith
+branch: specs/rewrite-specs
+related_adrs: []
+related_specs:
+  - specs/spec-template.md
+supersedes: []
+---
 
-## 1. High-level approach
-Employ a standardized logging approach for CLI entrypoints (e.g. ingest, preprocess, transform, load, training, inference, etc) packaged into a neat logging module, such that all entrypoints can reuse that same module for logging their executions and write them into a log file in the `logs/` directory.
+# Spec: `entrypoint-with-standardized-logging`
 
+## 1. Purpose
+Define the contract for the shared logging wrapper used by project CLI entrypoints.
 
-## 2. Expected behavior & Invariants
-- Each log file name is of the form `<entrypoint name>_<UTC id>.<status>.log` where `<status>` can be either `success, error, running`. 
-  
-- A log file has an `error` status if an `Exception` or `Error` is raised, including BOTH that are deliberately raised, indicating a logic error, and most importantly unhandled ones.
-    - The logging module **will print the stack trace using `logger.execption` so that source code only needs to `raise` so that printed stack traces are not duplicated**.
-  
-- For this reason, all source code must be consistent to their expected behavior so that relevant `Exceptions` or `Errors` can be raised if any such behavior is violated in any way.
-    - Again, source code only need to do a `raise` 
+This feature solves the need for each entrypoint execution to have a durable,
+inspectable log lifecycle:
 
-## 3. Important edge cases
+- create a per-run `.running.log` file before executing entrypoint logic
+- finalize the log as `.success.log` when the entrypoint logic completes
+- finalize the log as `.error.log` when the entrypoint logic raises an exception
+- log fatal stack traces once, at the wrapper boundary
+- re-raise exceptions so schedulers and callers can detect failed runs
 
+The wrapper is intended for user-facing modules under `entrypoint/`. Core logic in
+`src/` should raise exceptions when contracts are violated and should not duplicate
+wrapper-level fatal stack trace logging.
 
-## 4. Failure modes
-- Src explicitly raises `Exception`: log the exception via its stack trace
-- An unhandled `Exception` is raised: log the exception via its stack trace
+Out of scope for this spec:
 
-## 5. Key modules/classes/function signatures
-Create a logging module `src/utils/logging.py` that have the following functions:
-- `setup_logging` that sets up the logging console and file logging for one entrypoint execution.
-  - Ensure that `logs/` directory is present (create if not present),
-  - `*.running.log` file is created
+- changing source implementation behavior
+- changing current tests
+- changing `spec-template.md`
+- creating or updating ADRs
+- handling CLI argument parsing failures inside the wrapper in this pass
+- replacing Python's built-in `logging` library
 
-- A `run_entrypoint_with_logging` generic function to accept the entrypoint logic baked with the logging config set up above.
-  - Any exceptions should be reraised
-  - Assigns success/error status correctly to be written at `finalize_log_file`
+## 2. Context Check
+Before implementation or future changes, scan:
 
+- `src/utils/logging.py`
+- `tests/test_entrypoint_logging.py`
+- current `entrypoint/*.py` modules that call `run_entrypoint_with_logging`
+- `AGENTS.md` test and entrypoint rules
 
-- `finalize_log_file` which receives status of the entrypoint execution and modifying the `.log` file name accordingly, before closing down any write streams/flushing down handlers.
+Relevant existing decisions or conventions:
 
-```
-from __future__ import annotations
-import logging
-from datetime import datetime, timezone
-from pathlib import Path
+- Entrypoints should run as modules with `python -m ...` from the project root.
+- Entrypoints should use the shared logging wrapper pattern.
+- The wrapper creates `.running.log`, then renames it to `.success.log` or `.error.log`.
+- Fatal stack traces should be logged only by the wrapper.
+- Source code in `src/` should generally raise rather than duplicate fatal logging.
+- Tests should use built-in `unittest`.
+- Tests should be contract-driven and should avoid noisy `print()` statements.
 
-"""
-Utility functions for setting up logging in entrypoint scripts.
-Might do it in utils/ or io/ but since it's only relevant for entrypoints, keeping it here for now.
-"""
+Potential conflicts or uncertainties:
 
-# --------------
-# LOGGING SETUP
-# --------------
-def setup_logging(log_dir: str | Path, entrypoint_name: str) -> tuple[logging.Logger, Path]:
-    """
-    Configure console + file logging for one entrypoint execution.
+- Current entrypoints parse CLI arguments before entering the wrapper, so `argparse`
+  failures are outside the current logging lifecycle.
+- The wrapper catches `Exception`, not `BaseException`, so `SystemExit` and
+  `KeyboardInterrupt` are outside the current error-status contract.
+- The current timestamp has second precision, so same-entrypoint runs started in the
+  same second can target the same log file name.
+- `finalize_log_file` currently trusts the caller-provided `status` value.
+
+Resolution:
+
+- This spec documents the current implementation contract as-is.
+- CLI parsing failures are recorded as an edge case and deferred future work.
+- `.error.log` remains the terminal failure status because it matches current source
+  code and tests.
+- Future behavior changes should update this spec and may warrant an ADR.
+
+## 3. High-Level Approach
+Use a small shared module to wrap CLI entrypoint execution with a consistent log
+lifecycle.
+
+Expected flow:
+
+- The entrypoint parses CLI arguments.
+- The entrypoint defines a `main_logic(logger)` callable for the real work.
+- The entrypoint calls `run_entrypoint_with_logging(...)`.
+- The wrapper configures console and file logging and creates a `.running.log` file.
+- The wrapper executes `main_logic(logger)`.
+- On normal completion, the wrapper finalizes the log to `.success.log`.
+- On a propagated `Exception`, the wrapper logs the fatal stack trace, finalizes the
+  log to `.error.log`, and re-raises the original exception.
+
+Main modules or files likely affected by this spec:
+
+- `src/utils/logging.py`
+- `tests/test_entrypoint_logging.py`
+- `entrypoint/*.py`
+
+## 4. Expected Behavior
+The feature should:
+
+- create the requested log directory if it does not exist
+- create a per-execution log path ending in `.running.log`
+- name log files as `<entrypoint_name>_<YYYYMMDDTHHMMSSZ>.<status>.log`
+- use UTC for the timestamp component
+- configure both file logging and console logging for the execution
+- pass a usable `logging.Logger` to `main_logic`
+- mark the run as `success` when `main_logic` completes without raising
+- mark the run as `error` when `main_logic` raises an `Exception`
+- log fatal exception details through `logger.exception(...)`
+- re-raise the original exception after fatal logging
+- close or flush logging handlers before renaming the log file
+- return the final log path from `finalize_log_file`
+
+The feature should not:
+
+- swallow exceptions raised by `main_logic`
+- duplicate fatal stack trace logging in lower-level `src/` code
+- treat swallowed lower-level errors as wrapper-level failures
+- treat `.failure.log` as a current terminal status
+- handle `argparse` failures in the current pass
+- depend on real project `logs/`, `data/`, `models/`, or other ignored runtime
+  directories in tests
+
+## 5. Invariants
+Invariants:
+
+- Every wrapped entrypoint execution starts with a `.running.log` path.
+- The only intended terminal statuses are `success` and `error`.
+- A successful wrapped execution leaves a `.success.log` and no corresponding
+  `.running.log`.
+- A failing wrapped execution leaves a `.error.log`, re-raises the original
+  exception, and leaves no corresponding `.running.log` if finalization succeeds.
+- Only exceptions that propagate out of `main_logic` determine wrapper failure.
+- Source code must raise on violated contracts if the wrapper should mark the run as
+  failed.
+- The wrapper owns fatal stack trace logging for entrypoint execution failures.
+- The logging wrapper should not require ordinary runtime behavior changes in `src/`.
+
+## 6. Edge Cases
+Edge cases:
+
+- CLI argument parsing errors occur before the wrapper in current entrypoints.
+- `SystemExit` and `KeyboardInterrupt` are not caught because the wrapper catches
+  `Exception`, not `BaseException`.
+- External termination, process kill, interpreter crash, or power loss may leave a
+  `.running.log`.
+- Two executions of the same entrypoint starting in the same second may collide on
+  the same log filename.
+- Lower-level code may catch and swallow an exception before it reaches the wrapper.
+- `main_logic` may log messages before raising.
+- `setup_logging` may fail before the lifecycle log is created.
+- `finalize_log_file` may be called directly with an invalid status string.
+
+Expected handling:
+
+- CLI parsing failures are documented as current behavior and deferred future work;
+  they are not part of this wrapper contract for now.
+- `SystemExit` and `KeyboardInterrupt` are outside the current `.error.log` contract.
+- A lingering `.running.log` means the log lifecycle did not finalize; it should not
+  be interpreted as proof that the process is still running.
+- Filename collision behavior is a known limitation of second-precision timestamps
+  and should be addressed in a future change if concurrent runs become common.
+- Swallowed lower-level exceptions are source-code responsibility; if the error
+  should fail the run, source code must re-raise it.
+- Messages logged before a propagated exception should remain in the finalized
+  `.error.log` when finalization succeeds.
+- Setup failures should propagate because no reliable log lifecycle exists yet.
+- Invalid finalization statuses are outside the intended caller contract; future
+  validation may restrict them explicitly.
+
+## 7. Failure Modes
+Failure modes:
+
+- `main_logic` raises an `Exception`.
+- Log directory creation fails.
+- File handler creation fails.
+- Logging shutdown or file rename fails during finalization.
+- The final target log path already exists.
+- The process exits through `SystemExit`, `KeyboardInterrupt`, or external
+  termination.
+- CLI argument parsing fails before wrapper setup.
+
+Expected handling:
+
+- For `main_logic` exceptions, log a fatal stack trace, finalize to `.error.log`,
+  and re-raise the original exception.
+- For setup failures, fail fast and propagate the exception.
+- For finalization failures, propagate the finalization exception rather than hiding
+  filesystem problems.
+- For `SystemExit`, `KeyboardInterrupt`, external termination, and CLI parse errors,
+  document as outside the current wrapper contract.
+- Do not silently continue after a failure that should make the entrypoint run
+  invalid.
+
+## 8. Data Contracts
+Inputs:
+
+- Name: `log_dir`
+- Type or format: `str | pathlib.Path`
+- Required: yes for `setup_logging`; optional for `run_entrypoint_with_logging`
+- Notes: Directory where lifecycle log files are written.
+
+- Name: `entrypoint_name`
+- Type or format: `str`
+- Required: yes
+- Notes: Prefix used in the log filename. Should be stable and identify the
+  entrypoint module or command.
+
+- Name: `main_logic`
+- Type or format: `Callable[[logging.Logger], None]`
+- Required: yes
+- Notes: Callable containing the real entrypoint work. It receives the configured
+  logger and should raise exceptions when the run should fail.
+
+- Name: `log_path`
+- Type or format: `str | pathlib.Path`
+- Required: yes for `finalize_log_file`
+- Notes: Path to a `.running.log` file created for the current execution.
+
+- Name: `status`
+- Type or format: `str`
+- Required: yes for `finalize_log_file`
+- Notes: Intended values are `success` and `error`.
+
+Outputs:
+
+- Name: `logger`
+- Type or format: `logging.Logger`
+- Notes: Logger configured for the entrypoint execution.
+
+- Name: `running_log_path`
+- Type or format: `pathlib.Path`
+- Notes: Path ending in `.running.log`.
+
+- Name: `final_log_path`
+- Type or format: `pathlib.Path`
+- Notes: Path ending in `.<status>.log`.
+
+Schema notes:
+
+- Log filename format is `<entrypoint_name>_<YYYYMMDDTHHMMSSZ>.<status>.log`.
+- Timestamp is UTC.
+- Current timestamp precision is one second.
+- Current statuses are `running`, `success`, and `error`.
+- `.failure.log` is not part of the current contract.
+
+## 9. Interface Design
+Public function signatures:
+
+~~~python
+def setup_logging(
+    log_dir: str | Path,
+    entrypoint_name: str,
+) -> tuple[logging.Logger, Path]:
+    """Configure console and file logging for one entrypoint execution.
+
+    Args:
+        log_dir: Directory where the lifecycle log file should be created.
+        entrypoint_name: Stable name used as the log filename prefix.
 
     Returns:
-        logger:
-            Logger bound to this entrypoint module.
+        A configured logger and the initial `.running.log` path.
 
-        log_path:
-            Path to the initial '.running.log' file, which can later be
-            renamed to '.success.log' or '.error.log'.
+    Raises:
+        OSError: When the log directory or file handler cannot be created.
     """
-    log_dir = Path(log_dir)
-    log_dir.mkdir(parents=True, exist_ok=True)
+~~~
 
-    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    log_path = log_dir / f"{entrypoint_name}_{ts}.running.log"
-
-    # 1. setting up both console and file logging with a consistent format.
-    # The file logging will be renamed on completion to indicate success or error status. 
-    logging.basicConfig(
-        level=logging.INFO, # set to INFO to reduce verbosity, as the underlying preprocess module already has detailed logging
-        format="[%(asctime)s - %(levelname)s] %(message)s",
-        handlers=[
-            logging.FileHandler(log_path, encoding="utf-8"), # file logging
-            logging.StreamHandler(), # console logging
-        ],
-        force=True,  # reset handlers if rerun interactively
-    )
-
-    # 2. Create a logger for this module.
-    logger = logging.getLogger(__name__)
-
-    return logger, log_path
-
-
-def finalize_log_file(log_path: str | Path, status: str) -> Path:
-    """
-    Rename the per-execution log file from '.running.log' to a final status.
-
-    Expected status values:
-        - 'success'
-        - 'error'
-    """
-    log_path = Path(log_path)
-    final_path = Path(str(log_path).replace(".running.log", f".{status}.log"))
-
-    # Ensure all handlers are flushed/closed before renaming.
-    logging.shutdown()
-
-    if log_path.exists():
-        log_path.rename(final_path)
-
-    return final_path
-
-from typing import Callable
-
+~~~python
 def run_entrypoint_with_logging(
     entrypoint_name: str,
     main_logic: Callable[[logging.Logger], None],
     log_dir: str | Path = "logs",
 ) -> None:
-    logger, log_path = setup_logging(log_dir=log_dir, entrypoint_name=entrypoint_name)
-    status = "running"
+    """Run entrypoint logic under the standardized logging lifecycle.
 
-    try:
-        main_logic(logger)
-        status = "success"
-    except Exception:
-        logger.exception("Fatal error during entrypoint execution.")
-        status = "error"
-        raise
-    finally:
-        final_log_path = finalize_log_file(log_path, status)
-        print(f"Log written to: {final_log_path}")
-```
+    Args:
+        entrypoint_name: Stable name used as the log filename prefix.
+        main_logic: Callable that performs the entrypoint work.
+        log_dir: Directory where lifecycle logs should be written.
 
-## Future entrypoints MUST follow this skeleton. 
+    Raises:
+        Exception: Re-raises the original exception from `main_logic`.
+        OSError: When logging setup or finalization fails.
+    """
+~~~
 
-```
+~~~python
+def finalize_log_file(
+    log_path: str | Path,
+    status: str,
+) -> Path:
+    """Finalize a `.running.log` file by renaming it to the requested status.
 
-... import logging modules ...
+    Args:
+        log_path: Path to the current `.running.log` file.
+        status: Intended terminal status, currently `success` or `error`.
 
+    Returns:
+        The final log path.
+
+    Raises:
+        OSError: When log shutdown or rename cannot complete.
+    """
+~~~
+
+### Possible internal helpers (`_<function_name>`) worth testing for
+
+None in the current contract. Future helpers may be useful if timestamp generation,
+status validation, or filename construction becomes more complex.
+
+### CLI interface, if applicable:
+
+Entrypoints should continue to expose their own CLI arguments and call the wrapper
+from `main()`:
+
+~~~text
+python -m entrypoint.<module> --config_path config/local.yaml
+~~~
+
+Current skeleton:
+
+~~~python
 def main() -> None:
     args = parse_args()
 
     def _main_logic(logger: logging.Logger) -> None:
-        config = load_config(args.config_path)
-        
-        .... manage user input against config default args ....
-        .... whatever module your entrypoint calls....
-        .... can use logger.info() or the like for any branching ...
+        ...
 
     run_entrypoint_with_logging(
-        entrypoint_name="preproc_T1_k_index",
+        entrypoint_name="<entrypoint_name>",
         main_logic=_main_logic,
         log_dir="logs",
     )
-```
+~~~
 
-## 6. ⚠️ Important remark on unit tests
-Unit tests **must be derived from the spec** of each function:
-1. expected behavior
-2. invariants / schema contracts
-3. important edge cases
-4. failure modes
+Current limitation:
 
-Assertions **should validate those contracts directly**, not incidental ordering, formatting, or hardcoded fixture details unless those are explicitly part of the contract.
+- `parse_args()` happens before wrapper setup, so CLI parse errors are not finalized
+  as `.error.log` in this pass.
 
-## 7. Finally, any remarks?
-1. This module uses Python’s built-in `logging` library and assumes standard logger methods (`info`, `exception`, etc.).
-    - Choice of logging libraries are not of ultimate concern, as one only needs reliable and debuggable entrypoint logs. So I find `logging` library sufficient for my needs.
+### Configuration keys, if applicable:
 
-2. Ideal behavior for `src/`
-   - **Only the wrapper log the fatal exceptions itself, so that src code only needs to `raise`. Otherwise stack traces are duplicated.** We do not need to test this as this goes beyond the scope of our logging module, but this could be a useful advice for developing code in `src/`.
+None. The wrapper currently receives `log_dir` directly from the entrypoint.
+
+## 10. Test Blueprint
+Tests should prove the contract, not incidental implementation details.
+
+Testing framework:
+
+- Use built-in `unittest`.
+- Use `tempfile.TemporaryDirectory()` for filesystem lifecycle tests.
+- Patch clocks only if a test needs deterministic timestamp assertions.
+- Avoid real project `logs/`, `data/`, `models/`, or ignored runtime directories.
+- Avoid asserting Python logging internals unless they become part of the contract.
+- Avoid exact log formatting assertions unless the format becomes user-facing.
+- Future cleanup should remove noisy `print()` calls and emoji output from existing
+  tests to align with project test guardrails.
+
+Test files:
+
+- `tests/test_entrypoint_logging.py`
+
+Test boundary:
+
+- Chosen boundary: CLI/logging lifecycle plus filesystem integration.
+- Reason: the wrapper's primary contract is observable lifecycle behavior on disk
+  plus exception propagation.
+
+Fixtures and sample data:
+
+- Temporary log directory under `tempfile.TemporaryDirectory()`.
+- Small `main_logic(logger)` callables that either complete or raise.
+- Fixed `.running.log` paths for direct `finalize_log_file` tests.
+
+Real dependencies allowed in tests:
+
+- `tempfile.TemporaryDirectory()` because filesystem side effects are the contract.
+- Python `logging` because the wrapper directly configures it.
+- Real file reads after `logging.shutdown()` to verify persisted messages.
+
+Mocks and patches:
+
+- Patch `src.utils.logging.datetime` only when asserting exact timestamp text.
+- Do not mock the filesystem for lifecycle tests.
+- Do not invoke real entrypoint modules for wrapper unit tests.
+- Do not test CLI parse errors in the current matrix; document them as deferred.
+
+Test matrix:
+
+| Test name | Boundary | Scenario | Input / fixture | Expected result | Mocks / patches | Minimum assertions |
+|---|---|---|---|---|---|---|
+| `test_setup_logging_creates_log_dir_and_running_log_path` | Filesystem integration | Setup happy path | Temporary missing log directory and `entrypoint_name` | Log directory exists and returned path is a `.running.log` under it | None | Assert directory exists, path parent is `log_dir`, filename starts with `<entrypoint_name>_`, filename ends with `.running.log` |
+| `test_setup_logging_allows_messages_to_be_written_to_file` | Filesystem integration | Logger writes to file | Temporary log directory and info message | Message is persisted in running log | None | Assert log file exists after shutdown and contains expected message |
+| `test_finalize_log_file_renames_running_to_success` | Filesystem integration | Success finalization | Existing `.running.log` file | File is renamed to `.success.log` | None | Assert old running path is gone, success path exists, returned path equals expected success path |
+| `test_finalize_log_file_renames_running_to_error` | Filesystem integration | Error finalization | Existing `.running.log` file | File is renamed to `.error.log` | None | Assert old running path is gone, error path exists, returned path equals expected error path |
+| `test_run_entrypoint_with_logging_marks_success_when_main_logic_completes` | CLI/logging lifecycle | Wrapped success | `main_logic` logs and returns | Exactly one `.success.log` and no `.running.log` or `.error.log` | None | Assert one success log, zero running logs, zero error logs, success log contains message |
+| `test_run_entrypoint_with_logging_marks_error_when_main_logic_raises` | CLI/logging lifecycle | Wrapped failure | `main_logic` raises `RuntimeError` | Original exception propagates and one `.error.log` is created | None | Assert `RuntimeError` raised, one error log, zero running logs, zero success logs |
+| `test_run_entrypoint_with_logging_reraises_exception` | CLI/logging lifecycle | Exception identity/message | `main_logic` raises `ValueError` | Wrapper does not swallow or replace the exception | None | Assert raised exception type and message match original |
+| `test_run_entrypoint_with_logging_logs_fatal_exception_at_wrapper_level` | CLI/logging lifecycle | Fatal logging | `main_logic` raises | Error log contains wrapper-level fatal context | None | Assert one error log and stable fatal message substring is present |
+| `test_log_file_lifecycle_running_to_success_end_to_end` | CLI/logging lifecycle | End-to-end success lifecycle | `main_logic` returns | Final state is success only | None | Assert one success log and no running/error logs |
+| `test_log_file_lifecycle_running_to_error_end_to_end` | CLI/logging lifecycle | End-to-end error lifecycle | `main_logic` logs then raises | Final state is error only and exception propagates | None | Assert exception raised, one error log, no running/success logs |
+
+Things not to over-test:
+
+- Exact logging timestamp or full format unless made part of the user-facing
+  contract.
+- Whether `logging.shutdown()` itself was called; test observable finalization
+  behavior instead.
+- Private helper details.
+- Real entrypoint parsing behavior in this wrapper test suite.
+- Swallowed lower-level exceptions as wrapper behavior; this is a source-code
+  contract responsibility.
+
+## 11. Notebook Implementation Notes
+No notebook work is needed for this feature.
+
+Modularization plan:
+
+- Keep wrapper behavior in `src/utils/logging.py`.
+- Keep CLI-specific argument parsing in each `entrypoint/*.py` module.
+- Keep wrapper lifecycle tests in `tests/test_entrypoint_logging.py`.
+
+## 12. Acceptance Criteria
+This spec rewrite is complete when:
+
+- The spec follows the `spec-template.md` structure.
+- The spec documents current `.running.log`, `.success.log`, and `.error.log`
+  behavior.
+- The spec states that failures are determined by exceptions propagated from
+  `main_logic`.
+- The spec states that wrapper-level fatal logging uses `logger.exception(...)`.
+- The spec states that exceptions are re-raised after logging.
+- The spec records CLI argument parsing errors as a deferred edge case.
+- The spec records `SystemExit`, `KeyboardInterrupt`, external termination,
+  timestamp collision, swallowed exceptions, setup failure, finalization failure,
+  and invalid status as edge cases or failure modes.
+- The test blueprint maps current test intent into a clear matrix.
+- The spec does not require source, test, ADR, or template changes in this pass.
+
+## 13. Open Questions
+Questions to resolve before future implementation changes:
+
+- Should CLI argument parsing move inside the wrapper so `argparse` failures can
+  produce `.error.log`?
+- Should the wrapper catch selected `BaseException` subclasses such as `SystemExit`,
+  or should they remain outside the lifecycle contract?
+- Should log filenames include higher-precision timestamps or another run id to
+  prevent same-second collisions?
+- Should `finalize_log_file` validate `status` and reject unknown values?
+- Should the wrapper return the final log path from `run_entrypoint_with_logging`
+  for easier testing or orchestration?
+- Should the fatal logging policy be promoted into an ADR?
+
+Questions that can be deferred:
+
+- Whether to support a configurable logging level.
+- Whether to support JSON logs or structured logging.
+- Whether to make log directory configurable through project YAML config.
