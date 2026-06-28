@@ -1,162 +1,383 @@
-# Feature: what do I want to build?
+---
+status: Draft
+owner: Keith
+branch: specs/rewrite-specs
+related_adrs: []
+related_specs:
+  - specs/spec-template.md
+  - specs/spec-02-k-index-preproc.md
+  - specs/spec-03-entrypoint-with-logging.md
+supersedes: []
+---
 
-## Recall these things if necessary
+# Spec: `k-index-site-metadata-table`
 
-## 1. High-level approach
+## 1. Purpose
+Build a standalone station metadata table for BoM Space Weather K-index sites.
 
-1. Build a dataset of station metadata from World Data Center pages
-    - Initiate metadata building by an entrypoint CLI: **when it is executed, navigate to the BoM World Data Center URL (https://sws.bom.gov.au/World_Data_Centre/2/1/1, expected to exist in config), navigate to each location's map page (just a hyperlink within the webpage of the aformentioned URL) and extract geographical coordinates.**
-    - Note the dataset is expected to be **static**:
-        - ingestion pipeline = dynamic K-index observations
-        - station metadata pipeline = slow-changing reference data
-        - this should be cleaner architecturally and avoids making ingestion slower or more failure-prone.
-    - ❓This metadata building will be initiated by a separate entrypoint.
+This feature solves the problem of keeping slow-changing station reference data out of the dynamic K-index ingestion and preprocessing paths. The metadata table records station names, alternative names, geographic coordinates, source URLs, and retrieval time from BoM World Data Centre (WDC) station pages.
+
+Users of this feature:
+- CLI users running the site-metadata build from the project root.
+- Future preprocessing, feature engineering, or modelling code that needs station reference fields.
+- Tests and specs that need a stable contract for the station metadata artifact.
+
+Outcome after this feature is complete:
+- A Parquet file exists at the configured site metadata path.
+- The file contains one canonical row per parsed WDC station map entry with usable `alt` and `href`.
+- Missing or malformed station fields are represented with null values and warnings where possible.
+
+Intentionally out of scope:
+- Joining metadata onto T2 K-index observations.
+- Defining an `api_location -> canonical_station_name` lookup table.
+- Model-feature or T3 target construction.
+- Live-network unit tests.
+- Changes to source code, tests, ADRs, config, or the spec template as part of this rewrite.
+
+## 2. Context Check
+Relevant existing decisions or conventions:
+- `entrypoint/build_site_metadata_k_index.py` loads `base_url`, `map_page_url`, and `site_metadata_path` from YAML config.
+- `entrypoint/build_site_metadata_k_index.py` runs inside the shared entrypoint logging wrapper described by `specs/spec-03-entrypoint-with-logging.md`.
+- `src/metadata/site_location.py` contains the metadata scraping, parsing, and Parquet writing behavior.
+- `tests/test_space_weather_k_index_site_metadata.py` already tests parser helpers and the metadata builder with mocked network pages.
+- `specs/spec-02-k-index-preproc.md` defers T3/model-target construction because target and feature decisions are not settled.
+- `AGENTS.md` says future station metadata joins should use an explicit lookup relation rather than inferred string matching.
+
+Potential conflicts or uncertainties:
+- The old spec mixed the station metadata table build with a future T2 metadata join.
+- The current source default for `metadata_file_path` is `notebooks/site-metadata.parquet`, while the entrypoint/config runtime path is `data/metadata/space_weather/k_index/site-metadata.parquet`.
+- The WDC HTML structure is outside project control and may change.
+- Existing tests contain tutorial-style comments and emoji text that do not match current quiet-test guardrails.
+
+Resolution:
+- Keep this spec focused on the standalone station metadata table.
+- Defer metadata-to-T2 joining in the same spirit that `specs/spec-02-k-index-preproc.md` defers T3/model-target construction.
+- Treat the config-driven output path as the runtime contract.
+- Record the source default output path as current implementation debt, not the desired runtime contract.
+- Keep live BoM pages out of unit tests; use miniature HTML fixtures and mocked network boundaries.
+
+## 3. High-Level Approach
+The design separates the user-facing CLI, logging lifecycle, network retrieval, HTML parsing, coordinate parsing, and Parquet materialization.
+
+Expected flow:
+- Run `python -m entrypoint.build_site_metadata_k_index --config_path config/local.yaml`.
+- Parse CLI args before entering the logging wrapper.
+- Load YAML config.
+- Read `space_weather.metadata.k_index.base_url`, `map_page_url`, and `site_metadata_path`.
+- Use the shared logging wrapper to run metadata build logic.
+- Fetch and parse the WDC map page.
+- Read each station `<area>` entry with usable `alt` and `href`.
+- Build each detail-page URL from `base_url` and `href`.
+- Fetch and parse each station detail page.
+- Extract `Station Name`, `Alternative Name`, and `Geographic` table values.
+- Parse geographic coordinates into `lat`, `lon`, and `geometry_raw`.
+- Write the resulting station metadata rows to Parquet.
+- Return the output path as a string.
+
+Main modules or files affected by this spec:
+- `src/metadata/site_location.py`
+- `entrypoint/build_site_metadata_k_index.py`
+- `tests/test_space_weather_k_index_site_metadata.py`
+
+## 4. Expected Behavior
+The feature should:
+- Build site metadata from the configured WDC map page and station detail pages.
+- Use `urljoin(base_url, href)` semantics when constructing station detail URLs.
+- Extract source table values from rows whose first cell is a field name and whose second cell is the field value.
+- Ignore repeated header rows such as `Item` / `Value`.
+- Preserve `Alternative Name` exactly as parsed from the WDC page when present.
+- Preserve malformed non-null coordinate text in `geometry_raw`.
+- Use a single `retrieved_at_utc` timestamp for all rows from the same metadata build run.
+- Create the output parent directory before writing the Parquet file.
+- Propagate request, HTTP status, filesystem, and Parquet writer failures.
+- Let the shared logging wrapper own fatal entrypoint logging and log-file finalization.
+
+The feature should not:
+- Join station metadata onto T2 observations.
+- Infer K-index API locations from station names or aliases.
+- Mutate ingestion, T1, T2, or model-feature artifacts.
+- Swallow network, HTTP status, filesystem, or Parquet writer failures.
+- Use live BoM network calls in unit tests.
+- Treat the legacy `notebooks/site-metadata.parquet` function default as the desired runtime output path.
+
+## 5. Invariants
+Invariants:
+- The metadata table is a slow-changing reference artifact, separate from dynamic K-index ingestion runs.
+- Each output row represents one parsed WDC station map entry with usable `alt` and `href`.
+- The output schema contains exactly the station metadata contract columns unless a future spec changes it.
+- Missing optional source values do not remove the station row.
+- Malformed coordinate text does not remove the station row.
+- HTTP/network failures fail fast rather than producing a partial success artifact by contract.
+- `source_url` identifies the station detail page used for that row.
+- `retrieved_at_utc` is UTC ISO text shared by all rows produced by a single build invocation.
+- Future joins to observations must use an explicit lookup relation and must not remove, duplicate, or modify existing T2 observations.
+
+## 6. Edge Cases
+Edge cases:
+- `Station Name` is missing from a station detail page.
+- `Alternative Name` is missing from a station detail page.
+- `Geographic` is missing from a station detail page.
+- A relevant row is jagged, for example `<tr><td>Geographic</td></tr>`.
+- `Geographic` is non-null but uses an unexpected coordinate format.
+- `Geographic` is `None` or pandas-missing.
+- A longitude has a `W` suffix.
+- A station map `<area>` element is missing `alt` or `href`.
+- The WDC map page contains no usable station `<area>` entries.
+
+Expected handling:
+- Missing `Station Name`: log a warning and fall back to the map `<area alt>` display name.
+- Missing `Alternative Name`: log a warning and continue with null.
+- Missing `Geographic`: log a warning and continue with null coordinate fields.
+- Jagged relevant row: log a warning, store `None` for that source field, and continue parsing.
+- Malformed non-null coordinate text: log a warning, return null lat/lon, and preserve the raw text.
+- Missing coordinate input: return `(None, None, None)`.
+- West longitude: parse longitude as negative.
+- Missing `alt` or `href`: log a warning and skip that map entry.
+- No usable station entries: write an empty Parquet table with the contracted columns, unless the Parquet writer itself fails.
+
+## 7. Failure Modes
+Failure modes:
+- `requests.get(...)` raises while fetching the map page or a station detail page.
+- `response.raise_for_status()` raises for a non-success HTTP status.
+- The output parent directory cannot be created.
+- The Parquet file cannot be written because of permissions, missing writer dependency, invalid path, or disk failure.
+- CLI argument parsing fails before the logging wrapper starts.
+- YAML config loading or expected config-key lookup fails in the entrypoint.
+
+Expected handling:
+- Network and HTTP status failures propagate from `get_soup_content`.
+- Filesystem and Parquet writer failures propagate from `extract_station_metadata`.
+- Config and key lookup failures propagate from the entrypoint `main_logic` and are handled by the shared logging wrapper.
+- CLI parsing failures remain outside the wrapper for now, matching the deferred edge-case stance in `specs/spec-03-entrypoint-with-logging.md`.
+
+## 8. Data Contracts
+Inputs:
+- Name: `base_url`
+- Type or format: `str`
+- Required: yes
+- Notes: Base URL used to resolve station detail-page links, normally `https://sws.bom.gov.au`.
+
+- Name: `map_page_url`
+- Type or format: `str`
+- Required: yes
+- Notes: WDC map page URL containing station `<area>` entries, normally `https://sws.bom.gov.au/World_Data_Centre/2/1/1`.
+
+- Name: `metadata_file_path`
+- Type or format: `str`
+- Required: yes for runtime callers
+- Notes: Runtime path comes from config, normally `data/metadata/space_weather/k_index/site-metadata.parquet`.
+
+- Name: `geometry_raw`
+- Type or format: `str | None`
+- Required: no
+- Notes: Raw WDC `Geographic` value, expected to resemble `Lat. -30.28 Long. 149.58E`.
+
+Outputs:
+- Name: `site_metadata_path`
+- Type or format: `str`
+- Notes: Return value from `extract_station_metadata`; points to the written Parquet file.
+
+- Name: `station_metadata`
+- Type or format: Parquet table
+- Notes: One row per parsed station map entry with usable `alt` and `href`.
+
+Schema notes:
+- `station_name`: `str`; WDC `Station Name`, or map `alt` fallback when missing.
+- `alternative_name_raw`: `str | null`; raw WDC `Alternative Name`.
+- `geometry_raw`: `str | null`; raw WDC `Geographic` value when available and preserved.
+- `lat`: `float | null`; parsed latitude.
+- `lon`: `float | null`; parsed longitude, with west longitudes negative.
+- `source_url`: `str`; station detail page URL.
+- `retrieved_at_utc`: `str`; ISO timestamp generated in UTC for the metadata build invocation.
+
+## 9. Interface Design
+Function signatures:
+~~~python
+def get_soup_content(url: str, timeout: int = 30) -> BeautifulSoup:
+    """Fetch a web page and parse the response HTML.
+
+    Args:
+        url: WDC map or station detail page URL.
+        timeout: Request timeout in seconds.
+
+    Returns:
+        BeautifulSoup parsed from the response HTML.
+
+    Raises:
+        requests.RequestException: When the request or HTTP status check fails.
+    """
 
 
-2. Metadata is expected to be joined to the canonical K-index observation table T2 (see `spec-k-index-preproc.md`)
-    - Define a **canonical station key** suitable for joining to K-index observations.
-      - The result should be an appended T2 as such `T2(location: string, valid_time: datetime, kindex: int, flag: bool, **lat: float, lon: float, other relevant fields**)`, with **the original k-index rows `(location, valid_time, kindex, flag)` should remain unchanged**.
-     - The joining method however needs to be handled with caution.
-       - Complication: there is no stable station identifier explicitly mentioned in the `get-k-index` Space Weather API documentation.
-       - Recall the allowed location values as per the Space Weather API `get-k-index` documentation:
-            ```
-            Alice Springs, Canberra, Cocos Island, Narrabri, Darwin, Hobart, Launceston, Learmonth, Melbourne, Norfolk Island, Perth, Sydney, Townsville, or an Antartic region observing site: Casey, Davis, Macquarie Island, Mawson.
-            ```
-          - Some differences in location names from a correspondence to a BoM staff (`get-k-index` documentation to https://sws.bom.gov.au/World_Data_Centre/2/1/1):
-             ```
-             In the above name list "Narrabri" should be the "Culgoora" in the above linked map page. We do not have a station named "Melbourne", or close to the city Melbourne.
-             ```
-          - This means coordinates for any ingested kindex from `Narrabri` should correspond to the metadata with station `Culgoora`.
-            - `Narrabri` happens to be an alternative name for the `Culgoora` station (https://sws.bom.gov.au/World_Data_Centre/2/1/27), i.e. `Alternative Name: Narrabri (although not used with data reports)`. 
-          - Also, a station name in the WDC page is named `Cocos Islands`, but K-index API only allows `Cocos Island` (singular)
-        - Due to these inconsistencies, reconciliation of api locations to station names is handled by an explicit lookup relation rather than inferred from station names / aliases.
+def extract_key_value_rows(soup: BeautifulSoup) -> dict[str, str | None]:
+    """Extract station detail-page key-value table rows.
 
-    
+    Args:
+        soup: Parsed station detail page.
+
+    Returns:
+        Mapping from row key to parsed row value. Relevant jagged rows are stored
+        with `None` values and logged as warnings.
+    """
 
 
-## 2. Expected behavior & Invariants
-For the station metadata table:
-1. scrape station `<href>` relative links from the WDC map page at `https://sws.bom.gov.au/World_Data_Centre/2/1/1`
-2. visit each defail page (`https://sws.bom.gov.au` + corresponding `<href>`, for example metadata for `Mawson` site can be found at the link https://sws.bom.gov.au/World_Data_Centre/2/1/23)
-3. extract cell values that come right after `Station Name`, `Alternative Name` and `Geographic` in their respective rows; `Alternative Name`. **Assumptions:**
-   - Assume geographical coordinates in `Geographic` are stored in format similar to `'Lat. -30.28 Long. 149.58E'`.
-4. store canonical row per station with the following schema:
-    ```
-    metadata(
-          station_name: str,
-          alternative_name_raw: str | null,
-          lat: float | null,
-          lon: float | null,
-          geometry_raw: str | null,
-          source_url: str,
-          retrieved_at_utc: str
-      )
-    ```
-   - `geometry_raw` is either `None` (if no value can be detected), or the raw coordinate string itself.
+def parse_geographic(
+    geometry_raw: str | None,
+) -> tuple[float | None, float | None, str | None]:
+    """Parse WDC `Geographic` text into latitude, longitude, and raw text.
 
-5. How do we **join** each T2 location to obtain its geographical metadata? **For now, use a lookup table that maps `api_location -> canonical_station_name`** where `api_location` is the allowed location in the `get-k-index` API, and `canonical_station_name` is the `Station Name` that matches with the K-index API location.
-    - Why the lookup table? 
-      - Developing a rule to map `T2.location` to the WDC canonical station names are **too complex**. For example, as mentioned before, a station name in the WDC page is named `Cocos Islands`, but K-index API only allows `Cocos Island` (singular). Also K-index API location `Narrabri` corresponds to the station name `Culgoora` with `Alternative Name: Narrabri (although not used with data reports)`. Sub-string matching might be an option here but we would risk creating wrong joins because this rule depends on the stability of the allowed API locations AND the WDC web pages. 
-    - Joining algorithm
-      1. Hardcode a lookup table that maps `api_location -> canonical_station_name`. For example,
-         - `Narrabri -> Culgoora`
-         - `Cocos Island -> Cocos Islands`
-      2. Do a `T2 LEFT JOIN lookup_table` on the join condition `T2.location == api_location`
-      3. Then do another `LEFT JOIN` to the station metadata based on `canonical_station_name == station_name` i.e. `(T2 LEFT JOIN lookup_table) LEFT JOIN station metadata`
+    Args:
+        geometry_raw: Raw coordinate text such as `Lat. -30.28 Long. 149.58E`.
 
-  
-## 3. Important edge cases
-- `Station Name`, `Alternative Name`, `Geographic` does not exist or that there is no corresponding value when the HTML row is parsed (only one element e.g. `['Station Name']`)
-  - For example, the HTML syntax for the geography of a site might only contain the header cell `<tr><td>Geographic</td></tr>` but not the value so that `.find_all(['td', 'th'])` using bs4 only outputs a 1-element list. 
-  - Output a warning message, but do not fail fast.
-  
-- For the following cases, simply print/log a diagnostic message (`T2.location == ... cannot be matched`), and leave geographical metadata empty. 
-  - Hardcoded lookup table is malformed, e.g. An API location is missing from the lookup table, or typos exist
-  - WDC station names have changed, making lookup table outdated. 
-  - When joining, An API location in `T2.location` does not have a match in the lookup table (joining algorithm in 5 step 2). 
-
-- Error at parsing coordinates to floats (cell value for `Geographic` is a string taking formats other than `'Lat. -31.54 Long. 159.08E'`).
-  - return nulls for lat and long, but still store the raw string.
-
-## 4. Failure modes
-- Cannot make GET request to WDC web pages. 
-  - Fail fast and exit the program. 
+    Returns:
+        `(lat, lon, geometry_raw)` when parsing succeeds; null lat/lon with
+        preserved raw text when parsing fails; all nulls when input is missing.
+    """
 
 
-## 5. Key modules/classes/function signatures
-Below is an example:
+def extract_station_metadata(
+    base_url: str,
+    map_page_url: str,
+    metadata_file_path: str,
+) -> str:
+    """Build and write the K-index station metadata Parquet table.
+
+    Args:
+        base_url: Base URL for resolving station detail links.
+        map_page_url: WDC map page containing station area links.
+        metadata_file_path: Output Parquet path.
+
+    Returns:
+        The output path as a string.
+
+    Raises:
+        requests.RequestException: When WDC page retrieval fails.
+        OSError: When output directory or file writing fails.
+        ImportError: When no usable Parquet writer dependency is available.
+    """
+~~~
+
+### Possible internal helpers (`_<function_name>`) worth testing for
+None for this rewrite. The current functions are unprefixed, imported directly by tests, and treated as public contract surfaces.
+
+### CLI interface, if applicable
+~~~text
+python -m entrypoint.build_site_metadata_k_index --config_path config/local.yaml
+~~~
+
+### Configuration keys, if applicable
+- `space_weather.metadata.k_index.base_url`: Base URL for WDC station detail pages.
+- `space_weather.metadata.k_index.map_page_url`: WDC station map page URL.
+- `space_weather.metadata.k_index.site_metadata_path`: Runtime output path for the metadata Parquet file.
+
+Implementation note:
+- The current source default `metadata_file_path="notebooks/site-metadata.parquet"` is legacy implementation debt. Runtime callers should pass the config-driven path.
+
+## 10. Test Blueprint
+Tests should prove the contract, not incidental implementation details.
+
+Testing framework:
+- Use built-in `unittest`.
+- Mock external network calls and clocks.
+- Prefer miniature HTML fixtures over large snapshots.
+- Use real parser objects and real temporary disk writes where those are the contract.
+
+Test files:
+- `tests/test_space_weather_k_index_site_metadata.py`
+
+Test boundary:
+- Pure helper for `parse_geographic`.
+- Parser/scraper for `extract_key_value_rows`.
+- HTTP helper with mocked request boundary for `get_soup_content`.
+- Filesystem integration/orchestrator for `extract_station_metadata`.
+- CLI/logging lifecycle is covered by `specs/spec-03-entrypoint-with-logging.md`; this spec only references the metadata entrypoint contract.
+
+Fixtures and sample data:
+- Miniature WDC map HTML with `<area alt="..." href="...">` entries.
+- Miniature station detail HTML with normal `Station Name`, `Alternative Name`, and `Geographic` rows.
+- Miniature station detail HTML with jagged or missing relevant rows.
+- Temporary output directory for Parquet writes.
+- Fixed UTC clock value for deterministic `retrieved_at_utc`.
+
+Real dependencies allowed in tests:
+- Real `BeautifulSoup` objects built from miniature HTML strings.
+- Real `tempfile.TemporaryDirectory()` output paths.
+- Real pandas Parquet read/write when filesystem behavior and schema are the contract.
+
+Mocks and patches:
+- Patch `src.metadata.site_location.requests.get` when testing `get_soup_content`.
+- Patch `src.metadata.site_location.get_soup_content` when testing `extract_station_metadata`.
+- Patch `src.metadata.site_location.datetime` when asserting deterministic retrieval timestamps.
+- Avoid live calls to BoM WDC pages.
+
+Test matrix:
+
+| Test name | Boundary | Scenario | Input / fixture | Expected result | Mocks / patches | Minimum assertions |
+|---|---|---|---|---|---|---|
+| `test_get_soup_content_success_returns_beautifulsoup` | HTTP helper | Successful GET | Mock response with small HTML | Parsed soup returned | Patch `src.metadata.site_location.requests.get` | Return is `BeautifulSoup`; expected page text is present; `requests.get` called with URL and timeout; `raise_for_status` called once. |
+| `test_get_soup_content_request_failure_propagates` | HTTP helper | Request raises | URL fixture | Original request exception propagates | Patch `src.metadata.site_location.requests.get` | `assertRaises` catches the request exception; no fallback soup is returned. |
+| `test_parse_geographic_standard_east_longitude` | Pure helper | Expected coordinate format | `Lat. -30.28 Long. 149.58E` | Parsed lat/lon and raw text | None | Return equals `(-30.28, 149.58, raw)`. |
+| `test_parse_geographic_standard_west_longitude` | Pure helper | West longitude suffix | `Lat. 10.50 Long. 20.25W` | Longitude is negative | None | Return lat is `10.50`; lon is `-20.25`; raw text is preserved. |
+| `test_parse_geographic_malformed_preserves_raw` | Pure helper | Changed coordinate format | `Latitude -30.28 Longitude 149.58E` | Null coordinates and preserved raw text | Optional `assertLogs` | Lat/lon are null; raw string is unchanged; warning is emitted if asserting logs. |
+| `test_parse_geographic_missing_input_returns_nulls` | Pure helper | Missing coordinate input | `None` and/or pandas missing value | All return fields null | None | Return equals `(None, None, None)`. |
+| `test_extract_key_value_rows_normal_station_page` | Parser/scraper | Normal station detail table | Mini station HTML | Relevant fields extracted | None | Dict contains exact `Station Name`, `Alternative Name`, and `Geographic` values. |
+| `test_extract_key_value_rows_jagged_relevant_row_warns_and_sets_null` | Parser/scraper | Relevant row missing value cell | Mini HTML with `<tr><td>Geographic</td></tr>` | Value is null and parsing continues | `assertLogs` | `Geographic` key exists with `None`; other fields remain extracted; warning mentions the jagged field. |
+| `test_extract_station_metadata_writes_expected_parquet_rows` | Filesystem integration / orchestrator | Three station pages from mocked map/detail pages | Mini map plus station detail HTML; temp output path | Parquet file contains expected rows | Patch `src.metadata.site_location.get_soup_content`; patch `src.metadata.site_location.datetime` | Output path returned; file exists; DataFrame has contracted columns; expected rows match order-independently; source URLs are resolved. |
+| `test_extract_station_metadata_uses_one_retrieval_timestamp_per_run` | Filesystem integration / orchestrator | Deterministic clock | Two or more station rows | All rows share fixed UTC ISO timestamp | Patch `src.metadata.site_location.datetime`; patch network helper | `retrieved_at_utc` has exactly one unique value and equals the fixed ISO timestamp. |
+| `test_extract_station_metadata_skips_map_area_missing_alt_or_href` | Filesystem integration / orchestrator | Malformed map entries | Map HTML containing valid and invalid `<area>` entries | Invalid entries skipped with warning | Patch network helper; `assertLogs` | Only valid station rows are written; warning mentions missing `alt` or `href`. |
+| `test_extract_station_metadata_station_name_missing_uses_map_alt` | Filesystem integration / orchestrator | Detail page missing `Station Name` | Valid map `alt`; detail HTML without station name | Row uses map display name | Patch network helper; patch clock; `assertLogs` | Output row `station_name` equals map `alt`; warning mentions missing `Station Name`. |
+
+Minimum assertions:
 ```
-**Module:** `src/ingestion/loader.py`
-
-* `fetch_raw_data(source_url: str, retry_limit: int = 3) -> pd.DataFrame`
-    * *Behavior:* Pulls CSV from the remote endpoint; implements exponential backoff.
-* `validate_schema(df: pd.DataFrame) -> bool`
-    * *Behavior:* Checks for the 5 mandatory columns defined in Invariant 1.2.
-
-**Module:** `src/ingestion/cleaner.py`
-
-* `class DataStreamProcessor:`
-    * `__init__(self, config: Dict[str, Any])`
-    * `process(self, raw_df: pd.DataFrame) -> pd.DataFrame`
-        * *Behavior:* Orchestrates the two-step squashing approach.
+- Assert exact parsed helper return values.
+- Assert contracted schema columns.
+- Assert order-independent row content for metadata table outputs.
+- Assert warning behavior for degraded-but-valid HTML cases.
+- Assert external network boundaries are mocked.
+- Assert request/HTTP failures propagate.
 ```
-**Module:** `src/metadata/site_location.py`
 
-* `get_soup_content(url: str, timeout: int = 30) -> BeautifulSoup`
-  * *Behavior:* helper for `extract_station_metadata` to perform a GET request to a web page (e.g. WDC map page or a station detail page) and parse its HTML content into a `BeautifulSoup` object
-  * *Failure Mode:* Cannot make GET request to WDC web pages. In that case, fail fast and exit the program.
-  
-* `parse_geographic(geometry_raw: str | None) -> tuple[float | None, float | None, str | None]`
-  * *Behavior:* helper for `extract_station_metadata` to parse textual station coordinates from WDC station detail pages. For example `parse_geographic('Lat. -30.28 Long. 149.58E')` returns `(-30.28, 149.58, 'Lat. -30.28 Long. 149.58E' )`.
-  * *Edge case:* (unlikely since WDC page is likely static) What if geographical coordinate is not null but is not formatted like `'Lat. -31.54 Long. 159.08E'`?
-    * Simply return `(None, None, geometry_raw)`.
-  * *Edge case:* (unlikely since WDC page is likely static) What if geographical coordinate is `None` (i.e. `extract_key_value_rows` cannot parse any cell containing coordinates)?
-    * Just return `(None, None, None)`, we treat the station as not having a defined geographical coordinate.
+Things not to over-test:
+- Incidental row ordering unless the spec later makes ordering part of the contract.
+- Exact warning text beyond enough context to identify the issue.
+- BeautifulSoup internals.
+- pandas or Parquet writer internals.
+- Shared logging-wrapper behavior already covered by the logging spec.
 
-* `extract_key_value_rows(soup: BeautifulSoup) -> dict[str, str | None]`
-  * *Behavior:* helper for `extract_station_metadata` to extract all 2-column table rows from a station detail page into a flat Python dict. Dict values are allowed to be `None`, for example if geographical coordinates are not present.
-  * *Edge case:* if there is no cell in the row following the header cell (for example, `<tr><td>Geographic</td></tr>` instead of `<tr><td>Geographic</td><td>Lat. -23.81 Long. 133.90E</td> </tr>`), simply output a warning message, leave the value as null, and continue parsing.
-  * *Edge case:* a row does not contain any value, taking this as an example: `<tr><td>Geographic</td></tr>` instead of `<tr><td>Geographic</td><td>Lat. -23.81 Long. 133.90E</td> </tr>`. As per contract for `parse_geographic`, assign dict value to `None`.
+Future test cleanup note:
+- When this test file is next edited, remove tutorial-style comments, emoji text, noisy `print()` calls if any are introduced, and decorative success output so the tests align with current project guardrails.
 
-* `extract_station_metadata(base_url: str, map_page_url: str, metadata_file_path: str = 'data/02-preprocessed/space_weather/k_index/site-metadata.parquet') -> str`
-    * *Behavior:* The orchestrator to build one canonical metadata row per station from the WDC map page as shown in `map_page_url` and saves as a **parquet** file. Outputs the file path.
-      * Scrapes all `href` links for each station
-      * Navigate to each station's URL constructed by `base_url + href`
-      * Navigate through the station metadata and parse the following metadata into the following variables:
-        * `Station Name` into `station_name`,
-        * `Alternative Name` into `alternative_name_raw`
-        * and `Geographic` into floats `lat`, `lon` and the raw coordinate string `geometry_raw`. 
-        * In addition, add the `source_url` corresponding to the station detail (e.g. https://sws.bom.gov.au/World_Data_Centre/2/1/27)
-        * Also add a retrieved at UTC date `retrieved_at_utc`
-      * Store the variables as a canonical row of a station's metadata
+## 11. Notebook Implementation Notes
+Notebook/spike notes:
+- Station metadata is a reference-data build, not part of dynamic K-index ingestion.
+- WDC page fields observed so far include `Station Name`, `Alternative Name`, and `Geographic`.
+- Expected coordinate text resembles `Lat. -30.28 Long. 149.58E`, but malformed text should not drop the station row.
+- The source default output path still points at a notebook location and should be cleaned up in a future implementation pass.
 
+Modularization plan:
+- Keep metadata table building in `src/metadata/site_location.py`.
+- Keep config loading and logging-wrapper orchestration in `entrypoint/build_site_metadata_k_index.py`.
+- Keep metadata-to-observation joining out of this spec until a future feature spec defines the desired artifact.
 
-**Module:** `src/preprocess/space_weather_k_index_transform_with_metadata.py`
-* `append_kindex_with_loc_metadata(T2_path: str, site_metadata_path: str) -> str`
-  * *Behavior:* Given T2, a preprocessed K-index table `T2(location: string, valid_time: datetime, kindex: int, flag: bool)` as written in the current version of `specs/spec-k-index-preproc.md`, and the path to the site metadata table, perform a left join to match each T2 row with its location metadata, dictated by the lookup table that maps `T2.location` to a station name in the location metadata. Each row in T2 will have these additional fields: `(station_name:str, alternative_name_raw:str, lat:float|null , lon:float|null, geometry_raw:str|null)`.
-  * *High-level steps*
-    * Read `T2` and site metadata table
-    * Read the API-location lookup table
-    * Match each `T2` row with the site metadata via the lookup table, as per the join algorithm in 2.5
-    * Emit diagnostics for unmapped locations:
-      * If `T2.location` does not exist in the lookup table, specify as `'unmapped_api_location'`
-      * If a known API location (e.g. `Australian region`) is allowed but it is known that no station can be matched (e.g. lookup table includes `{"api_location": "Australian region", "canonical_station_name": None}`), specify as `'known_without_station'`
-      * If the station name mapped in the lookup table is not present in the metadata (e.g. WDC web page has changed), specify as `'lookup_target_missing_in_metadata'`.
-  * **Joining station metadata to T2 must not remove, duplicate, or modify existing T2 observations.**
-  * *Edge cases:*
-    * T2 and the site metadata path must be defined. If either one is not present in disk, exit the program without outputting or writing anything.
-    * T2 locations cannot be matched (either false positives or there is truly no match) 
-      * For example, API locations like `Australian region` and `Melbourne` are not defined (former averages kindices all over stations, latter does not exist as a station).
-      * Simply leave `(station_name, alternative_name_raw, lat, lon)` with nulls and print/log a diagnostic message. 
+## 12. Acceptance Criteria
+This spec rewrite is complete when:
+- `specs/spec-04-site-metadata-table.md` follows the `specs/spec-template.md` structure.
+- The spec describes only the standalone station metadata table build as the current contract.
+- Metadata-to-T2 joining is explicitly deferred.
+- Runtime config keys and CLI invocation are documented.
+- Public interfaces in `src/metadata/site_location.py` are documented.
+- The Parquet data contract is documented.
+- Edge cases and failure modes from the current implementation and tests are documented.
+- The test blueprint is specific enough to update or regenerate `unittest` tests without guessing.
+- No source code, tests, ADRs, config, or template files are changed in this pass.
 
+## 13. Open Questions
+Questions to resolve before implementation:
+- None for this documentation-only rewrite.
 
-## 6. ⚠️ Important remark on unit tests
-Unit tests **must be derived from the spec** of each function:
-1. expected behavior
-2. invariants / schema contracts
-3. important edge cases
-4. failure modes
-
-Assertions **should validate those contracts directly**, not incidental ordering, formatting, or hardcoded fixture details unless those are explicitly part of the contract.
-
-## 7. Finally, any remarks?
+Questions that can be deferred:
+- Should future metadata enrichment append columns to T2, create a separate T2-plus artifact, or live in a later feature-engineering/T3 stage?
+- Where should an `api_location -> canonical_station_name` lookup live: config, source constant, or standalone reference file?
+- Should known unmappable API locations such as `Melbourne` or `Australian region` be represented explicitly in a future lookup table?
+- Should the source default for `metadata_file_path` be changed to match the config-driven runtime path?
+- Should the metadata builder validate expected column order and dtypes before writing Parquet?
+- Should the CLI eventually support output-path override arguments, or should config remain the only runtime surface?
