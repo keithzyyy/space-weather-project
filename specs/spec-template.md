@@ -120,8 +120,9 @@ Schema notes:
 ## 9. Interface Design
 Define the planned public functions, classes, or command-line entrypoints.
 
-Function signatures:
+Specify function signatures for functions that primarily address the aforementioned behaviors and contracts, not necessarily internal helpers (which should be prefixed with underscores `_`). 
 
+Function signatures:
 ~~~python
 def example_function(input_path: str, *, strict: bool = True) -` ExampleResult:
     """Short contract-focused docstring.
@@ -138,6 +139,9 @@ def example_function(input_path: str, *, strict: bool = True) -` ExampleResult:
         FileNotFoundError: When required input does not exist.
     """
 ~~~
+
+### Possible internal helpers (`_<function_name>`) worth testing for
+
 
 ### CLI interface, if applicable:
 
@@ -185,6 +189,10 @@ Mocks and patches:
 Test matrix:
 
 (*Give the agent the full test matrix before generating test code. Each row should be specific enough that the agent does not need to guess the test level, fixtures, mocks, or minimum assertions.*)
+
+NOTE:
+- minimum assertions should be short and clear enough so that the reader can know exactly what is being asserted and how it is being asserted without necessarily looking at the test code. 
+- one might prefer to group tests by appending a column to the left called `Test group`, so that these groups could be implemented as test classes with relevant tests `test_*` as methods.
 
 | Test name | Boundary | Scenario | Input / fixture | Expected result | Mocks / patches | Minimum assertions |
 |---|---|---|---|---|---|---|
