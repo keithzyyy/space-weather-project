@@ -26,9 +26,6 @@ Notes
 - Before implementing non-trivial features, clarify invariants, edge cases, failure modes, and acceptance criteria in a spec.
 - Do not copy every ADR into this file. Keep `AGENTS.md` focused on stable working rules that affect future implementation.
 
-Source ADR: `ADR = why/intent, spec = what/how`
-https://app.notion.com/p/32a946dd9bca807898f1e9df93ed9d01
-
 ## Configuration
 
 - YAML config files hold stable system knobs: base URLs, endpoint names, allowed values, default paths, model or pipeline settings, and component wiring.
@@ -37,11 +34,6 @@ https://app.notion.com/p/32a946dd9bca807898f1e9df93ed9d01
 - Keep `entrypoint/` as the user-facing CLI layer that reads config and CLI args.
 - Keep core implementation in `src/` path-explicit and free of hidden user-interface defaults where practical.
 
-Source ADRs:
-- `YAML config = system knobs, CLI args = user decision at runtime`
-  https://app.notion.com/p/2ee946dd9bca80879a58d3b8a674e94c
-- `Config-driven preprocessing CLI`
-  https://app.notion.com/p/32a946dd9bca80128849c0c1d5d90358
 
 ## Secrets
 
@@ -50,8 +42,6 @@ Source ADRs:
 - Load the actual secret from the environment or an ignored `.env` file.
 - Keep `env/`, `.env`, and other secret-bearing files ignored by git.
 
-Source ADR: `Read the BoM SW API key from a env variable`
-https://app.notion.com/p/2ee946dd9bca80cc9ea8e68abb2eac72
 
 ## Ingestion
 - [BoM Space Weather API documentation](https://sws-data.sws.bom.gov.au/)
@@ -64,18 +54,6 @@ https://app.notion.com/p/2ee946dd9bca80cc9ea8e68abb2eac72
 - Run CLI entrypoints as modules with `python -m ...` from the project root.
 
 
-Source ADRs:
-- `Enforce Strict UTC Datetime Contract for Ingestion`
-  https://app.notion.com/p/306946dd9bca801087b8df13d6692689
-- `Chunking approach to fetch data from SW API`
-  https://app.notion.com/p/2ee946dd9bca8079a490d9f423e88f87
-- `Fail fast: if a request fails, stop the ingestion completely`
-  https://app.notion.com/p/2ee946dd9bca8062868ac6d5bd129dc8
-- `ONE ingestion routine only to disk (no need latest & history)`
-  https://app.notion.com/p/2ee946dd9bca80ac81b5d0d86feb42a9
-- `creating entrypoint/ for ingestion`
-  https://app.notion.com/p/2ff946dd9bca803a8a86dcb8c8c2b7f8
-
 ## Data Contracts
 
 - Treat `data/01-raw` as append-only, immutable raw lake storage.
@@ -84,8 +62,6 @@ Source ADRs:
 - Do not mutate raw ingested records to deduplicate or clean them. Perform cleanup in later preprocessing stages.
 - Respect the repository's ignored data and model directories. Do not inspect or modify ignored data/model artifacts unless the user explicitly asks for the exact action.
 
-Source ADR: `Treat data/01-raw as data lake + include manifest`
-https://app.notion.com/p/2ee946dd9bca80f0a696c9a34048f6aa
 
 ## Preprocessing
 
@@ -103,11 +79,6 @@ https://app.notion.com/p/2ee946dd9bca80f0a696c9a34048f6aa
   - Join K-index observations to station metadata through an explicit api_location -> canonical_station_name lookup, not inferred string matching. Known special cases include Narrabri -> Culgoora and Cocos Island -> Cocos Islands.
   - Appending station metadata to T2 must not remove, duplicate, or modify existing T2 observations; unmatched metadata should remain null with diagnostics.
 
-Source ADRs:
-- `High level preprocessing approach`
-  https://app.notion.com/p/32a946dd9bca8027b458deff846854ef
-- `Adoption of DuckDB for preprocessing`
-  https://app.notion.com/p/32a946dd9bca80129c08dfe640b769af
 
 ## Testing Automation Guardrails
 **Test library**
@@ -147,11 +118,22 @@ Source ADRs:
 - If a test uses real temporary disk writes, DuckDB, parquet, pandas, or BeautifulSoup, say so explicitly in the test matrix instead of leaving the agent to infer it.
 
 
-Source ADR: `Unit testing philosophy (contract-driven)`
-https://app.notion.com/p/32a946dd9bca80e2bba8e762e98c781f
-
 ## Entrypoints
 All future entrypoints should use the shared logging wrapper pattern: create .running.log, rename to .success.log or .error.log, log fatal stack traces only in the wrapper, and re-raise exceptions. Source code in src/ should generally just raise, not duplicate fatal logging.
+
+## Source code conventions
+Helper functions vs functions that implement a behavior or contract in the spec
+- No leading underscore:
+  - functions/classes that appear in the spec's Interface Design section
+  - entrypoint-called orchestration functions
+  - reusable utilities intended to be imported by other modules
+  - functions whose behavior is a durable project contract
+
+- Leading underscore:
+  - implementation details used **only inside one module**
+  - discovery/parsing/formatting helpers not meant to be called externally
+  - clock/token/path helpers that support a public function
+  - nested or module-local mechanics that specs should not need to cross-check directly
 
 
 ## ADR Supersession Semantics
@@ -161,7 +143,6 @@ If an ADR has `status: Accepted` and a non-empty `supersedes` list, treat it as 
 When supersession is partial, clarify the affected scope in the ADR body, usually under `# Context (short)` or `# Consequences (tradeoffs)`. Do not add extra YAML fields such as `partially_supersedes` unless a future ADR changes this convention.
 
 ## Dependencies
-
 - It is acceptable to develop locally in a Conda environment, but install Python packages with `pip` so requirements files remain compatible with Docker.
 - Do not assume Conda is installed inside Docker. Prefer plain Python Docker images with `pip install -r requirements-prod.txt`.
 - Treat requirements files as the source-of-truth shopping list.
@@ -169,14 +150,8 @@ When supersession is partial, clarify the affected scope in the ADR body, usuall
 - Avoid using a broad `pip freeze` dump as the source of truth because it can make Docker builds brittle.
 - Optionally run `pip check` after dependency changes to validate installed package compatibility.
 
-Source ADRs:
-- `Conda env for development but install packages using pip`
-  https://app.notion.com/p/2ee946dd9bca8016a2e3ebe54b0f7474
-- `Revised strategy to install packages`
-  https://app.notion.com/p/31c946dd9bca800282b3f3aa6d0396da
 
 ## Project Structure
-
 - Preserve separation of concerns across the repository.
 - Use `config/` for system configuration.
 - Use `entrypoint/` for CLI entrypoints.
@@ -185,5 +160,4 @@ Source ADRs:
 - Use `docs/adr/` later as the long-form home for migrated ADRs.
 - Keep this root `AGENTS.md` as a concise operating manual, not a full ADR archive.
 
-Source ADR: `Created the project structure`
-https://app.notion.com/p/2ee946dd9bca801a8345f379a9cc4fae
+
