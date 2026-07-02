@@ -32,23 +32,61 @@ From [[1]](#source-1)
 - Solar wind magnetic-field / IMF features: `B`, `Bx`, `By`, `Bz`, clock angle, southward `Bz` summaries.
 - Engineered lag-window features: min, max, and average summaries of the above over windows before the forecast time, for example `Bz_min_last_1h`, `B_avg_last_3h`, or `Vsw_max_last_1h`.
 
-### Proposed data sources for ingestion
-**Potential data sources for ingestion**
-
-For historical model training, the most practical source is NASA SPDF's OMNI high-resolution dataset, accessed through the CDAWeb HAPI endpoint.
-- HAPI is the access protocol; OMNI is the actual dataset. 
-- The CDAWeb HAPI server exposes REST-like endpoints including `/catalog`, `/info`, and `/data`, and its `/data` endpoint streams time-bounded data for a chosen dataset ID and parameter list [[6]](#source-6).
-- The HAPI data-access specification is maintained separately by the HAPI project [[8]](#source-8).
-
-The recommended dataset is:
+## Proposed data source for ingestion
+### Recommended dataset
+The recommended external predictor dataset is:
 
 ```text
 OMNI_HRO2_1MIN
 ```
 
-This dataset is described as combined solar wind plasma moments and interplanetary magnetic field data, time-shifted to the nose of Earth's bow shock, at 1-minute cadence [[7]](#source-7). That is convenient for K-index modelling because the upstream solar-wind measurements have already been processed into a near-Earth reference frame.
+This is a 1-minute OMNI high-resolution dataset exposed by NASA/SPDF through CDAWeb. It contains combined solar wind plasma moments and interplanetary magnetic field data, time-shifted to the nose of Earth's bow shock [[6]](#source-6).
 
-Useful HAPI parameters:
+The data-engineering rationale:
+- **High enough resolution for lag-window features**: K-index is 3-hourly, but predictors like Bz_min_last_1h, Vsw_max_last_3h, or coverage ratios need finer input than hourly data.
+- **Can be downsampled later**: 1-minute data can become hourly or 3-hour summaries, but hourly OMNI cannot recover short-lived spikes.
+- Already near-Earth/time-shifted: the dataset is processed into a reference frame that is more directly relevant to geomagnetic response than raw spacecraft time.
+- **Contains the core predictor families**: IMF variables plus plasma variables in one dataset.
+- **Accessible through a stable API path**: CDAWeb HAPI gives /info for metadata/fill values and /data for time-bounded retrieval.
+
+### What OMNI, CDAWeb, and HAPI mean here
+**OMNI** is the NASA/SPDF solar-wind and interplanetary magnetic-field dataset family.
+- In this project, OMNI is the exact external data source we want to use as upstream solar-wind predictors for K-index modelling.
+- **`OMNI_HRO2_1MIN`** is the specific OMNI product we want for the kindex exogenous predictors' ingestion. The dataset ID matters because it is required to retrieve data via the `/info` and `/data` endpoints (see CDAWeb HAPI description below).
+
+**CDAWeb** is NASA/SPDF's Coordinated Data Analysis Web system.
+- It is the web data-access service used to browse and retrieve space-physics datasets, including OMNI products.
+
+**CDAWeb HAPI** is the concrete API surface this project would call: CDAWeb exposes OMNI datasets through HAPI-shaped endpoints (CDAWeb HAPI documentation here [[8]](#source-8)).
+- NOTE: **HAPI** is the generic time-series data access protocol. It defines endpoint patterns such as `/catalog`, `/info`, and `/data`, but it is not an OMNI dataset by itself (generic HAPI documentation on endpoints here [[9]](#source-9)).
+
+### Why this dataset fits K-index modelling
+For historical model training, `OMNI_HRO2_1MIN` is useful because it provides upstream solar wind and IMF variables at 1-minute cadence. These measurements are global near-Earth drivers, not station-specific ground observations, so they can later be converted into lag-window features before each K-index target time.
+
+The selected dataset is also convenient because CDAWeb's dataset-specific HAPI metadata can describe the available parameters, units, types, and fill values for the exact dataset ID used by the pipeline.
+
+### How the data is accessed
+The access path is:
+
+```text
+CDAWeb HAPI server -> OMNI_HRO2_1MIN dataset -> selected parameters -> bounded time range
+```
+
+For ingestion, use bounded time windows such as weekly or monthly chunks. Store the raw response before feature engineering. Missing/fill values should be discovered from `/info` and converted before aggregation.
+
+### Important HAPI endpoints
+For this project, the important CDAWeb HAPI endpoints are:
+
+| Endpoint | Role |
+|---|---|
+| `/catalog` | Discover datasets exposed by the CDAWeb HAPI server. |
+| `/info?id=OMNI_HRO2_1MIN` | Retrieve dataset-specific metadata, including parameter names, descriptions, units, types, and fill values. |
+| `/data` | Retrieve bounded time ranges for a dataset ID and parameter list. |
+
+The `/info` endpoint is the operational metadata source for ingestion. The `/data` endpoint is the retrieval endpoint.
+
+### Useful parameters for v1 ingestion
+The table below is a practical v1 subset of OMNI parameters for solar-wind and IMF predictors, not the complete OMNI data dictionary.
 
 | Conceptual variable | HAPI parameter | Suggested local column name | Notes |
 |---|---|---|---|
@@ -60,15 +98,57 @@ Useful HAPI parameters:
 | Proton density | `proton_density` | `proton_density_n_cm3` | Useful core plasma predictor |
 | Dynamic pressure | `Pressure` | `pressure_nPa` | Can also be derived from speed and density |
 
-Example HAPI request:
+### Example request
+This example shows a `/data` request for one day of selected OMNI parameters. It is a retrieval example; use `/info?id=OMNI_HRO2_1MIN` as the source of truth for parameter metadata and fill values.
 
 ```text
 https://cdaweb.gsfc.nasa.gov/hapi/data?id=OMNI_HRO2_1MIN&parameters=F,BX_GSE,BY_GSM,BZ_GSM,flow_speed,proton_density,Pressure&time.min=2021-11-21T00:00:00Z&time.max=2021-11-22T00:00:00Z&format=csv
 ```
 
-For a production-style ingestion design, fetch the OMNI data in bounded chunks, for example weekly or monthly, and store the raw response before feature engineering. Replace OMNI fill values with missing values before aggregating, and keep coverage features such as `Bz_coverage_last_1h` so the model can distinguish genuine calm conditions from missing upstream data.
+### Source roles
+- [CDAWeb OMNI dataset notes](https://cdaweb.gsfc.nasa.gov/misc/NotesO.html#OMNI_HRO2_1MIN) [[6]](#source-6): Main source for the selected dataset ID, cadence, CDAWeb context, and parameter names.
+- [OMNI data documentation](https://omniweb.gsfc.nasa.gov/html/ow_data.html) [[7]](#source-7): Optional deeper background on the broader OMNI data family, provenance, and processing.
+- [CDAWeb HAPI documentation](https://cdaweb.gsfc.nasa.gov/hapi) [[8]](#source-8): CDAWeb's HAPI entry point for dataset discovery, metadata, and data retrieval endpoints.
+  - CDAWeb HAPI `/info` endpoint: Dataset-specific operational metadata source for ingestion.
+- [HAPI 2.0.0 documentation](https://github.com/hapi-server/data-specification/blob/master/hapi-2.0.0/HAPI-data-access-spec-2.0.0.pdf) [[9]](#source-9): the generic specification for the HAPI endpoints (e.g. `/info, /catalog, /capabilities, /data`) used in the CDAWEb HAPI.
 
-### How can it be joined to K-index data?
+```text
+https://cdaweb.gsfc.nasa.gov/hapi/info?id=OMNI_HRO2_1MIN
+```
+
+The next section explains how `/info` should be used to retrieve fill values.
+
+### Missing values/fill values: how to identify them
+- fetch those fill values dynamically from /info instead of hardcoding them (e.g. `99.99`):
+```python
+import requests
+
+def fetch_hapi_fill_values(dataset_id: str, parameter_names: list[str]) -> dict[str, float | int | str | None]:
+    url = "https://cdaweb.gsfc.nasa.gov/hapi/info"
+    response = requests.get(url, params={"id": dataset_id}, timeout=60)
+    response.raise_for_status()
+
+    info = response.json()
+    fills = {}
+
+    for parameter in info["parameters"]:
+        name = parameter["name"]
+        if name in parameter_names:
+            fills[name] = parameter.get("fill")
+
+    return fills
+
+fills = fetch_hapi_fill_values(
+    "OMNI_HRO2_1MIN",
+    ["F", "BX_GSE", "BY_GSM", "BZ_GSM", "flow_speed", "proton_density", "Pressure"],
+)
+```
+
+### Suggested invariant to handle missing values
+- Fill values must be read from the HAPI /info metadata for the selected dataset and parameters, then converted to missing values before feature aggregation. That keeps the pipeline robust if we later switch from OMNI_HRO2_1MIN to another OMNI product.
+
+
+## How can it be joined to K-index data?
 **How can it be joined to K-index data, and why so**
 
 The OMNI solar-wind / IMF data is **global upstream driver data**, not station-specific ground data.
@@ -111,46 +191,6 @@ Examples:
 This keeps the model in a real forecasting posture. It prevents the model from seeing solar-wind or ground-response information that would only be available after the target K interval has started.
 
 
-### Resources to data documentation (OMNI, HAPI)
-- [CDAWeb OMNI dataset notes](https://cdaweb.gsfc.nasa.gov/misc/NotesO.html#OMNI_HRO2_1MIN)
-- [OMNI data documentation](https://omniweb.gsfc.nasa.gov/html/ow_data.html) 
-- [HAPI data specification repo](https://github.com/hapi-server/data-specification/tree/master)
-  - For example, For OMNI via HAPI, the key documentation is the dataset-specific HAPI `/info` endpoint:
-    ```
-    https://cdaweb.gsfc.nasa.gov/hapi/info?id=OMNI_HRO2_1MIN
-    ```
-    - That endpoint returns JSON metadata for the dataset, including each parameter’s `name`, `description`, `units`, `type`, and `fill`
-
-### Missing values/fill values: how to identify them
-- fetch those fill values dynamically from /info instead of hardcoding them (e.g. `99.99`):
-```python
-import requests
-
-def fetch_hapi_fill_values(dataset_id: str, parameter_names: list[str]) -> dict[str, float | int | str | None]:
-    url = "https://cdaweb.gsfc.nasa.gov/hapi/info"
-    response = requests.get(url, params={"id": dataset_id}, timeout=60)
-    response.raise_for_status()
-
-    info = response.json()
-    fills = {}
-
-    for parameter in info["parameters"]:
-        name = parameter["name"]
-        if name in parameter_names:
-            fills[name] = parameter.get("fill")
-
-    return fills
-
-fills = fetch_hapi_fill_values(
-    "OMNI_HRO2_1MIN",
-    ["F", "BX_GSE", "BY_GSM", "BZ_GSM", "flow_speed", "proton_density", "Pressure"],
-)
-```
-
-### Suggested invariant to handle missing values
-- Fill values must be read from the HAPI /info metadata for the selected dataset and parameters, then converted to missing values before feature aggregation. That keeps the pipeline robust if we later switch from OMNI_HRO2_1MIN to another OMNI product.
-
-
 ## Remarks
 
 [[1]](#source-1) Need to properly consider the ML goal: classification (treating positive cases of those with Kp > 5) or regression (but deal with the supposed claim of Kp > 5 being hard to predict)
@@ -168,3 +208,11 @@ fills = fetch_hapi_fill_values(
 <span id="source-4">[4]</span>: [Kp index explained](https://auroraforecast.me/guides/kp-index-explained)
 
 <span id="source-5">[5]</span>: [BoM solar wind explanation](https://www.sws.bom.gov.au/Solar/1/4)
+
+<span id="source-6">[6]</span>: [CDAWeb OMNI datasets (link points to the `OMNI_HRO2_1MIN` dataset specifically)](https://cdaweb.gsfc.nasa.gov/misc/NotesO.html#OMNI_HRO2_1MIN)
+
+<span id="source-7">[7]</span>: [OMNI data documentation](https://omniweb.gsfc.nasa.gov/html/ow_data.html) 
+
+<span id="source-8">[8]</span>: [CDAWeb HAPI documentation](https://cdaweb.gsfc.nasa.gov/hapi)
+
+<span id="source-9">[9]</span>: [HAPI 2.0.0 documentation (which is what the CDAWeb HAPI server uses)](https://github.com/hapi-server/data-specification/blob/master/hapi-2.0.0/HAPI-data-access-spec-2.0.0.pdf)
