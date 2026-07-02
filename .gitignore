@@ -1,6 +1,5 @@
 env/
 .env
-config/local.yaml
 data/
 models/
 __pycache__/

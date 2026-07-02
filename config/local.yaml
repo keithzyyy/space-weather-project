@@ -1,0 +1,73 @@
+# config: things the system needs to know to run, CLI args: things the user wants to decide at run time 
+space_weather:
+  base_url: "https://sws-data.sws.bom.gov.au/api/v1"
+  api_key_env: "SPACE_WEATHER_API_KEY"   # NOT the real key but the env variable
+  date_fmt: "%Y-%m-%d %H:%M:%S" 
+  
+  ingestion:
+    k_index:
+      timeout_s: 60 # allowed waiting time before HTTP request times out
+      raw_base_dir: "data/01-raw/space_weather/k_index"
+      manifest_file_name: "_manifest.json" # name of the manifest file to track successful runs
+      chunk_days: 30 # be careful with the 10,000 entry limit! (8 entries per day -> 1250 days max can be retrieved at a time)
+      sleep_seconds: 5
+
+  preprocessing:
+    k_index:
+      T1_output_dir: "data/02-preprocessed/space_weather/k_index/T1"
+
+  transform:
+    k_index:
+      T2_output_dir: "data/02-preprocessed/space_weather/k_index/T2"
+
+  metadata:
+    k_index:
+      site_metadata_path: "data/metadata/space_weather/k_index/site-metadata.parquet"
+      base_url: "https://sws.bom.gov.au"
+      map_page_url: "https://sws.bom.gov.au/World_Data_Centre/2/1/1"
+
+  endpoints:
+    k_index: "get-k-index"
+    a_index: "get-a-index"
+    dst_index: "get-dst-index"
+
+  defaults: # safe default values for run-specific, CLI args
+    location_k: "Australian region"
+    location_a: "Australian region"
+    location_dst: "Australian region"
+
+  allowed_values:
+    k_locations:
+      - "Australian region"
+      - "Alice Springs"
+      - "Canberra"
+      - "Cocos Island"
+      - "Narrabri"
+      - "Darwin"
+      - "Hobart"
+      - "Launceston"
+      - "Learmonth"
+      - "Melbourne"
+      - "Norfolk Island"
+      - "Perth"
+      - "Sydney"
+      - "Townsville"
+      - "Casey"
+      - "Davis"
+      - "Macquarie Island"
+      - "Mawson"
+noaa:
+  base_url: "https://services.swpc.noaa.gov/json"
+  api_key_env: null       
+  output_dir: "data/01-raw/noaa"
+  endpoints:
+    solar_wind: "solar-wind.json"
+data:
+  processed_dir: "data/02-preprocessed"
+  features_dir: "data/03-features"
+model:
+  type: "RandomForest"
+  parameters:
+    n_estimators: 200
+    random_state: 42
+
