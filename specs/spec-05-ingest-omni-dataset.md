@@ -9,10 +9,7 @@ related_adrs:
 related_specs:
 supersedes: []
 ---
-
 # Spec: `feature-name`
-
-
 ## 1. Purpose
 Describe what this feature is trying to achieve in plain language.
 
@@ -30,7 +27,7 @@ This feature only focuses on ingestion, but will defer constructing the logic to
 Before implementing, scan existing ADRs, specs, and relevant source/test files.
 
 Relevant existing decisions or conventions:
-- `decision/convention`
+- [From this adr entry](/docs/adr/adr-009-raw-data-lake-manifest.md), raw ingested data should be immutable. 
 - `decision/convention`
 
 Potential conflicts or uncertainties:
@@ -41,18 +38,46 @@ Resolution:
 - `how this spec handles the above`
 
 ## 3. High-Level Approach
-Describe the intended design at a system level.
 
-Expected flow:
-1. Specify a dataset id (e.g. `OMNI_HRO2_1MIN` at the config) 
-2. CLI entrypoint initiates the ingestion for the dataset id, which specifies the variables/parameters of interest (e.g. `--parameters F,BX_GSE,BY_GSM,BZ_GSM,flow_speed,proton_density,Pressure`), start and end dates of the measurements (`--start, --end`), and an optional directory to save the ingested data to (`--raw_base_dir`), with default specified at the config
-3. Call the `/info` endpoint of the CDAWeb HAPI to fetch dataset metadata at runtime, which should contain the HAPI version, source URL, variable-specific metadata: units, types, fill placeholders/missing-value placeholders.
-4. Validate CLI args against the response for `/info`:
-   1. validate requested parameters against `/info.parameters` -- 
-   2. validate requested time window against /info startDate/stopDate
-5. Write `/info` response into the run directory
-6. Call the `/data` endpoint of the CDAWeb HAPI to fetch the actual observations of the validated parameters at the validated time range, and chunk the request
-7. Write a run manifest/metadata with success/failure marker.
+In a nutshell, build a raw, auditable OMNI HAPI ingestion routine that:
+- validates requested variables against CDAWeb `/info`,
+- preserves source `/data` values unchanged,
+- and saves the `/info` metadata needed for later preprocessing of fill values.
+
+Since run manifest contains dataset id, then we should fetch the dataset metadata `/info` first thing **before** writing manifest with status RUNNING, otherwise we would not be able to validate correctness of dataset id. Also we agreed for run directory to have the parent as the dataset id. 
+
+```
+load config + CLI args
+fetch /info for configured dataset_id
+validate:
+  - /info.HAPI == supported_version
+    - HAPI version mismatch -> RuntimeError
+  - requested parameters exist in /info.parameters
+    - requested parameter missing -> ValueError
+  - requested time range is within /info.startDate and /info.stopDate
+    - time range outside info startDate/stopDate -> ValueError
+  - start < end
+  - clip requested start and/or end dates if they fall beyond startDate or stopDate respectively
+  - return a "plan" object that records the "effective" start and stop date
+
+create run_id + run_dir at <raw_output_dir>/<dataset_id>/run_id=<run_id>
+write RUNNING manifest
+write hapi_info.json
+
+try:
+    iterate /data chunks
+    validate each /data HAPI status
+    write raw chunk JSON files
+    write _SUCCESS
+    write SUCCESS manifest
+except Exception:
+    write _FAILED
+    write FAILED manifest
+    raise
+```
+
+Remarks
+- Why returning a "plan" object? so that the program is aware of the effective start and end date used. This is better than letting /data handle it because it avoids wasting requests beyond stopDate, especially with small chunk_days.
 
 Main modules or files likely affected:
 - `src/`module`.py`
@@ -63,8 +88,51 @@ Main modules or files likely affected:
 Describe the observable behavior of the feature.
 
 The feature should:
-- `expected behavior`
-- `expected behavior`
+- Perform a **preflight `/info` request BEFORE creating the raw run directory**. Failures during preflight are logged by the entrypoint wrapper and re-raised, but they do not create raw-lake run artifacts. Once preflight succeeds and a run directory is created, later failures write _FAILED and a failed manifest. The pseudocode could look like this:
+    ```python
+    response = requests.get(info_url, params={"id": dataset_id}, timeout=timeout_s)
+
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        response.raise_for_status()
+        raise RuntimeError("CDAWeb HAPI /info returned non-JSON response") from exc
+
+    hapi_status = payload.get("status", {})
+    hapi_code = hapi_status.get("code")
+    hapi_message = hapi_status.get("message")
+
+    if response.status_code >= 400 or hapi_code != 1200:
+        raise RuntimeError(
+            f"CDAWeb HAPI /info failed for dataset_id={dataset_id} "
+            f"| http_status={response.status_code} "
+            f"| hapi_status={hapi_code} "
+            f"| message={hapi_message}"
+        )
+    ```
+- Raise a `ValueError` if requested time frame falls completely beyond `/info`'s `[startDate, stopDate]`, specifically:
+  ```
+  Let requested interval be [start, end).
+  Let dataset interval from /info be [startDate, stopDate].
+
+  - If requested end <= dataset startDate, raise ValueError.
+  - If requested start >= dataset stopDate, raise ValueError.
+  - If intervals partially overlap, warn and continue.
+  - If requested interval is fully inside dataset interval, continue silently.
+  ```
+  One might reflect this on the manifest:
+  ```json
+    {
+        "requested_start_utc_str": "2026-04-13T00:00:00Z",
+        "requested_end_utc_str": "2026-04-16T00:00:00Z",
+        "effective_start_utc_str": "2026-04-13T00:00:00Z",
+        "effective_end_utc_str": "2026-04-13T01:15:00Z",
+        "time_range_overlap_status": "partial",
+        "warnings": [
+            "Requested end exceeds dataset stopDate from /info; ingestion continues for overlapping records only."
+        ]
+    }
+  ```
 - `expected behavior`
 
 The feature should not:
@@ -75,7 +143,8 @@ The feature should not:
 List rules that must always remain true if the feature is working correctly.
 
 Invariants:
-- `invariant`
+- Any failed /info request, non-OK HAPI status, unsupported HAPI version,
+invalid parameter list, or invalid time range raises before raw artifacts are created.
 - `invariant`
 - `invariant`
 
@@ -135,25 +204,169 @@ Define the planned public functions, classes, or command-line entrypoints.
 Specify function signatures for functions that primarily address the aforementioned behaviors and contracts, not necessarily internal helpers (which should be prefixed with underscores `_`). 
 
 Function signatures:
-~~~python
-def example_function(input_path: str, *, strict: bool = True) -` ExampleResult:
-    """Short contract-focused docstring.
 
+~~~python
+from src.io.atomic import _atomic_write_json, write_success, write_failed
+
+def fetch_hapi_info(base_url: str, dataset_id: str, timeout_s: int) -> dict:
+    """
+    Fetch dataset metadata at runtime from `/info` CDAWeb HAPI endpoint.
+    accepts start: datetime, end: datetime only
+    formats them to YYYY-MM-DDTHH:MM:ssZ at the request boundary
     Args:
-        input_path: What this path represents.
-        strict: What strict mode changes.
+        
 
     Returns:
-        What the returned object contains.
+        
 
     Raises:
-        ValueError: When input violates the feature contract.
-        FileNotFoundError: When required input does not exist.
+        
     """
+    pass
+
+def validate_hapi_info(
+    info: dict,
+    *,
+    supported_hapi_version: str,
+    requested_parameters: list[str],
+    start: object,
+    end: object,
+) -> None:
+    pass
+
+def fetch_hapi_data(
+    base_url: str,
+    dataset_id: str,
+    parameters: list[str],
+    start: datetime,
+    end: datetime,
+    timeout_s: int,
+) -> str:
+    """
+    Fetch solar wind observations from OMNI via
+    `/data` CDAWeb HAPI endpoint.
+    
+
+    Args:
+        
+
+    Returns:
+        
+
+    Raises:
+        
+    """
+    pass
+
+def iter_omni_chunks(
+    omni_config: dict,
+    *,
+    parameters: list[str],
+    start: object,
+    end: object,
+) -> Iterator[OmniChunk]:
+    """
+    accepts start: datetime, end: datetime only
+    performs arithmetic
+    calls fetch_hapi_data with datetime chunk boundaries
+    """
+    pass
+
+def write_manifest(...):
+    """
+    Creates or updates a run manifest with a certain status.
+
+    Args:
+        
+
+    Returns:
+        
+
+    Raises:
+        
+    """
+    pass
+
+def ingest_omni_run(
+    omni_config: dict,
+    *,
+    parameters: list[str],
+    start: object,
+    end: object,
+    raw_base_dir: object | None = None,
+) -> Path:
+
+    """
+    parse and validate CLI start/end once (`parse_cli_utc_datetime` helper)
+    call `fetch_hapi_info` to fetch /info
+    call `validate_hapi_info` using parsed datetimes
+    call `iter_omni_chunks` with datetimes
+    """
+    
+    # fetch /info for configured dataset_id specified in config
+
+    # validate HAPI version, CLI args
+
+    # create runid + rundir at <raw_output_dir>/<dataset_id>/run_id=<run_id>
+
+    # write RUNNING manifest
+
+    # write hapi_info.json 
+
+
+    try:
+        pass
+        # iterate /data chunks
+
+        # validate each /data HAPI status
+
+        # write raw chunk JSON files
+
+        # write _SUCCESS
+
+        # write SUCCESS manifest
+        
+    except Exception as e:
+        # write _FAILED
+
+        # write FAILED manifest
+
+        pass
+
+
+
 ~~~
+
+
+
 
 ### Possible internal helpers (`_<function_name>`) worth testing for
 
+```python
+CLI_UTC_FMT = "%Y-%m-%d %H:%M:%S"
+HAPI_UTC_FMT = "%Y-%m-%dT%H:%M:%SZ"
+
+def parse_cli_utc_datetime(value: str) -> datetime:
+    """
+    Parse CLI UTC string into UTC-naive datetime; reject ISO T/Z strings.
+    """
+
+def parse_hapi_utc_datetime(value: str) -> datetime:
+    """
+    Parse /info HAPI timestamp into UTC-naive datetime.
+    """
+
+def format_hapi_utc_datetime(value: datetime) -> str:
+    """
+    Format UTC-naive datetime for HAPI /data request.
+    """
+
+def chunk_token(value: datetime) -> str:
+    """
+    Format datetime for chunk filenames.
+    """
+
+```
 
 ### CLI interface, if applicable:
 
@@ -253,10 +466,14 @@ Notebook/spike notes:
     - 🤔 So probably `/info` and `/data` should be coupled? So based on the requested params in our config (let's say a list of strings),
       - First, hit the CDAWeb HAPI's `/info` endpoint to first validate variable param names from CLI arg (?) to dataset metadata from `/info`.
           - We can also validate the HAPI version -- put the HAPI version as a config key, so that when the HAPI version (`"HAPI"` key in the `/info` response body) is different (outdated or upgraded, `!= '2.0.0'`), our ingestion program can fail fast. 
+            - ✔️ <u>The ingestion implementation targets CDAWeb HAPI 2.0. Each run must fetch /info before /data and verify that the returned top-level HAPI value equals the configured supported version, currently "2.0". If CDAWeb returns a different HAPI version, ingestion must fail fast before requesting data, because endpoint semantics, request parameters, or response structure may no longer match the implementation contract.</u>
       - Second, when everything is good, then and only then we hit the `/data` endpoint.
       - QUESTION: we have hit the `/info` endpoint, sure, but do we **replace missing values with their placeholders in ingestion or preprocessing? If the latter we need to save it somewhere. Or treat it as a metadata in a run directory similar to how manifest is a run's metadata? But then with multiple `/data` calls we risk duplicating the data dictionary.**
+        - ✔️ <u>Keep raw ingestion RAW, as [this ADR](/docs/adr/adr-009-raw-data-lake-manifest.md) mentions that ingested data should not be changed; so any cleaning belongs later (so missing placeholders like `999.99` should be left as is to reflect the actual data source)</u>
+        - ✔️ <u>One solution for now is to **save `/info` response per run**, so that each run directory has the following files: `run_id=20260702T..., _manifest.json, hapi_info.json, chunk_20211121T000000Z__20211122T000000Z.csv, _SUCCESS` </u>
 3. Where should it be saved to? `data/01-raw/omni`? `data/01-raw/omni/OMNI_HRO2_1MIN`?
    - Maybe lets do the former, because then we can tweak the dataset source as a config key (if we are interested in obtaining different variants of omni datasets e.g. at a lower resolution), provided that CDAWeb HAPI specification is already standardized (i.e. just specify a dataset id, parameters of interest and a bounded time frame). Parameter names (e.g. `"F, BX_GSE, BY_GSM,BZ_GSM"`) should have been naturally validated with the result from `/info`. 
+   - ✔️ <u>For now, make the output path containing the dataset id e.g. `data/01-raw/omni/OMNI_HRO2_1MIN/run_id=<run_id>` because it keeps room for other OMNI datasets later without mixing incompatible schemas. The dataset id is stable system identity, so config can own it.</u>
 4. What should be included in a run manifest (`_manifest.json`)? This is what we had for kindex:
    ```python
     {
@@ -288,7 +505,9 @@ Notebook/spike notes:
    - runid
    - HAPI version (in this case is 2.0.0) -- read from `/info` or config?
 5. We don't know whether a request will be truncated or not if `time.max - time.min` is long enough (remember SW API truncates response at 10k rows). But even if not, we should keep in mind that the `OMNI_HRO2_1MIN` dataset retrieves solar wind **at 1-minute time intervals** i.e. 1 day = `24*60=1440` rows, a bounded request for a month long time frame produces `30*1440=43200` rows. So there is no clear reason for chunking requests (i.e. break a request into multiple requests).
+    - ✔️<u>Keep chunking for now and set a reasonable default (e.g. 7 or 30 days) because chunking can help with debuggability, retries later, bounded files, and partial failure clarity </u>
 6. Seems that `time.min, time.max` request parameters has to take a strict format like `"2021-11-21T00:00:00Z"`. But CLI arg can take time inputs like `YYYY-MM-DD HH:MM:ss` and parse it using python's `datetime`.
+7. 
 
 Modularization plan:
 - Move `notebook logic` into `src/module.py`
