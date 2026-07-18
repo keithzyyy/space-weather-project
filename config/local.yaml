@@ -56,12 +56,25 @@ space_weather:
       - "Davis"
       - "Macquarie Island"
       - "Mawson"
-noaa:
-  base_url: "https://services.swpc.noaa.gov/json"
-  api_key_env: null       
-  output_dir: "data/01-raw/noaa"
-  endpoints:
-    solar_wind: "solar-wind.json"
+    
+omni:
+  hapi:
+    base_url: "https://cdaweb.gsfc.nasa.gov/hapi"
+    supported_version: "2.0"
+    dataset_id: "OMNI_HRO2_1MIN"
+    chunk_days: 10
+    timeout_s: 120
+    sleep_s: 5
+    raw_output_dir: "data/01-raw/omni"
+    CLI_UTC_FMT: "%Y-%m-%d %H:%M:%S"
+    HAPI_UTC_FMT: "%Y-%m-%dT%H:%M:%SZ"
+
+# noaa:
+#   base_url: "https://services.swpc.noaa.gov/json"
+#   api_key_env: null       
+#   output_dir: "data/01-raw/noaa"
+#   endpoints:
+#     solar_wind: "solar-wind.json"
 data:
   processed_dir: "data/02-preprocessed"
   features_dir: "data/03-features"
