@@ -334,6 +334,11 @@ def iter_omni_chunks(
     chunk_start = start
     while chunk_start < end:
         chunk_end = min(chunk_start + timedelta(days=chunk_days), end)
+        logger.info(
+            "Fetching OMNI chunk | start=%s | end=%s",
+            _format_hapi_utc_datetime(chunk_start),
+            _format_hapi_utc_datetime(chunk_end),
+        )
         payload = fetch_hapi_data(base_url, dataset_id, parameters, chunk_start, chunk_end, timeout_s)
         # possibly return an OmniChunk data class
         # with attributes: payload, chunk_start, chunk_end
@@ -530,6 +535,18 @@ def ingest_omni_run(
     if settings['sleep_s'] < 0:
         raise ValueError(f"Please specify a positive sleep time in between chunked requests.")
 
+    logger.info(
+        "Starting OMNI preflight | dataset_id=%s | requested=[%s, %s) "
+        "| parameters=%s | chunk_days=%s | timeout_s=%s | sleep_s=%s",
+        settings["dataset_id"],
+        _format_hapi_utc_datetime(start_dt),
+        _format_hapi_utc_datetime(end_dt),
+        parameters,
+        settings["chunk_days"],
+        settings["timeout_s"],
+        settings["sleep_s"],
+    )
+
     # 2.1 fetch /info for configured dataset_id specified in config
     info = fetch_hapi_info(
         base_url=settings["base_url"],
@@ -546,6 +563,17 @@ def ingest_omni_run(
         end=end_dt,
     )
 
+    logger.info(
+        "OMNI preflight complete | hapi_version=%s | overlap=%s "
+        "| effective=[%s, %s)",
+        info["HAPI"],
+        plan.time_range_overlap_status,
+        _format_hapi_utc_datetime(plan.effective_start),
+        _format_hapi_utc_datetime(plan.effective_end),
+    )
+    for warning in plan.preflight_warnings:
+        logger.warning("OMNI preflight warning | %s", warning)
+
     # 3. create runid + rundir at <raw_output_dir>/<dataset_id>/run_id=<run_id>
     run_id = _run_id_utc()
     # e.g. "data/01-raw/omni/OMNI_HRO2_1MIN"
@@ -560,12 +588,14 @@ def ingest_omni_run(
                                       plan=plan)
 
     write_manifest(run_dir, manifest)
+    logger.info("OMNI run initialized | run_id=%s | run_dir=%s", run_id, run_dir)
 
     try:        
         # 4.2 write dataset metadata from /info response 
         # if written outside `try` block, if this fails then
         # the run will remain `RUNNING` instead of `FAILED`.
         _atomic_write_json(run_dir / "hapi_info.json", info)
+        logger.info("Saved HAPI metadata | file=%s", run_dir / "hapi_info.json")
 
         # 5. iterate /data chunks
         chunks = iter_omni_chunks(
@@ -589,6 +619,18 @@ def ingest_omni_run(
             # for final manifest
             _record_chunk_in_manifest(manifest, chunk_record)
 
+            logger.info(
+                "Stored OMNI chunk | file=%s | hapi_status=%s | rows=%s",
+                chunk_record["file"],
+                chunk_record["hapi_status_code"],
+                chunk_record["rows"],
+            )
+            if chunk_record["rows"] == 0:
+                logger.warning(
+                    "OMNI chunk contained no rows | file=%s",
+                    chunk_record["file"],
+                )
+
         # 6.1 log successful outcome
         # write _SUCCESS
         write_success(run_dir)
@@ -596,6 +638,16 @@ def ingest_omni_run(
         # write SUCCESS manifest (TODO)
         _mark_manifest_success(manifest, _run_id_utc())
         write_manifest(run_dir, manifest)
+
+        logger.info(
+            "OMNI run completed | run_id=%s | chunks=%s "
+            "| total_rows=%s | empty_chunks=%s | run_dir=%s",
+            run_id,
+            len(manifest["artifacts"]["chunks"]),
+            manifest["summary"]["total_rows"],
+            manifest["summary"]["empty_chunk_count"],
+            run_dir,
+        )
 
         return run_dir
         
