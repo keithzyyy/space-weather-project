@@ -572,8 +572,13 @@ Testing framework:
 - Never write to real `data/`, `logs/`, or other ignored runtime directories.
 
 Test files:
-- `tests/test_ingest_omni.py`: source helpers, HTTP boundaries, manifest behavior, orchestrator coordination, and temporary-filesystem integration.
-- `tests/test_entrypoint_ingest_omni.py`: CLI parsing, config selection, source-call wiring, and logging-wrapper coordination.
+- `tests/omni/support.py`: deterministic fixtures and builders shared by OMNI test modules.
+- `tests/omni/test_datetime.py`: strict datetime parsing, formatting, and chunk filename contracts.
+- `tests/omni/test_hapi.py`: HTTP boundaries and HAPI metadata validation.
+- `tests/omni/test_chunks.py`: chunk iteration and raw chunk writing.
+- `tests/omni/test_manifest.py`: manifest construction, mutation, and snapshot writing.
+- `tests/omni/test_ingest_run.py`: orchestrator coordination and temporary-filesystem integration.
+- `tests/omni/test_entrypoint.py`: CLI parsing, config selection, source-call wiring, and logging-wrapper coordination.
 
 Chosen boundaries:
 - Pure tests for strict datetime conversion, validation plans, filename generation, and manifest transformations.
@@ -583,17 +588,19 @@ Chosen boundaries:
 - CLI/logging coordination tests with the source call and wrapper patched; the shared wrapper's own lifecycle remains covered by `tests/test_entrypoint_logging.py`.
 
 Fixtures:
-- `_FakeResponse`: configurable HTTP status, decoded payload, JSON decode failure, and `raise_for_status()` behavior.
-- `_valid_info_payload()`: HAPI `2.0`, status `1200`, parameter metadata, and deterministic dataset boundaries.
-- `_valid_data_payload()`: complete HAPI JSON response with parameter metadata and array rows.
-- `_valid_empty_payload()`: valid JSON with HAPI status `1201` and no observations.
-- `_base_omni_config()`: small deterministic `omni.hapi` mapping whose output root can be replaced by a temporary directory.
+- `FakeResponse`: configurable HTTP status, decoded payload, JSON decode failure, and `raise_for_status()` behavior.
+- `valid_info_payload()`: HAPI `2.0`, status `1200`, parameter metadata, and deterministic dataset boundaries.
+- `valid_data_payload()`: complete HAPI JSON response with parameter metadata and array rows.
+- `valid_empty_payload()`: valid JSON with HAPI status `1201` and no observations.
+- `valid_ingestion_plan()`: deterministic validated subset plan with ordered parameters.
+- `valid_chunk()`: deterministic chunk with independently copied payload data.
+- `base_omni_config()`: small deterministic `omni.hapi` mapping whose output root can be replaced by a temporary directory.
 - fixed UTC-naive datetimes, run IDs, and completion IDs.
 
 Mocks and exact patch targets:
 - `src.ingest.omni.requests.get` for `/info` and `/data` request tests.
 - `src.ingest.omni.fetch_hapi_data` and `src.ingest.omni.time.sleep` for chunk-iteration tests.
-- `src.ingest.omni.fetch_hapi_info`, `validate_hapi_info`, `iter_omni_chunks`, `write_chunk_json`, `write_manifest`, `write_success`, `write_failed`, and `_run_id_utc` for orchestrator coordination tests as appropriate.
+- `src.ingest.omni.fetch_hapi_info`, `validate_hapi_info`, `iter_omni_chunks`, `write_chunk_json`, `write_manifest`, `_atomic_write_json`, `write_success`, `write_failed`, and `_run_id_utc` for orchestrator coordination tests as appropriate.
 - `entrypoint.ingest_omni.parse_args`, `load_config`, `ingest_omni_run`, and `run_entrypoint_with_logging` for entrypoint tests.
 
 Test matrix:
@@ -603,7 +610,7 @@ Test matrix:
 | Datetime | `test_parse_cli_utc_datetime_exact_value_returns_utc_naive_datetime` | Pure | Exact CLI string | None | Exact datetime returned; `tzinfo is None`. |
 | Datetime | `test_parse_cli_utc_datetime_invalid_variants_raise` | Pure | Non-string, `T`, `Z`, offset, fractional seconds, non-padded or invalid date via `subTest` | None | Non-string raises `TypeError`; every malformed string raises `ValueError`. |
 | Datetime | `test_parse_hapi_utc_datetime_exact_value_returns_utc_naive_datetime` | Pure | Exact HAPI string | None | Exact datetime returned; `tzinfo is None`. |
-| Datetime | `test_parse_hapi_utc_datetime_invalid_variants_raise` | Pure | Missing `T`/`Z`, offset, fraction, and non-string | None | Exact exception class follows the helper contract. |
+| Datetime | `test_parse_hapi_utc_datetime_invalid_variants_raise` | Pure | Missing `T`/`Z`, offset, fraction, and non-string | None | Non-string raises `TypeError`; every malformed string raises `ValueError`. |
 | Datetime | `test_format_hapi_utc_datetime_contract` | Pure | Valid UTC-naive datetime plus non-datetime, aware, and microsecond variants | None | Valid value formats exactly; invalid variants raise the documented exception. |
 | Filename | `test_omni_chunk_filename_uses_exact_boundaries` | Pure | Fixed start and end | None | Exact `chunk_<start>__<end>.json` name. |
 | Info fetch | `test_fetch_hapi_info_success_calls_expected_endpoint` | HTTP boundary | Valid `1200` info payload | Patch `src.ingest.omni.requests.get` | Exact URL, `id`, timeout, and returned object asserted. |
@@ -631,7 +638,7 @@ Test matrix:
 | Orchestrator | `test_ingest_omni_run_local_validation_fails_before_info_fetch` | Orchestrator | Invalid dates, empty parameters, and invalid settings via `subTest` | Patch `src.ingest.omni.fetch_hapi_info`, `src.ingest.omni._run_id_utc`, and `src.ingest.omni.write_manifest` | Expected exception; no network, run ID, or manifest call. |
 | Orchestrator | `test_ingest_omni_run_preflight_failure_creates_no_run` | Orchestrator/filesystem | Temporary raw root; `/info` fetch or validation failure | Patch `src.ingest.omni.fetch_hapi_info` or `src.ingest.omni.validate_hapi_info`, plus `src.ingest.omni._run_id_utc` | Exception re-raised; run ID not generated; temporary raw root has no run directory. |
 | Orchestrator | `test_ingest_omni_run_success_coordinates_artifacts_and_manifest` | Orchestrator | Fixed info, plan, two chunks, paths, and IDs | Patch lower-level collaborators listed above | Initial RUNNING write precedes info/chunks; effective bounds are used; every chunk is written/recorded; `_SUCCESS` called; final status SUCCESS; returned dataset/run path exact; `_FAILED` absent. |
-| Orchestrator | `test_ingest_omni_run_post_initialization_failure_marks_failed_and_reraises` | Orchestrator | Chunk fetch/write raises after RUNNING manifest | Patch collaborators and force exception | `_SUCCESS` not called; `_FAILED` called; final manifest FAILED with error; original exception re-raised; no later chunks. |
+| Orchestrator | `test_ingest_omni_run_post_initialization_failure_marks_failed_and_reraises` | Orchestrator | Chunk fetch/write raises after RUNNING manifest | Patch collaborators and force exception | Preflight succeeds and the initial RUNNING manifest establishes the run. The first raw chunk write then raises `RuntimeError`. The first chunk write is attempted once; later chunks are not written; `_SUCCESS` is absent; `_FAILED` is requested; manifest snapshots are `RUNNING` then `FAILED` with exact error diagnostics; the original exception is re-raised. |
 | Orchestrator | `test_ingest_omni_run_raw_base_override_controls_dataset_path` | Orchestrator | Config root plus distinct override | Patch network/chunk collaborators and `src.ingest.omni._run_id_utc` | Returned and written path uses override, dataset ID, and run ID; config root unused. |
 | Orchestrator | `test_ingest_omni_run_writes_expected_filesystem_artifacts` | Filesystem integration | Temporary root, mocked `/info` and `/data`, fixed clock | Patch network and `src.ingest.omni._run_id_utc`; use real writers/markers | `hapi_info.json`, chunks, `_manifest.json`, and `_SUCCESS` exist; no `_FAILED`/`.tmp`; manifest schema, totals, filenames, and payloads match. |
 | CLI | `test_parse_args_valid_values_parses_parameter_list_and_override` | CLI parser | Patched `sys.argv` with all arguments | Patch `sys.argv` | Exact namespace values; parameters become ordered list; override retained. |
