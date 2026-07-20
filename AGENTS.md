@@ -87,17 +87,21 @@ Notes
 **Test disciplines/best practices**
 - Tests should be contract driven. Always review the spec's test matrix before writing test code. Each generated test should trace back to expected behavior, an invariant, a schema contract, an edge case, or a failure mode.
 - Avoid relying on incidental row ordering, brittle string formatting, or broad snapshot-style assertions unless the ordering or formatting is itself part of the contract.
+- For table-driven tests with more than two input or expected values, prefer dictionaries or named records over positional tuples. Name requested and expected fields explicitly. Use comments for contract intent that field names cannot communicate.
 - Mock external APIs, network calls, sleeps, clocks, progress bars, and other nondeterministic boundaries. Patch objects where they are used, not where they are originally defined.
 - When testing orchestrators, mock lower-level I/O/network helpers and assert observable coordination contracts: calls made, statuses written, exceptions re-raised, and output paths returned.
 - Although test matrix should have been crystal clear on what to test, it is reminded to not over-test implementation details. Private helpers may be tested when they encode important contracts, but tests should primarily protect public behavior and project data contracts.
 - Add or update tests when changing ingestion, preprocessing, config parsing, or CLI behavior.
+
+**Test comments etiquette**
+- Assume the reviewer understands ordinary Python plus Arrange, Act, and Assert. At the first use of every testing-specific mechanism, add a concise inline comment explaining what it does and why this test needs it. When uncertain whether a mechanism is obvious, comment it.
+- If a testing mechanism needs more than two or three concise comment lines to explain, first consider simplifying the test, splitting the behavior, or extracting a clearly named helper. **In such case, ask permission from the reviewer to make such changes since it deviates from the test matrix.**
 
 
 **Test files and code structure**
 - Name test files after the behavior/module under test, following the existing `tests/test_*.py` pattern.
 - Name test classes as `Test<ComponentOrFunctionName>` and test methods as `test_<unit>_<scenario>_<expected_behavior>`, for example `test_transform_t1_missing_exits_cleanly`.
 - Keep test function docstrings short and contract-focused. Prefer one or two sentences explaining the boundary being tested; avoid long tutorial-style docstrings unless the setup is genuinely complex.
-- Use the Arrange / Act / Assert structure for multi-step tests. Add `# Arrange`, `# Act`, and `# Assert` comments when they improve scanning, but avoid excessive comments that merely restate obvious code.
 - Prefer small named fixtures and helper methods such as `_make_*`, `_read_*`, `_assert_*`, and `_canonical_*` when they make assertions easier to understand.
 - Prefer explicit dictionaries, rows, and small DataFrames over opaque snapshots or large fixture blobs.
 - For tabular assertions, compare by named fields rather than tuple positions. Use order-independent comparisons such as canonical JSON strings plus `assertCountEqual` unless row order is part of the contract.
