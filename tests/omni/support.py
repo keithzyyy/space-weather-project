@@ -3,11 +3,15 @@
 import copy
 from datetime import datetime
 
+from src.ingest.omni import OmniChunk, OmniIngestionPlan
+
 
 HAPI_BASE_URL = "https://example.test/hapi"
 OMNI_DATASET_ID = "OMNI_HRO2_1MIN"
 SUPPORTED_HAPI_VERSION = "2.0"
 REQUEST_TIMEOUT_S = 30
+RUN_ID = "20260719T010203Z"
+COMPLETED_AT_UTC = "20260719T010204Z"
 
 DATASET_START_DATETIME = datetime(2021, 11, 1, 0, 0, 0)
 DATASET_STOP_DATETIME = datetime(2021, 12, 1, 0, 0, 0)
@@ -124,3 +128,48 @@ def valid_data_payload(*, data=None, status_code=1200) -> dict:
 def valid_empty_payload() -> dict:
     """Return a fresh valid HAPI 1201 payload with no observations."""
     return valid_data_payload(data=[], status_code=1201)
+
+
+def valid_ingestion_plan() -> OmniIngestionPlan:
+    """Return a fresh validated subset plan with ordered parameters."""
+    return OmniIngestionPlan(
+        requested_start=CHUNK_START_DATETIME,
+        requested_end=CHUNK_END_DATETIME,
+        effective_start=CHUNK_START_DATETIME,
+        effective_end=CHUNK_END_DATETIME,
+        time_range_overlap_status="subset",
+        preflight_warnings=[],
+        parameters=["Time", "BX_GSE"],
+    )
+
+
+def valid_chunk(
+    *,
+    chunk_start=CHUNK_START_DATETIME,
+    chunk_end=CHUNK_END_DATETIME,
+    payload=None,
+) -> OmniChunk:
+    """Return a fresh OMNI chunk with an independently copied payload."""
+    if payload is None:
+        payload = valid_data_payload()
+
+    return OmniChunk(
+        chunk_start=chunk_start,
+        chunk_end=chunk_end,
+        payload=copy.deepcopy(payload),
+    )
+
+
+def base_omni_config(*, raw_output_dir) -> dict:
+    """Return a fresh deterministic omni.hapi configuration."""
+    return {
+        "hapi": {
+            "dataset_id": OMNI_DATASET_ID,
+            "base_url": HAPI_BASE_URL,
+            "supported_version": SUPPORTED_HAPI_VERSION,
+            "chunk_days": 2,
+            "timeout_s": REQUEST_TIMEOUT_S,
+            "sleep_s": 0,
+            "raw_output_dir": str(raw_output_dir),
+        }
+    }
