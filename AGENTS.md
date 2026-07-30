@@ -164,4 +164,8 @@ When supersession is partial, clarify the affected scope in the ADR body, usuall
 - Use `docs/adr/` later as the long-form home for migrated ADRs.
 - Keep this root `AGENTS.md` as a concise operating manual, not a full ADR archive.
 
+## Codebase Quizzes
+- For repository-grounded quiz sessions, follow `quiz/QUIZ.md` for question structure, grading, repository evidence, and attempt logging.
+- Treat specifications as intended contracts and report disagreements with source or tests explicitly.
+
 
