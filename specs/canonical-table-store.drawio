@@ -1,0 +1,414 @@
+<mxfile host="65bd71144e">
+    <diagram id="UMAaWAlnDUdCo_jkCF_t" name="Page-1">
+        <mxGraphModel dx="1395" dy="402" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="30" value="... and so on" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="380" y="328.75" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="32" value="" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="1">
+                    <mxGeometry x="30" y="268.75" width="190" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="2" value="observation" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="120" y="308.75" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="Run_id" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="308.75" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="5" value="1321" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="120" y="328.75" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="6" value="202769129Z" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="328.75" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="1321" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="120" y="346.75" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="8" value="202769129Z" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="346.75" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="9" value="1321" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="120" y="366.75" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="10" value="202769129Z" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="366.75" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="Parameter 1" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="30" y="268.75" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="33" value="" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;" vertex="1" parent="1">
+                    <mxGeometry x="240" y="268.75" width="190" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="34" value="observation" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="330" y="308.75" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="35" value="Run_id" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="250" y="308.75" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="36" value="1321" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="330" y="328.75" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="37" value="202769129Z" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="250" y="328.75" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="38" value="1321" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="330" y="346.75" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="39" value="202769129Z" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="250" y="346.75" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="40" value="1321" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="330" y="366.75" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="41" value="202769129Z" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="250" y="366.75" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="42" value="Parameter 2" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="240" y="268.75" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="121" value="" style="edgeStyle=none;html=1;" edge="1" parent="1" source="43" target="119">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="43" value="Previously constructing audit &amp;amp; canonical table for kindex is straightforward because we only deal with one variable&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Now, each run can have different variables.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;One naive way is to construct audit and canonical tables for each variable.&amp;nbsp;&lt;/div&gt;" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="1" y="178.75" width="385" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="45" value="Run audit" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="-465" y="515" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="46" value="dataset_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#CCCCCC;" vertex="1" parent="1">
+                    <mxGeometry x="-235" y="525" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="47" value="Run_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#B3B3B3;" vertex="1" parent="1">
+                    <mxGeometry x="-315" y="525" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="48" value="effective_start" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="46" y="525" width="90" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="49" value="requested_end" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="-54" y="525" width="100" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="65" value="requested_start" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="-154" y="525" width="100" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="66" value="effective_end" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="136" y="525" width="90" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="71" value="empty_chunk_count" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="306" y="525" width="130" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="72" value="total_rows" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="226" y="525" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="75" value="Run-parameter metadata" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="-395" y="875" width="118" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="76" value="dataset_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#CCCCCC;" vertex="1" parent="1">
+                    <mxGeometry x="-197" y="880" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="78" value="parameter_type" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="103" y="880" width="90" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="79" value="parameter_position" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="-20" y="880" width="122" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="80" value="parameter_name" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="-120" y="880" width="102" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="81" value="units" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="194" y="880" width="52" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="83" value="fill_value" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="247" y="880" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="85" value="Run_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#B3B3B3;" vertex="1" parent="1">
+                    <mxGeometry x="-277" y="880" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="87" value="Long observation audit" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="-395" y="765" width="110" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="88" value="dataset_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#CCCCCC;" vertex="1" parent="1">
+                    <mxGeometry x="-195" y="745" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="89" value="parameter_name" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="107" y="745" width="102" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="90" value="observation_time" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="-15" y="745" width="122" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="91" value="chunk_file" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="-115" y="745" width="102" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="92" value="raw_value" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="205" y="745" width="62" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="93" value="fill_value" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="267" y="745" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="113" style="edgeStyle=none;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="94" target="47">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="94" value="Run_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#B3B3B3;" vertex="1" parent="1">
+                    <mxGeometry x="-275" y="745" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="95" value="dataset_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="-194" y="766" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="96" value="&lt;pre&gt;&lt;code&gt;BX_GSE      &lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="108" y="766" width="102" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="97" value="&lt;pre&gt;&lt;code&gt;2026-01-01T00:00Z&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="-14" y="766" width="122" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="98" value="chunk_file" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="-114" y="766" width="102" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="99" value="&lt;pre&gt;&lt;code&gt;4.79&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="206" y="766" width="62" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="100" value="&lt;pre&gt;&lt;code&gt; 4.79&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="268" y="766" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="101" value="&lt;pre&gt;&lt;code&gt;run-A&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="-274" y="766" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="102" value="is_source_fill" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="348" y="745" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="103" value="&lt;pre&gt;&lt;code&gt;false&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="348" y="766" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="104" value="dataset_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="-194" y="784" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="112" style="edgeStyle=none;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="105" target="80">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="105" value="&lt;pre&gt;&lt;code&gt;flow_speed &lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="108" y="784" width="102" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="106" value="&lt;pre&gt;&lt;code&gt;2026-01-01T00:00Z&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="-14" y="784" width="122" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="107" value="chunk_file" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="-114" y="784" width="102" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="108" value="&lt;pre&gt;&lt;code&gt;99999.9 &lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="206" y="784" width="62" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="109" value="&lt;pre&gt;&lt;code&gt;NULL&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="268" y="784" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="110" value="&lt;pre&gt;&lt;code&gt;run-A&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="-274" y="784" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="111" value="&lt;pre&gt;&lt;code&gt;true&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="348" y="784" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="114" value="(ONLY SUCCESSFUL RUNS!)" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="-415" y="555" width="80" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="115" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;flipH=1;labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;rotation=90;" vertex="1" parent="1">
+                    <mxGeometry x="21.75" y="381.25" width="20" height="377.5" as="geometry"/>
+                </mxCell>
+                <mxCell id="116" value="&lt;pre&gt;&lt;code&gt;manifest[&#39;request&#39;]&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=0;" vertex="1" parent="1">
+                    <mxGeometry x="-45" y="592" width="149" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="117" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;flipH=1;labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;rotation=90;" vertex="1" parent="1">
+                    <mxGeometry x="306" y="475" width="20" height="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="118" value="&lt;pre&gt;&lt;code&gt;manifest[&#39;summary&#39;]&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=0;" vertex="1" parent="1">
+                    <mxGeometry x="255" y="575" width="149" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="119" value="" style="shape=cross;whiteSpace=wrap;html=1;rotation=45;fillColor=#FFCCCC;" vertex="1" parent="1">
+                    <mxGeometry x="128" y="247.6" width="191.31" height="192.3" as="geometry"/>
+                </mxCell>
+                <mxCell id="122" value="&lt;span style=&quot;color: rgb(63, 63, 63); font-family: Helvetica; font-size: 12px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: center; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: normal; background-color: rgb(251, 251, 251); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; display: inline !important; float: none;&quot;&gt;But inefficient bcause there can be ~40-50 variables for the omni dataset&lt;/span&gt;" style="text;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="41" y="435" width="420" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="123" value="Run_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#B3B3B3;" vertex="1" parent="1">
+                    <mxGeometry x="-420" y="258.75" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="124" value="parameter 2" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="-240" y="258.75" width="100" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="126" value="parameter 1" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="-340" y="258.75" width="100" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="128" value="parameter ..." style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="-140" y="258.75" width="100" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="129" value="" style="shape=cross;whiteSpace=wrap;html=1;rotation=45;fillColor=#FFCCCC;" vertex="1" parent="1">
+                    <mxGeometry x="-340" y="178.75" width="191.31" height="192.3" as="geometry"/>
+                </mxCell>
+                <mxCell id="130" value="&lt;div style=&quot;text-align: center;&quot;&gt;&lt;span style=&quot;background-color: transparent;&quot;&gt;not all runs have the same parameter set so some observations will be nulls.&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: center;&quot;&gt;&lt;span style=&quot;background-color: transparent;&quot;&gt;- what about replacing missing val placeholders LATER?&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: center;&quot;&gt;&lt;span style=&quot;background-color: transparent;&quot;&gt;- Ok, but.............&amp;nbsp;&lt;/span&gt;&lt;/div&gt;" style="text;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="-419" y="358.75" width="420" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="131" value="Run audit" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="-455" y="936" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="132" value="dataset_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#CCCCCC;" vertex="1" parent="1">
+                    <mxGeometry x="-225" y="946" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="133" value="Run_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#B3B3B3;" vertex="1" parent="1">
+                    <mxGeometry x="-305" y="946" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="134" value="effective_start" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="56" y="946" width="90" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="135" value="requested_end" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="-44" y="946" width="100" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="136" value="requested_start" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="-144" y="946" width="100" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="137" value="effective_end" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="146" y="946" width="90" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="138" value="empty_chunk_count" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="316" y="946" width="130" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="139" value="total_rows" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="236" y="946" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="148" value="Long observation audit" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="-424" y="1186" width="110" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="149" value="dataset_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#CCCCCC;" vertex="1" parent="1">
+                    <mxGeometry x="-224" y="1166" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="150" value="parameter_name" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="198" y="1166" width="102" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="151" value="observation_time" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="77" y="1166" width="122" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="152" value="chunk_file" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="-144" y="1166" width="102" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="153" value="raw_value" style="rounded=0;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="296" y="1166" width="62" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="154" value="fill_value" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#99FF99;" vertex="1" parent="1">
+                    <mxGeometry x="358" y="1166" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="155" style="edgeStyle=none;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="156" target="133">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="156" value="Run_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#B3B3B3;" vertex="1" parent="1">
+                    <mxGeometry x="-304" y="1166" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="157" value="dataset_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="-223" y="1187" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="158" value="&lt;pre&gt;&lt;code&gt;BX_GSE      &lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="199" y="1187" width="102" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="159" value="&lt;pre&gt;&lt;code&gt;2026-01-01T00:00Z&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="78" y="1187" width="122" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="160" value="chunk_file" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="-143" y="1187" width="102" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="161" value="&lt;pre&gt;&lt;code&gt;4.79&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="297" y="1187" width="62" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="162" value="&lt;pre&gt;&lt;code&gt; 4.79&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="359" y="1187" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="163" value="&lt;pre&gt;&lt;code&gt;run-A&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="-303" y="1187" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="164" value="is_source_fill" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#99FF99;" vertex="1" parent="1">
+                    <mxGeometry x="620" y="1166" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="165" value="&lt;pre&gt;&lt;code&gt;false&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="620" y="1187" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="166" value="dataset_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="-223" y="1205" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="168" value="&lt;pre&gt;&lt;code&gt;flow_speed &lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="199" y="1205" width="102" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="169" value="&lt;pre&gt;&lt;code&gt;2026-01-01T00:00Z&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="78" y="1205" width="122" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="170" value="chunk_file" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="-143" y="1205" width="102" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="171" value="&lt;pre&gt;&lt;code&gt;99999.9 &lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="297" y="1205" width="62" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="172" value="&lt;pre&gt;&lt;code&gt;NULL&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="359" y="1205" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="173" value="&lt;pre&gt;&lt;code&gt;run-A&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="-303" y="1205" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="174" value="&lt;pre&gt;&lt;code&gt;true&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="620" y="1210" width="80" height="17" as="geometry"/>
+                </mxCell>
+                <mxCell id="175" value="(ONLY SUCCESSFUL RUNS!)" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="-405" y="976" width="80" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="176" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;flipH=1;labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;rotation=90;" vertex="1" parent="1">
+                    <mxGeometry x="31.75" y="802.25" width="20" height="377.5" as="geometry"/>
+                </mxCell>
+                <mxCell id="177" value="&lt;pre&gt;&lt;code&gt;manifest[&#39;request&#39;]&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=0;" vertex="1" parent="1">
+                    <mxGeometry x="-35" y="1013" width="149" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="178" value="" style="shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;flipH=1;labelPosition=right;verticalLabelPosition=middle;align=left;verticalAlign=middle;rotation=90;" vertex="1" parent="1">
+                    <mxGeometry x="316" y="896" width="20" height="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="179" value="&lt;pre&gt;&lt;code&gt;manifest[&#39;summary&#39;]&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=0;" vertex="1" parent="1">
+                    <mxGeometry x="265" y="996" width="149" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="180" value="" style="edgeStyle=none;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1">
+                    <mxGeometry width="80" relative="1" as="geometry">
+                        <mxPoint x="-590" y="920" as="sourcePoint"/>
+                        <mxPoint x="640" y="920" as="targetPoint"/>
+                        <Array as="points"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="181" value="" style="edgeStyle=none;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1">
+                    <mxGeometry width="80" relative="1" as="geometry">
+                        <mxPoint x="-569" y="480" as="sourcePoint"/>
+                        <mxPoint x="661" y="480" as="targetPoint"/>
+                        <Array as="points"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="182" value="units" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#99FF99;" vertex="1" parent="1">
+                    <mxGeometry x="438" y="1166" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="183" value="&lt;pre&gt;&lt;code&gt;nT&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="438" y="1187" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="184" value="&lt;pre&gt;&lt;code&gt;km/s&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="438" y="1205" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="185" value="parameter_type" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#99FF99;" vertex="1" parent="1">
+                    <mxGeometry x="519" y="1166" width="102" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="186" value="&lt;pre&gt;&lt;code&gt;double&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="519" y="1187" width="102" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="187" value="&lt;pre&gt;&lt;code&gt;double&lt;/code&gt;&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="518" y="1207" width="102" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="188" value="source_row_number" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#99FF99;" vertex="1" parent="1">
+                    <mxGeometry x="-42" y="1166" width="122" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="189" value="0" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="-41" y="1187" width="121" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="190" value="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="-41" y="1205" width="121" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="191" value="parameter metadata related fields" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#99FF99;strokeColor=0;shadow=0;" vertex="1" parent="1">
+                    <mxGeometry x="204" y="1110" width="266" height="20" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
