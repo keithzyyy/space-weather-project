@@ -1,6 +1,220 @@
 <mxfile host="65bd71144e">
+    <diagram id="omni-query-flow" name="Long observation query flow">
+        <mxGraphModel dx="951" dy="898" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1000" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="q-title" value="OMNI long-observation audit query flow" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=24;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="90" y="10" width="900" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="q-note" value="Each box is a CTE relation.&lt;div&gt;Only the final relation is materialized as the&lt;/div&gt;&lt;div&gt;long-observation audit table.&lt;/div&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=#4D4D4D;" parent="1" vertex="1">
+                    <mxGeometry x="90" y="70" width="260" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="q-manifests" value="&lt;b&gt;Manifest files&lt;/b&gt;&lt;br&gt;&lt;br&gt;run.run_id&lt;br&gt;run.status&lt;br&gt;source.dataset_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="730" y="60" width="140" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="q-raw-chunks" value="&lt;b&gt;Raw chunk JSON files&lt;/b&gt;&lt;br&gt;&lt;br&gt;filename&lt;br&gt;parameters[]&lt;br&gt;data[][]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="670" y="210" width="160" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="q-successful-runs" value="&lt;b&gt;successful_runs&lt;/b&gt;&lt;br&gt;&lt;br&gt;One row per successful manifest&lt;br&gt;&lt;br&gt;run_id | dataset_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="290" y="140" width="250" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="q-successful-chunks" value="&lt;b&gt;successful_chunks&lt;/b&gt;&lt;br&gt;&lt;br&gt;One row per chunk belonging to a successful run&lt;br&gt;&lt;br&gt;dataset_id | run_id | filename&lt;br&gt;data[][] | parameters[]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="370" y="360" width="300" height="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="q-observation-rows" value="&lt;b&gt;observation_rows&lt;/b&gt;&lt;br&gt;&lt;br&gt;One row per observation array&lt;br&gt;&lt;br&gt;filename | source_row_number&lt;br&gt;row_array" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="920" y="370" width="210" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="q-observation-values" value="&lt;b&gt;observation_values&lt;/b&gt;&lt;br&gt;&lt;br&gt;One row per non-time value&lt;br&gt;&lt;br&gt;source_row_number | timestamp&lt;br&gt;parameter_index | raw_value" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="1140" y="410" width="220" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="q-parameter-definitions" value="&lt;b&gt;parameter_definitions&lt;/b&gt;&lt;br&gt;&lt;br&gt;One row per non-time parameter per chunk&lt;br&gt;&lt;br&gt;filename | parameter_index&lt;br&gt;name | fill | units | type" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="560" y="570" width="270" height="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="q-final" value="&lt;b&gt;Long observation audit&lt;/b&gt;&lt;br&gt;&lt;br&gt;dataset_id | run_id | chunk_file&lt;br&gt;source_row_number | observation_time&lt;br&gt;parameter_name | raw_value&lt;br&gt;source_fill_value | units | type&lt;br&gt;is_source_fill" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=12;fontSize=14;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1030" y="630" width="280" height="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="q-e1" value="filter status = SUCCESS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="q-manifests" target="q-successful-runs" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="q-e2" value="join by (successful) run_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="q-successful-runs" target="q-successful-chunks" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="q-e3" value="read_json" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="q-raw-chunks" target="q-successful-chunks" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="670" y="290"/>
+                            <mxPoint x="590" y="290"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="q-e4" value="UNNEST(data)&lt;br&gt;WITH ORDINALITY" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="q-successful-chunks" edge="1">
+                    <mxGeometry x="0.0667" y="-10" relative="1" as="geometry">
+                        <mxPoint x="920" y="480" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="840" y="490"/>
+                            <mxPoint x="840" y="480"/>
+                            <mxPoint x="920" y="480"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="q-e5" value="UNNEST(row_array[2:])&lt;br&gt;WITH ORDINALITY" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.382;exitY=0.014;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="q-observation-rows" edge="1">
+                    <mxGeometry x="-0.0811" relative="1" as="geometry">
+                        <mxPoint x="1230" y="410" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="1000" y="330"/>
+                            <mxPoint x="1230" y="330"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="q-e6" value="UNNEST(parameters[2:])&lt;br&gt;WITH ORDINALITY" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.704;exitY=0.982;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="q-successful-chunks" target="q-parameter-definitions" edge="1">
+                    <mxGeometry x="-0.2962" y="20" relative="1" as="geometry">
+                        <mxPoint x="580" y="540" as="sourcePoint"/>
+                        <Array as="points">
+                            <mxPoint x="580" y="527"/>
+                            <mxPoint x="580" y="550"/>
+                            <mxPoint x="440" y="550"/>
+                            <mxPoint x="440" y="635"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="q-e7" value="inner join&lt;br&gt;by&amp;nbsp;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;dataset_id + run_id +&lt;br&gt;filename + parameter_index&lt;/span&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.99;exitY=0.878;exitDx=0;exitDy=0;exitPerimeter=0;entryX=-0.005;entryY=0.401;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="q-parameter-definitions" target="q-final" edge="1">
+                    <mxGeometry x="0.0381" relative="1" as="geometry">
+                        <mxPoint x="1010" y="700" as="targetPoint"/>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="q-e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=;endFill=1;fontSize=12;exitX=0.36;exitY=0.998;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="q-observation-values" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="840" y="800" as="sourcePoint"/>
+                        <mxPoint x="990" y="710" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="1219" y="600"/>
+                            <mxPoint x="990" y="600"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="q-branch-note" value="The query branches here: parameter_definitions does not depend on observation_values." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#F5F5F5;strokeColor=#666666;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="690" y="370" width="190" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="olKjEBBf0nesbzvgei2I-1" value="&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;blue&amp;nbsp; &amp;nbsp;= run and chunk provenance&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;yellow = observation expansion&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;green&amp;nbsp; = parameter metadata&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;purple = final joined rows&lt;/font&gt;&lt;/div&gt;" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="910" y="110" width="200" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="XFH64xVKmTM80IAz-rJc-1" value="" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fontColor=#000000;darkOpacity=0.05;fillColor=#FFF9B2;strokeColor=none;fillStyle=solid;direction=west;gradientDirection=north;gradientColor=#FFF2A1;shadow=1;size=20;pointerEvents=1;" vertex="1" parent="1">
+                    <mxGeometry x="900" y="320" width="140" height="160" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram id="omni-worked-example" name="Worked example">
+        <mxGraphModel dx="1508" dy="1197" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1400" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="w-title" value="Worked example: one successful run, two chunks, two non-time parameters" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=24;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="25" width="1300" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-legend" value="Abbreviations below: c1 = chunk_0000__0002.json, c2 = chunk_0002__0003.json. WITH ORDINALITY is one-based and restarts for each chunk." style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=#4D4D4D;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="65" width="1500" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-manifest" value="&lt;b&gt;Manifest&lt;/b&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;{&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;run&amp;quot;: {&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;quot;run_id&amp;quot;: &amp;quot;20260801T021300Z&amp;quot;,&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;quot;status&amp;quot;: &amp;quot;SUCCESS&amp;quot;&lt;br&gt;&amp;nbsp;&amp;nbsp;},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;source&amp;quot;: {&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;quot;dataset_id&amp;quot;: &amp;quot;OMNI_HRO2_1MIN&amp;quot;&lt;br&gt;&amp;nbsp;&amp;nbsp;}&lt;br&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="110" width="250" height="230" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-chunk1" value="&lt;b&gt;c1: chunk_0000__0002.json&lt;/b&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;{&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;parameters&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;Time&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;isotime&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;UTC&amp;quot;},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;F&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;BX_GSE&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99}&lt;br&gt;&amp;nbsp;&amp;nbsp;],&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;data&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;[&amp;quot;2026-01-01T00:00:00.000Z&amp;quot;, 9.85, -1.39],&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;[&amp;quot;2026-01-01T00:01:00.000Z&amp;quot;, 9.77, 9999.99]&lt;br&gt;&amp;nbsp;&amp;nbsp;]&lt;br&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="390" y="110" width="380" height="270" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-chunk2" value="&lt;b&gt;c2: chunk_0002__0003.json&lt;/b&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;{&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;parameters&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;Time&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;isotime&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;UTC&amp;quot;},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;F&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;BX_GSE&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99}&lt;br&gt;&amp;nbsp;&amp;nbsp;],&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;data&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;[&amp;quot;2026-01-01T00:02:00.000Z&amp;quot;, 9.65, -1.95]&lt;br&gt;&amp;nbsp;&amp;nbsp;]&lt;br&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="790" y="120" width="270" height="250" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-successful-runs" value="&lt;b&gt;1. successful_runs (1 row)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;run_id&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;| dataset_id&lt;br&gt;20260801T021300Z | OMNI_HRO2_1MIN&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="510" width="250" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-successful-chunks" value="&lt;b&gt;2. successful_chunks (2 rows)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;file | data rows | parameters&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | [Time, F, BX_GSE]&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | [Time, F, BX_GSE]&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="500" width="320" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-observation-rows" value="&lt;b&gt;3. observation_rows (3 rows)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;file | row | row_array&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | [00:00, 9.85, -1.39]&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | [00:01, 9.77, 9999.99]&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | [00:02, 9.65, -1.95]&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=10;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="480" width="270" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-observation-values" value="&lt;b&gt;4a. observation_values (6 rows)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;file | row | time&amp;nbsp; | idx | raw_value&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:00 | 1&amp;nbsp;&amp;nbsp; | 9.85&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:00 | 2&amp;nbsp;&amp;nbsp; | -1.39&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | 00:01 | 1&amp;nbsp;&amp;nbsp; | 9.77&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | 00:01 | 2&amp;nbsp;&amp;nbsp; | 9999.99&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:02 | 1&amp;nbsp;&amp;nbsp; | 9.65&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:02 | 2&amp;nbsp;&amp;nbsp; | -1.95&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=10;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="780" y="770" width="320" height="210" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-parameter-definitions" value="&lt;b&gt;4b. parameter_definitions (4 rows)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;file | idx | name&amp;nbsp;&amp;nbsp; | fill&amp;nbsp;&amp;nbsp;&amp;nbsp; | units | type&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | F&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | 9999.99 | nT&amp;nbsp;&amp;nbsp;&amp;nbsp; | double&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | BX_GSE | 9999.99 | nT&amp;nbsp;&amp;nbsp;&amp;nbsp; | double&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | F&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | 9999.99 | nT&amp;nbsp;&amp;nbsp;&amp;nbsp; | double&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | BX_GSE | 9999.99 | nT&amp;nbsp;&amp;nbsp;&amp;nbsp; | double&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;align=left;spacingLeft=10;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="290" y="815" width="390" height="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-final" value="&lt;b&gt;5. Long observation audit (6 rows)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;file | row | time&amp;nbsp; | parameter | raw&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | fill?&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:00 | F&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | 9.85&amp;nbsp;&amp;nbsp;&amp;nbsp; | false&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:00 | BX_GSE&amp;nbsp;&amp;nbsp; | -1.39&amp;nbsp;&amp;nbsp; | false&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | 00:01 | F&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | 9.77&amp;nbsp;&amp;nbsp;&amp;nbsp; | false&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | 00:01 | BX_GSE&amp;nbsp;&amp;nbsp; | 9999.99 | true&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:02 | F&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | 9.65&amp;nbsp;&amp;nbsp;&amp;nbsp; | false&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:02 | BX_GSE&amp;nbsp;&amp;nbsp; | -1.95&amp;nbsp;&amp;nbsp; | false&lt;/div&gt;&lt;br&gt;&lt;b&gt;Join keys:&lt;/b&gt; dataset_id + run_id + filename + parameter_index" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=10;fontSize=13;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="1010" width="380" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-counts" value="Row-count trace: 1 successful run -&gt; 2 chunks -&gt; 3 observation arrays -&gt; 6 values + 4 repeated parameter definitions -&gt; 6 joined long rows." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#F5F5F5;strokeColor=#666666;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="310" y="1190" width="500" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-e1" value="filter SUCCESS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="w-manifest" target="w-successful-runs" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-e2" value="join by&lt;div&gt;(successful)&lt;/div&gt;&lt;div&gt;run_id&lt;/div&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="w-successful-runs" target="w-successful-chunks" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="w-chunk1" target="w-successful-chunks" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="600" y="450"/>
+                            <mxPoint x="675" y="450"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="w-e4" value="read both chunks" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.25;exitY=1;exitDx=0;exitDy=0;" parent="1" source="w-chunk2" target="w-successful-chunks" edge="1">
+                    <mxGeometry x="0.6366" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="860" y="370"/>
+                            <mxPoint x="860" y="450"/>
+                            <mxPoint x="675" y="450"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="w-e5" value="UNNEST data" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="w-successful-chunks" target="w-observation-rows" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-e6" value="UNNEST values" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.044;exitY=1.011;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="w-observation-rows" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="910" y="770" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="913" y="740"/>
+                            <mxPoint x="910" y="740"/>
+                            <mxPoint x="910" y="770"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="w-e7" value="UNNEST parameter definitions" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="w-successful-chunks" target="w-parameter-definitions" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-e8" value="inner join to match filename and index&lt;br&gt;join keys: dataset_id + run_id +&lt;br&gt;filename + parameter index&lt;div&gt;&amp;nbsp;&lt;/div&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.086;exitY=1.003;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="w-observation-values" target="w-final" edge="1">
+                    <mxGeometry x="0.0043" y="-20" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="810" y="981"/>
+                            <mxPoint x="810" y="1190"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="w-e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=;endFill=1;fontSize=12;" parent="1" source="w-parameter-definitions" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="810" y="1190" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="485" y="1170"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="lNoQbXvZiYd4_bXEUqeE-2" value="&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;blue&amp;nbsp; &amp;nbsp;= run and chunk provenance&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;yellow = observation expansion&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;green&amp;nbsp; = parameter metadata&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;purple = final joined rows&lt;/font&gt;&lt;/div&gt;" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="860" y="350" width="280" height="130" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
     <diagram id="UMAaWAlnDUdCo_jkCF_t" name="Page-1">
-        <mxGraphModel dx="1395" dy="402" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="1907" dy="1026" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
