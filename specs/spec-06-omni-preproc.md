@@ -16,11 +16,6 @@ Create a reusable preprocessing module for ingested OMNI dataset using the simil
 
 - Replace missing value placeholders accordingly with nulls
 
-## Inputs
-
-## Outputs
-
-
 
 ## Brainstorming
 
@@ -70,11 +65,105 @@ is_source_fill
 
 ## Pseudocode flow
 
-```
-Extract all successful runs from the manifest
+Initial brainstorming
 
-For each succcessful run, parse all `chunk*.json` into a table,
-attach header based on variables from  `hapi_info.json`
+```
+Extract all successful runs (ruled by the manifest)
+from the output directory.
+
+Among all such runs, extract successful chunks (/data response), arrange them
+into a table but do not parse data[][] and parameters[] yet.
+
+Parsing data and parameters
+1. Unnest the data in two phases: unnest the rows and the observations in
+each row
+2. Unnest parameter definitions from /data.parameters
+
+Join the two tables by dataset_id + run_id + filename + parameter_index
+```
+
+
+
+Incremental flow
+
+```
+discover successful manifests
+read processed run IDs from run audit
+select oldest unprocessed successful run
+
+if none:
+    return None
+
+discover that run's chunk files
+build run-audit query for one manifest
+build long-observation query for one manifest and its chunks
+append both outputs under that run ID
+return audit output path
+```
+
+
+Rebuild flow
+
+```
+discover every successful manifest
+fail if none exist
+discover their chunk files
+build both complete queries
+write both outputs to temporary storage
+replace the existing audit output only after both writes succeed
+```
+
+
+## Inputs
+
+
+
+## Outputs
+
+
+
+## Interface
+
+```Python
+class OmniPreprocessSpecError(RuntimeError):
+    """Raised when raw OMNI artifacts violate preprocessing contracts."""
+
+
+def build_long_observation_select_sql(
+    manifest_paths: list[str],
+    chunk_paths: list[str],
+) -> str:
+    """Build long-audit rows, including successful-empty sentinels."""
+
+
+def pick_oldest_unprocessed_successful_run(
+    raw_dataset_dir: str | Path,
+    audit_output_dir: str | Path,
+) -> str | None:
+    """Return the oldest successful run absent from long audit."""
+
+
+def write_audit_table(
+    long_observation_sql: str,
+    output_dir: str | Path,
+    *,
+    mode: str,
+) -> Path:
+    """Append one run or overwrite the complete long-audit dataset."""
+
+
+def increment_successful_run(
+    raw_dataset_dir: str | Path,
+    audit_output_dir: str | Path,
+) -> Path | None:
+    """Process one oldest successful unprocessed run."""
+
+
+def rebuild_successful_runs(
+    raw_dataset_dir: str | Path,
+    audit_output_dir: str | Path,
+) -> Path:
+    """Rebuild long audit from every successful ingestion run."""
 ```
 
 
