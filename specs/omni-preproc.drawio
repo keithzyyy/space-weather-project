@@ -1,11 +1,486 @@
 <mxfile host="65bd71144e">
+    <diagram id="omniIncrementalFlow20" name="Incremental Flow 2.0">
+        <mxGraphModel dx="1370" dy="1237" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2300" pageHeight="1250" math="0" shadow="0">
+            <root>
+                <mxCell id="inc2-0"/>
+                <mxCell id="inc2-1" parent="inc2-0"/>
+                <mxCell id="inc2-title" value="OMNI long-observation audit: incremental flow 2.0" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=24;fontStyle=1;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="30" y="20" width="1000" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-subtitle" value="Process the oldest successful run not already represented in the dataset-specific long audit. Red boxes are failure modes; orange boxes are valid skips or no-op outcomes." style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="30" y="60" width="1500" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-container-manifest" value="" style="rounded=0;whiteSpace=wrap;html=1;opacity=20;strokeWidth=2;fillColor=#f5f5f5;strokeColor=#666666;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="20" y="110" width="2152" height="310" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-label-manifest" value="1. Dataset boundary and manifest eligibility" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="40" y="115" width="500" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-raw-input" value="&lt;b&gt;Input: dataset-specific raw directory&lt;/b&gt;&lt;br&gt;&lt;br&gt;&amp;lt;raw_output_dir&amp;gt;/&amp;lt;dataset_id&amp;gt;/" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="50" y="165" width="230" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-raw-check" value="&lt;b&gt;Validate local dataset boundary&lt;/b&gt;&lt;br&gt;&lt;br&gt;Directory exists&lt;br&gt;Expected dataset ID = directory leaf name" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="330" y="155" width="240" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-discover" value="&lt;b&gt;Discover candidate manifests&lt;/b&gt;&lt;br&gt;&lt;br&gt;run_id=*/_manifest.json" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="620" y="165" width="210" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-identity" value="&lt;b&gt;Read JSON and validate run identity&lt;/b&gt;&lt;br&gt;&lt;br&gt;Top-level object&lt;br&gt;run_id + known status&lt;br&gt;created_at_utc and directory agree" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="878" y="119" width="250" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-status" value="Run status?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=13;fontStyle=1;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="1300" y="110" width="150" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-skip" value="&lt;b&gt;RUNNING or FAILED&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;Skip run. Do not require source or artifact keys/metadata.&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="1260" y="300" width="230" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-success-validate" value="&lt;b&gt;SUCCESS: validate eligible manifest&lt;/b&gt;&lt;br&gt;&lt;br&gt;source.dataset_id exists and matches directory leaf&lt;br&gt;artifacts is an object" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="1600" y="100" width="280" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-success-paths" value="&lt;b&gt;Successful manifest paths&lt;/b&gt;&lt;br&gt;&lt;br&gt;Validated and ordered oldest first" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="1930" y="380" width="220" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-fail-raw" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Raw dataset directory is missing.&lt;br&gt;&lt;b&gt;Fail fast.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="330" y="300" width="220" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-fail-identity" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Unreadable/non-object JSON, missing run identity, unknown status, or run ID disagreement.&lt;br&gt;&lt;b&gt;Eligibility is unknown: fail fast.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="890" y="290" width="260" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-fail-success" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Successful manifest is missing required metadata or its dataset ID disagrees with the raw directory.&lt;br&gt;&lt;b&gt;Fail fast.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="1600" y="290" width="280" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-container-selection" value="" style="rounded=0;whiteSpace=wrap;html=1;opacity=20;strokeWidth=2;fillColor=#f5f5f5;strokeColor=#666666;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="20" y="440" width="2187" height="300" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-label-selection" value="2. Incremental selection and raw artifact integrity" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="40" y="445" width="600" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-audit-input" value="&lt;b&gt;Existing long audit&lt;/b&gt;&lt;br&gt;&lt;br&gt;Absent audit = no processed runs" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="36" y="505" width="210" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-read-processed" value="&lt;b&gt;Read existing audit identity&lt;/b&gt;&lt;br&gt;&lt;br&gt;Distinct dataset_id + run_id from Parquet" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="264" y="490" width="230" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-audit-validate" value="&lt;b&gt;Validate existing audit dataset&lt;/b&gt;&lt;br&gt;&lt;br&gt;Every row belongs to the raw directory dataset ID" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="540" y="490" width="240" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-pick" value="&lt;b&gt;Pick oldest unprocessed success&lt;/b&gt;&lt;br&gt;&lt;br&gt;Successful run IDs minus processed run IDs" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="880" y="495" width="240" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-found" value="Run found?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=13;fontStyle=1;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="1170" y="500" width="140" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-noop" value="&lt;b&gt;No unprocessed run&lt;/b&gt;&lt;br&gt;&lt;br&gt;Log caught-up state and return None." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="1130" y="625" width="220" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-chunk-discover" value="&lt;b&gt;Discover recorded chunks&lt;/b&gt;&lt;br&gt;&lt;br&gt;Use only chunk records from the selected successful manifest" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="1360" y="485" width="211" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-chunk-validate" value="&lt;b&gt;Validate raw artifacts&lt;/b&gt;&lt;br&gt;&lt;br&gt;Valid unique chunk filenames&lt;br&gt;Every recorded chunk still exists" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="1605" y="485" width="205" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-query" value="&lt;b&gt;build_long_observation_select_sql&lt;/b&gt;&lt;br&gt;&lt;br&gt;Input: ONE successful manifest + its recorded chunks&lt;br&gt;See &lt;b&gt;Generic flow&lt;/b&gt; for CTE internals.&lt;br&gt;&lt;br&gt;Important contracts:&lt;br&gt;- Time is first; [2:] means non-time values/definitions&lt;br&gt;- observation and parameter lengths match&lt;br&gt;- successful run LEFT JOIN preserves one sentinel when no non-time values exist&lt;br&gt;- source fill values remain raw and are flagged" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#666666;strokeWidth=3;align=left;spacingLeft=12;verticalAlign=top;spacingTop=10;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="1895" y="500" width="290" height="230" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-fail-audit" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Existing audit contains another dataset ID or cannot be read.&lt;br&gt;&lt;b&gt;Fail fast.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="540" y="645" width="240" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-fail-chunk" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Missing/duplicate/invalid recorded chunk path.&lt;br&gt;&lt;b&gt;Fail fast before DuckDB reads it.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="1562" y="645" width="240" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-container-write" value="" style="rounded=0;whiteSpace=wrap;html=1;opacity=20;strokeWidth=2;fillColor=#f5f5f5;strokeColor=#666666;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="30" y="800" width="2047" height="430" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-label-write" value="3. Stage and commit one run partition" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="40" y="800" width="500" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-query-execute" value="&lt;b&gt;Execute query through DuckDB&lt;/b&gt;&lt;br&gt;&lt;br&gt;Malformed chunk JSON, invalid Time position, positional mismatch, or cast error propagates." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#666666;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="80" y="890" width="280" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-stage" value="&lt;b&gt;Stage COPY output&lt;/b&gt;&lt;br&gt;&lt;br&gt;Temporary sibling directory&lt;br&gt;Parquet PARTITION_BY(run_id)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="415" y="890" width="230" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-one-partition" value="Exactly one staged run partition?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=13;fontStyle=1;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="710" y="885" width="190" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-target-check" value="Target run partition already exists?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=13;fontStyle=1;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="1040" y="900" width="190" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-commit" value="&lt;b&gt;Commit append&lt;/b&gt;&lt;br&gt;&lt;br&gt;Move staged run_id partition into the dedicated long-audit directory" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="1350" y="880" width="260" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-complete" value="&lt;b&gt;Increment complete&lt;/b&gt;&lt;br&gt;&lt;br&gt;Log run ID and output path&lt;br&gt;Return audit output path" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;fontSize=13;fontStyle=1;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="1690" y="940" width="230" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-fail-query" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Query or staged COPY fails.&lt;br&gt;&lt;b&gt;Existing audit remains unchanged; propagate.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="390" y="1090" width="250" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-fail-partitions" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Staging produced zero or multiple run partitions.&lt;br&gt;&lt;b&gt;Fail before append.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="700" y="1100" width="230" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-fail-collision" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Target run partition already exists.&lt;br&gt;&lt;b&gt;Never overwrite; fail fast.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="1010" y="1100" width="230" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-fail-move" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Filesystem move fails during commit.&lt;br&gt;&lt;b&gt;Propagate; no success reported.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="inc2-1" vertex="1">
+                    <mxGeometry x="1360" y="1100" width="240" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-raw-input" target="inc2-raw-check" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e2" value="valid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-raw-check" target="inc2-discover" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-discover" target="inc2-identity" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e4" value="valid identity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-identity" target="inc2-status" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e5" value="RUNNING / FAILED" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-status" target="inc2-skip" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e6" value="SUCCESS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-status" target="inc2-success-validate" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e7" value="valid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-success-validate" target="inc2-success-paths" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-ef1" value="missing" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-raw-check" target="inc2-fail-raw" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-ef2" value="invalid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-identity" target="inc2-fail-identity" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-ef3" value="invalid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-success-validate" target="inc2-fail-success" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-audit-input" target="inc2-read-processed" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-read-processed" target="inc2-audit-validate" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e10" value="processed&lt;div&gt;run IDs&lt;/div&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-audit-validate" target="inc2-pick" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e11" value="successful run IDs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-success-paths" target="inc2-pick" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-pick" target="inc2-found" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e13" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-found" target="inc2-noop" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e14" value="yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-found" target="inc2-chunk-discover" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-chunk-discover" target="inc2-chunk-validate" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e16" value="validated paths" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-chunk-validate" target="inc2-query" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-ef4" value="invalid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-audit-validate" target="inc2-fail-audit" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-ef5" value="invalid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-chunk-validate" target="inc2-fail-chunk" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e17" value="execute" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-query" target="inc2-query-execute" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="2001" y="840"/>
+                            <mxPoint x="220" y="840"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="inc2-e18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-query-execute" target="inc2-stage" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-stage" target="inc2-one-partition" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e20" value="yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-one-partition" target="inc2-target-check" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e21" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-target-check" target="inc2-commit" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-e22" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-commit" target="inc2-complete" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-ef6" value="failure" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-stage" target="inc2-fail-query" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-ef7" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-one-partition" target="inc2-fail-partitions" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-ef8" value="yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-target-check" target="inc2-fail-collision" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="inc2-ef9" value="move failure" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-commit" target="inc2-fail-move" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="vI-JYYQeCX6wK3giBf9d-3" value="&lt;i&gt;_discover_successful_manifests()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" vertex="1" parent="inc2-1">
+                    <mxGeometry x="54" y="263" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="vI-JYYQeCX6wK3giBf9d-4" value="&lt;i&gt;_read_processed_run_ids()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" vertex="1" parent="inc2-1">
+                    <mxGeometry x="36" y="605" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="vI-JYYQeCX6wK3giBf9d-5" value="&lt;i&gt;pick_oldest_unprocessed_successful_run()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" vertex="1" parent="inc2-1">
+                    <mxGeometry x="861" y="615" width="253" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="XOy-lfGtwATaT-7U9pt1-0" value="&lt;i&gt;write_audit_table()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" vertex="1" parent="inc2-1">
+                    <mxGeometry x="77" y="1015" width="200" height="30" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram id="omniRebuildFlow20" name="Rebuild flow 2.0">
+        <mxGraphModel dx="1265" dy="1142" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2300" pageHeight="1250" math="0" shadow="0">
+            <root>
+                <mxCell id="reb2-0"/>
+                <mxCell id="reb2-1" parent="reb2-0"/>
+                <mxCell id="reb2-title" value="OMNI long-observation audit: rebuild flow 2.0" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=24;fontStyle=1;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="30" y="20" width="1000" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-subtitle" value="Rebuild the dedicated long audit from every eligible successful run. Red boxes are failure modes; non-success runs are valid skips." style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="30" y="60" width="1400" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-container-manifest" value="" style="rounded=0;whiteSpace=wrap;html=1;opacity=20;strokeWidth=2;fillColor=#f5f5f5;strokeColor=#666666;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="20" y="110" width="2026" height="310" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-label-manifest" value="1. Dataset boundary and manifest eligibility" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="40" y="115" width="500" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-raw-input" value="&lt;b&gt;Input: dataset-specific raw directory&lt;/b&gt;&lt;br&gt;&lt;br&gt;&amp;lt;raw_output_dir&amp;gt;/&amp;lt;dataset_id&amp;gt;/" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="50" y="165" width="230" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-raw-check" value="&lt;b&gt;Validate local dataset boundary&lt;/b&gt;&lt;br&gt;&lt;br&gt;Directory exists&lt;br&gt;Expected dataset ID = directory leaf name" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="330" y="155" width="240" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-discover" value="&lt;b&gt;Discover candidate manifests&lt;/b&gt;&lt;br&gt;&lt;br&gt;run_id=*/_manifest.json" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="620" y="165" width="210" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-identity" value="&lt;b&gt;Read JSON and validate run identity&lt;/b&gt;&lt;br&gt;&lt;br&gt;Top-level object&lt;br&gt;run_id + known status&lt;br&gt;created_at_utc and directory agree" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="880" y="145" width="250" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-status" value="Run status?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=13;fontStyle=1;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="1180" y="155" width="150" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-skip" value="&lt;b&gt;RUNNING or FAILED&lt;/b&gt;&lt;br&gt;&lt;br&gt;Skip run. Do not require source or artifact keys/metadata." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="1140" y="300" width="230" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-success-validate" value="&lt;b&gt;SUCCESS: validate eligible manifest&lt;/b&gt;&lt;br&gt;&lt;br&gt;source.dataset_id exists and matches directory leaf&lt;br&gt;artifacts is an object" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="1400" y="145" width="280" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-success-paths" value="&lt;b&gt;All successful manifest paths&lt;/b&gt;&lt;br&gt;&lt;br&gt;Validated and ordered by run ID" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="1791" y="165" width="220" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-fail-raw" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Raw dataset directory is missing.&lt;br&gt;&lt;b&gt;Fail fast.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="330" y="300" width="220" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-fail-identity" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Unreadable/non-object JSON, missing run identity, unknown status, or run ID disagreement.&lt;br&gt;&lt;b&gt;Eligibility is unknown: fail fast.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="850" y="300" width="260" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-fail-success" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Successful manifest is ❓missing required metadata&amp;nbsp;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;❓&lt;/span&gt;&amp;nbsp;or its dataset ID disagrees with the raw directory.&lt;br&gt;&lt;b&gt;Fail fast.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="1400" y="300" width="280" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-container-input" value="" style="rounded=0;whiteSpace=wrap;html=1;opacity=20;strokeWidth=2;fillColor=#f5f5f5;strokeColor=#666666;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="8" y="477" width="2047" height="361" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-label-input" value="2. Select every successful run and its recorded chunks" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="40" y="485" width="650" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-any-success" value="Any successful manifests?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=13;fontStyle=1;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="80" y="565" width="180" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-chunk-discover" value="&lt;b&gt;Discover recorded chunks across all successful manifests&lt;/b&gt;&lt;br&gt;&lt;br&gt;Do not glob unrelated failed/running chunks" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="340" y="564" width="280" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-chunk-validate" value="&lt;b&gt;Validate raw artifacts&lt;/b&gt;&lt;br&gt;&lt;br&gt;Valid unique chunk filenames&lt;br&gt;Every recorded chunk still exists" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="690" y="545" width="250" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-query" value="&lt;b&gt;build_long_observation_select_sql&lt;/b&gt;&lt;br&gt;&lt;br&gt;Input: every successful manifest + all recorded chunks&lt;br&gt;See &lt;b&gt;Generic flow&lt;/b&gt; for CTE internals.&lt;br&gt;&lt;br&gt;Important contracts:&lt;br&gt;- Time is first; [2:] means non-time values/definitions&lt;br&gt;- observation and parameter lengths match&lt;br&gt;- successful run LEFT JOIN preserves one sentinel when no non-time values exist&lt;br&gt;- source fill values remain raw and are flagged" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#666666;strokeWidth=3;align=left;spacingLeft=12;verticalAlign=top;spacingTop=10;fontSize=13;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="1020" y="558" width="330" height="230" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-query-execute" value="&lt;b&gt;Execute complete query through DuckDB&lt;/b&gt;&lt;br&gt;&lt;br&gt;Malformed chunk JSON, invalid Time position, positional mismatch, or cast error propagates." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#666666;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="1440" y="562" width="290" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-stage" value="&lt;b&gt;Stage complete rebuild&lt;/b&gt;&lt;br&gt;&lt;br&gt;Temporary sibling directory&lt;br&gt;Parquet PARTITION_BY(run_id)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="1775" y="564" width="240" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-fail-none" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;No successful manifests exist.&lt;br&gt;&lt;b&gt;Fail fast; do not replace audit.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="50" y="730" width="240" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-fail-chunk" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Missing/duplicate/invalid recorded chunk path.&lt;br&gt;&lt;b&gt;Fail before DuckDB reads it.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="690" y="728" width="250" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-fail-query" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Query or staged COPY fails.&lt;br&gt;&lt;b&gt;Existing audit remains unchanged; propagate.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="1454" y="710" width="260" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-container-write" value="" style="rounded=0;whiteSpace=wrap;html=1;opacity=20;strokeWidth=2;fillColor=#f5f5f5;strokeColor=#666666;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="12" y="871" width="2037" height="522" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-label-write" value="3. Replace the complete long audit only after staging succeeds" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="23" y="876" width="700" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-partitions" value="At least one staged run partition?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=13;fontStyle=1;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="90" y="950" width="190" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-output-exists" value="Existing audit present?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=13;fontStyle=1;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="390" y="991" width="170" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-backup" value="&lt;b&gt;Move existing audit to temporary backup&lt;/b&gt;&lt;br&gt;&lt;br&gt;Keep previous rebuild available until replacement" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="650" y="991" width="270" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-replace" value="&lt;b&gt;Move staged rebuild into final output path&lt;/b&gt;&lt;br&gt;&lt;br&gt;Filesystem replacement is staged but not transactionally atomic" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="1030" y="991" width="280" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-replace-ok" value="Replacement succeeded?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=13;fontStyle=1;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="1449" y="938" width="170" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-complete" value="&lt;b&gt;Rebuild complete&lt;/b&gt;&lt;br&gt;&lt;br&gt;Log run/chunk counts and output path&lt;br&gt;Return audit output path" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;fontSize=13;fontStyle=1;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="1749" y="938" width="250" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-fail-partitions" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Staged query produced no run partitions.&lt;br&gt;&lt;b&gt;Fail before replacement.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="55" y="1170" width="230" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-restore" value="&lt;b&gt;Replacement failure&lt;/b&gt;&lt;br&gt;&lt;br&gt;If backup exists and final output is absent, restore previous audit; then re-raise original failure." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="1390" y="1102" width="280" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-residual" value="&lt;b&gt;Residual failure mode&lt;/b&gt;&lt;br&gt;Backup restoration can itself fail due to filesystem conditions.&lt;br&gt;&lt;b&gt;No success reported.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="1771" y="1107" width="260" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-raw-input" target="reb2-raw-check" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-e2" value="valid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-raw-check" target="reb2-discover" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-discover" target="reb2-identity" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-e4" value="valid identity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-identity" target="reb2-status" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-e5" value="RUNNING / FAILED" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-status" target="reb2-skip" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-e6" value="SUCCESS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-status" target="reb2-success-validate" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-e7" value="valid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-success-validate" target="reb2-success-paths" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-ef1" value="missing" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-raw-check" target="reb2-fail-raw" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-ef2" value="invalid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-identity" target="reb2-fail-identity" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-ef3" value="invalid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-success-validate" target="reb2-fail-success" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-success-paths" target="reb2-any-success" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1922" y="524"/>
+                            <mxPoint x="170" y="524"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="reb2-e9" value="yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-any-success" target="reb2-chunk-discover" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-ef4" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-any-success" target="reb2-fail-none" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-e10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-chunk-discover" target="reb2-chunk-validate" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-e11" value="validated paths" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-chunk-validate" target="reb2-query" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-ef5" value="invalid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-chunk-validate" target="reb2-fail-chunk" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-e12" value="execute" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-query" target="reb2-query-execute" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-e13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-query-execute" target="reb2-stage" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-e14" value="staged" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-stage" target="reb2-partitions" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1920" y="918"/>
+                            <mxPoint x="185" y="918"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="reb2-ef6" value="failure" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-stage" target="reb2-fail-query" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1878" y="757"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="reb2-e15" value="yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-partitions" target="reb2-output-exists" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-ef7" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-partitions" target="reb2-fail-partitions" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-e16" value="yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-output-exists" target="reb2-backup" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-e17" value="no existing output" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-output-exists" target="reb2-replace" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="475" y="1246"/>
+                            <mxPoint x="1190" y="1246"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="reb2-e18" value="backup ready" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-backup" target="reb2-replace" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-e19" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-replace" target="reb2-replace-ok" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-e20" value="yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-replace-ok" target="reb2-complete" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-ef8" value="no" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-replace-ok" target="reb2-restore" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="reb2-ef9" value="restore may fail" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-restore" target="reb2-residual" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="PC5n1m0W9N5Md4XX_FPm-0" value="&lt;i&gt;_discover_successful_manifests()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" vertex="1" parent="reb2-1">
+                    <mxGeometry x="54" y="263" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="PC5n1m0W9N5Md4XX_FPm-1" value="&lt;i&gt;_discover_chunk_paths()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" vertex="1" parent="reb2-1">
+                    <mxGeometry x="367" y="707" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="hEfuENSlWpCC6ep9NGJW-0" value="&lt;i style=&quot;forced-color-adjust: none; color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251); font-family: Helvetica; font-size: 13px; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: left; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: nowrap; background-color: rgb(251, 251, 251); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;&quot;&gt;write_audit_table()&lt;/i&gt;" style="text;whiteSpace=wrap;html=1;" vertex="1" parent="reb2-1">
+                    <mxGeometry x="1445.996094501202" y="535.9976929649936" width="135" height="38" as="geometry"/>
+                </mxCell>
+                <mxCell id="zoNAhnYyJgMdwSh_8Jqt-0" value="&lt;i&gt;_read_manifest_json()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" vertex="1" parent="reb2-1">
+                    <mxGeometry x="880" y="118" width="200" height="30" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
     <diagram id="omni-query-flow" name="Generic flow">
-        <mxGraphModel dx="727" dy="1024" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1000" math="0" shadow="0">
+        <mxGraphModel dx="1383" dy="1060" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1000" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
                 <mxCell id="B4rk1_QbdN-p0PcBLmn4-1" value="" style="rounded=0;whiteSpace=wrap;html=1;opacity=40;strokeWidth=6;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" parent="1" vertex="1">
-                    <mxGeometry x="280" y="100" width="1300" height="820" as="geometry"/>
+                    <mxGeometry x="280" y="210" width="1300" height="710" as="geometry"/>
                 </mxCell>
                 <mxCell id="q-title" value="OMNI long-observation audit query flow" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=24;fontStyle=1;" parent="1" vertex="1">
                     <mxGeometry x="7" width="900" height="40" as="geometry"/>
@@ -14,10 +489,10 @@
                     <mxGeometry x="7" y="60" width="140" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="q-raw-chunks" value="&lt;b&gt;Raw chunk JSON files&lt;/b&gt;&lt;br&gt;&lt;br&gt;filename&lt;br&gt;parameters[]&lt;br&gt;data[][]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
-                    <mxGeometry x="680" y="140" width="160" height="140" as="geometry"/>
+                    <mxGeometry x="720" y="55" width="160" height="140" as="geometry"/>
                 </mxCell>
                 <mxCell id="q-successful-runs" value="&lt;b style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;successful_runs&lt;/b&gt;&lt;br style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;br style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;One for per SUCCESSFUL manifests (filter status=&#39;SUCCESS&#39;)&lt;/span&gt;&lt;br style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;br style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;run_id | dataset_id&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
-                    <mxGeometry x="310" y="140" width="230" height="130" as="geometry"/>
+                    <mxGeometry x="350" y="60" width="230" height="130" as="geometry"/>
                 </mxCell>
                 <mxCell id="q-successful-chunks" value="&lt;b&gt;successful_chunks&lt;/b&gt;&lt;br&gt;&lt;br&gt;One row per chunk belonging to a successful run&lt;br&gt;&lt;br&gt;dataset_id | run_id | filename&lt;br&gt;data[][] | parameters[]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
                     <mxGeometry x="370" y="360" width="300" height="170" as="geometry"/>
@@ -26,24 +501,23 @@
                     <mxGeometry x="907" y="381" width="210" height="150" as="geometry"/>
                 </mxCell>
                 <mxCell id="q-observation-values" value="&lt;b&gt;observation_values&lt;/b&gt;&lt;br&gt;&lt;br&gt;One row per non-time value&lt;br&gt;&lt;br&gt;source_row_number | timestamp&lt;br&gt;parameter_index | raw_value" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
-                    <mxGeometry x="1140" y="410" width="200" height="160" as="geometry"/>
+                    <mxGeometry x="1160" y="410" width="200" height="160" as="geometry"/>
                 </mxCell>
                 <mxCell id="q-parameter-definitions" value="&lt;b&gt;parameter_definitions&lt;/b&gt;&lt;br&gt;&lt;br&gt;One row per non-time parameter per chunk&lt;br&gt;&lt;br&gt;filename | parameter_index&lt;br&gt;name | fill | units | type" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
-                    <mxGeometry x="560" y="570" width="270" height="170" as="geometry"/>
+                    <mxGeometry x="560" y="640" width="270" height="170" as="geometry"/>
                 </mxCell>
                 <mxCell id="q-final" value="&lt;b&gt;Long observation audit&lt;/b&gt;&lt;br&gt;&lt;br&gt;dataset_id | run_id | chunk_file&lt;br&gt;source_row_number | observation_time&lt;br&gt;parameter_name | raw_value&lt;br&gt;source_fill_value | units | type&lt;br&gt;is_source_fill" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=12;fontSize=14;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="1030" y="630" width="280" height="240" as="geometry"/>
+                    <mxGeometry x="1050" y="650" width="280" height="240" as="geometry"/>
                 </mxCell>
                 <mxCell id="q-e2" value="join by (successful) run_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="q-successful-runs" target="q-successful-chunks" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="q-e3" value="read_json" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="q-raw-chunks" edge="1">
+                <mxCell id="q-e3" value="read_json" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="q-raw-chunks" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
-                            <mxPoint x="670" y="290"/>
-                            <mxPoint x="590" y="290"/>
+                            <mxPoint x="810" y="280"/>
                         </Array>
-                        <mxPoint x="540" y="320" as="targetPoint"/>
+                        <mxPoint x="520" y="280" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="q-e4" value="UNNEST(data)&lt;br&gt;WITH ORDINALITY" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="q-successful-chunks" edge="1">
@@ -99,337 +573,16 @@
                     <mxGeometry x="690" y="370" width="190" height="90" as="geometry"/>
                 </mxCell>
                 <mxCell id="olKjEBBf0nesbzvgei2I-1" value="&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;blue&amp;nbsp; &amp;nbsp;= run and chunk provenance&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;yellow = observation expansion&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;green&amp;nbsp; = parameter metadata&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;purple = final joined rows&lt;/font&gt;&lt;/div&gt;" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
-                    <mxGeometry x="910" y="110" width="200" height="130" as="geometry"/>
+                    <mxGeometry x="40" y="110" width="200" height="130" as="geometry"/>
                 </mxCell>
                 <mxCell id="MDyw_XZpYq_tzGEoCfLS-1" value="&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;Long observation&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;query builder&lt;/font&gt;&lt;/div&gt;" style="text;strokeColor=none;align=center;fillColor=#B3B3B3;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
-                    <mxGeometry x="130" y="150" width="120" height="50" as="geometry"/>
-                </mxCell>
-            </root>
-        </mxGraphModel>
-    </diagram>
-    <diagram id="omni-worked-example" name="Worked example (generic flow)">
-        <mxGraphModel dx="400" dy="563" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1400" math="0" shadow="0">
-            <root>
-                <mxCell id="0"/>
-                <mxCell id="1" parent="0"/>
-                <mxCell id="w-title" value="Worked example: one successful run, two chunks, two non-time parameters" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=24;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="30" y="25" width="1300" height="40" as="geometry"/>
-                </mxCell>
-                <mxCell id="w-legend" value="Abbreviations below: c1 = chunk_0000__0002.json, c2 = chunk_0002__0003.json. WITH ORDINALITY is one-based and restarts for each chunk." style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=#4D4D4D;" parent="1" vertex="1">
-                    <mxGeometry x="30" y="65" width="1500" height="30" as="geometry"/>
-                </mxCell>
-                <mxCell id="w-manifest" value="&lt;b&gt;Manifest&lt;/b&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;{&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;run&amp;quot;: {&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;quot;run_id&amp;quot;: &amp;quot;20260801T021300Z&amp;quot;,&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;quot;status&amp;quot;: &amp;quot;SUCCESS&amp;quot;&lt;br&gt;&amp;nbsp;&amp;nbsp;},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;source&amp;quot;: {&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;quot;dataset_id&amp;quot;: &amp;quot;OMNI_HRO2_1MIN&amp;quot;&lt;br&gt;&amp;nbsp;&amp;nbsp;}&lt;br&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;fontSize=13;" parent="1" vertex="1">
-                    <mxGeometry x="120" y="110" width="250" height="230" as="geometry"/>
-                </mxCell>
-                <mxCell id="w-chunk1" value="&lt;b&gt;c1: chunk_0000__0002.json&lt;/b&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;{&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;parameters&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;Time&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;isotime&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;UTC&amp;quot;},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;F&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;BX_GSE&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99}&lt;br&gt;&amp;nbsp;&amp;nbsp;],&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;data&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;[&amp;quot;2026-01-01T00:00:00.000Z&amp;quot;, 9.85, -1.39],&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;[&amp;quot;2026-01-01T00:01:00.000Z&amp;quot;, 9.77, 9999.99]&lt;br&gt;&amp;nbsp;&amp;nbsp;]&lt;br&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;fontSize=12;" parent="1" vertex="1">
-                    <mxGeometry x="390" y="110" width="380" height="270" as="geometry"/>
-                </mxCell>
-                <mxCell id="w-chunk2" value="&lt;b&gt;c2: chunk_0002__0003.json&lt;/b&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;{&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;parameters&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;Time&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;isotime&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;UTC&amp;quot;},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;F&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;BX_GSE&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99}&lt;br&gt;&amp;nbsp;&amp;nbsp;],&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;data&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;[&amp;quot;2026-01-01T00:02:00.000Z&amp;quot;, 9.65, -1.95]&lt;br&gt;&amp;nbsp;&amp;nbsp;]&lt;br&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;fontSize=12;" parent="1" vertex="1">
-                    <mxGeometry x="790" y="120" width="270" height="250" as="geometry"/>
-                </mxCell>
-                <mxCell id="w-successful-runs" value="&lt;b&gt;1. successful_runs (1 row)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;run_id&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;| dataset_id&lt;br&gt;20260801T021300Z | OMNI_HRO2_1MIN&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="1" vertex="1">
-                    <mxGeometry x="120" y="510" width="250" height="140" as="geometry"/>
-                </mxCell>
-                <mxCell id="w-successful-chunks" value="&lt;b&gt;2. successful_chunks (2 rows)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;file | data rows | parameters&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | [Time, F, BX_GSE]&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | [Time, F, BX_GSE]&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;fontSize=13;" parent="1" vertex="1">
-                    <mxGeometry x="470" y="500" width="320" height="160" as="geometry"/>
-                </mxCell>
-                <mxCell id="w-observation-rows" value="&lt;b&gt;3. observation_rows (3 rows)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;file | row | row_array&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | [00:00, 9.85, -1.39]&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | [00:01, 9.77, 9999.99]&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | [00:02, 9.65, -1.95]&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=10;fontSize=13;" parent="1" vertex="1">
-                    <mxGeometry x="900" y="480" width="270" height="180" as="geometry"/>
-                </mxCell>
-                <mxCell id="w-observation-values" value="&lt;b&gt;4a. observation_values (6 rows)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;file | row | time&amp;nbsp; | idx | raw_value&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:00 | 1&amp;nbsp;&amp;nbsp; | 9.85&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:00 | 2&amp;nbsp;&amp;nbsp; | -1.39&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | 00:01 | 1&amp;nbsp;&amp;nbsp; | 9.77&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | 00:01 | 2&amp;nbsp;&amp;nbsp; | 9999.99&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:02 | 1&amp;nbsp;&amp;nbsp; | 9.65&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:02 | 2&amp;nbsp;&amp;nbsp; | -1.95&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=10;fontSize=13;" parent="1" vertex="1">
-                    <mxGeometry x="780" y="770" width="320" height="210" as="geometry"/>
-                </mxCell>
-                <mxCell id="w-parameter-definitions" value="&lt;b&gt;4b. parameter_definitions (4 rows)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;file | idx | name&amp;nbsp;&amp;nbsp; | fill&amp;nbsp;&amp;nbsp;&amp;nbsp; | units | type&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | F&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | 9999.99 | nT&amp;nbsp;&amp;nbsp;&amp;nbsp; | double&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | BX_GSE | 9999.99 | nT&amp;nbsp;&amp;nbsp;&amp;nbsp; | double&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | F&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | 9999.99 | nT&amp;nbsp;&amp;nbsp;&amp;nbsp; | double&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | BX_GSE | 9999.99 | nT&amp;nbsp;&amp;nbsp;&amp;nbsp; | double&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;align=left;spacingLeft=10;fontSize=13;" parent="1" vertex="1">
-                    <mxGeometry x="290" y="815" width="390" height="240" as="geometry"/>
-                </mxCell>
-                <mxCell id="w-final" value="&lt;b&gt;5. Long observation audit (6 rows)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;file | row | time&amp;nbsp; | parameter | raw&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | fill?&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:00 | F&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | 9.85&amp;nbsp;&amp;nbsp;&amp;nbsp; | false&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:00 | BX_GSE&amp;nbsp;&amp;nbsp; | -1.39&amp;nbsp;&amp;nbsp; | false&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | 00:01 | F&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | 9.77&amp;nbsp;&amp;nbsp;&amp;nbsp; | false&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | 00:01 | BX_GSE&amp;nbsp;&amp;nbsp; | 9999.99 | true&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:02 | F&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | 9.65&amp;nbsp;&amp;nbsp;&amp;nbsp; | false&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:02 | BX_GSE&amp;nbsp;&amp;nbsp; | -1.95&amp;nbsp;&amp;nbsp; | false&lt;/div&gt;&lt;br&gt;&lt;b&gt;Join keys:&lt;/b&gt; dataset_id + run_id + filename + parameter_index" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=10;fontSize=13;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="900" y="1010" width="380" height="220" as="geometry"/>
-                </mxCell>
-                <mxCell id="w-counts" value="Row-count trace: 1 successful run -&gt; 2 chunks -&gt; 3 observation arrays -&gt; 6 values + 4 repeated parameter definitions -&gt; 6 joined long rows." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#F5F5F5;strokeColor=#666666;fontSize=13;" parent="1" vertex="1">
-                    <mxGeometry x="310" y="1190" width="500" height="90" as="geometry"/>
-                </mxCell>
-                <mxCell id="w-e1" value="filter SUCCESS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="w-manifest" target="w-successful-runs" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="w-e2" value="join by&lt;div&gt;(successful)&lt;/div&gt;&lt;div&gt;run_id&lt;/div&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="w-successful-runs" target="w-successful-chunks" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="w-e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="w-chunk1" target="w-successful-chunks" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <Array as="points">
-                            <mxPoint x="600" y="450"/>
-                            <mxPoint x="675" y="450"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="w-e4" value="read both chunks" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.25;exitY=1;exitDx=0;exitDy=0;" parent="1" source="w-chunk2" target="w-successful-chunks" edge="1">
-                    <mxGeometry x="0.6366" relative="1" as="geometry">
-                        <Array as="points">
-                            <mxPoint x="860" y="370"/>
-                            <mxPoint x="860" y="450"/>
-                            <mxPoint x="675" y="450"/>
-                        </Array>
-                        <mxPoint as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="w-e5" value="UNNEST data" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="w-successful-chunks" target="w-observation-rows" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="w-e6" value="UNNEST values" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.044;exitY=1.011;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="w-observation-rows" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="910" y="770" as="targetPoint"/>
-                        <Array as="points">
-                            <mxPoint x="913" y="740"/>
-                            <mxPoint x="910" y="740"/>
-                            <mxPoint x="910" y="770"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="w-e7" value="UNNEST parameter definitions" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="w-successful-chunks" target="w-parameter-definitions" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="w-e8" value="inner join to match filename and index&lt;br&gt;join keys: dataset_id + run_id +&lt;br&gt;filename + parameter index&lt;div&gt;&amp;nbsp;&lt;/div&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.086;exitY=1.003;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="w-observation-values" target="w-final" edge="1">
-                    <mxGeometry x="0.0043" y="-20" relative="1" as="geometry">
-                        <Array as="points">
-                            <mxPoint x="810" y="981"/>
-                            <mxPoint x="810" y="1190"/>
-                        </Array>
-                        <mxPoint as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="w-e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=;endFill=1;fontSize=12;" parent="1" source="w-parameter-definitions" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="810" y="1190" as="targetPoint"/>
-                        <Array as="points">
-                            <mxPoint x="485" y="1170"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="lNoQbXvZiYd4_bXEUqeE-2" value="&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;blue&amp;nbsp; &amp;nbsp;= run and chunk provenance&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;yellow = observation expansion&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;green&amp;nbsp; = parameter metadata&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;purple = final joined rows&lt;/font&gt;&lt;/div&gt;" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
-                    <mxGeometry x="860" y="350" width="280" height="130" as="geometry"/>
-                </mxCell>
-            </root>
-        </mxGraphModel>
-    </diagram>
-    <diagram id="LdB6RIPJI_-b1zbkGt6J" name="Incremental flow ">
-        <mxGraphModel dx="894" dy="1092" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
-            <root>
-                <mxCell id="0"/>
-                <mxCell id="1" parent="0"/>
-                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-2" value="" style="rounded=0;whiteSpace=wrap;html=1;opacity=40;strokeWidth=6;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" parent="1" vertex="1">
-                    <mxGeometry x="170" y="290" width="1580" height="760" as="geometry"/>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-1" value="OMNI long-observation audit query flow" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=24;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="11" y="10" width="900" height="40" as="geometry"/>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-3" value="&lt;b&gt;Discover successful manifests&lt;/b&gt;&lt;div&gt;One row per successful manifest&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#FF550F;align=left;spacingLeft=12;fontSize=14;shadow=0;" parent="1" vertex="1">
-                    <mxGeometry x="930" y="30" width="270" height="80" as="geometry"/>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-4" value="&lt;b&gt;Raw chunk JSON files &lt;u&gt;associated with the picked run&lt;/u&gt;&lt;/b&gt;&lt;br&gt;&lt;br&gt;filename&lt;br&gt;parameters[]&lt;br&gt;data[][]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#FF0000;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
-                    <mxGeometry x="542" y="370" width="259" height="120" as="geometry"/>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-5" value="&lt;b&gt;successful_runs&lt;/b&gt;&lt;br&gt;&lt;br&gt;One for per SUCCESSFUL manifests (filter status=&#39;SUCCESS&#39;)&lt;br&gt;&lt;br&gt;run_id | dataset_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
-                    <mxGeometry x="200" y="330" width="230" height="130" as="geometry"/>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-6" value="&lt;b&gt;successful_chunks&lt;/b&gt;&lt;br&gt;&lt;br&gt;One row per chunk belonging to a successful run&lt;br&gt;&lt;br&gt;dataset_id | run_id | filename&lt;br&gt;data[][] | parameters[]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
-                    <mxGeometry x="291" y="501" width="300" height="170" as="geometry"/>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-7" value="&lt;b&gt;observation_rows&lt;/b&gt;&lt;br&gt;&lt;br&gt;One row per observation array&lt;br&gt;&lt;br&gt;filename | source_row_number&lt;br&gt;row_array" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
-                    <mxGeometry x="828" y="522" width="210" height="150" as="geometry"/>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-8" value="&lt;b&gt;observation_values&lt;/b&gt;&lt;br&gt;&lt;br&gt;One row per non-time value&lt;br&gt;&lt;br&gt;source_row_number | timestamp&lt;br&gt;parameter_index | raw_value" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
-                    <mxGeometry x="1061" y="551" width="200" height="160" as="geometry"/>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-9" value="&lt;b&gt;parameter_definitions&lt;/b&gt;&lt;br&gt;&lt;br&gt;One row per non-time parameter per chunk&lt;br&gt;&lt;br&gt;filename | parameter_index&lt;br&gt;name | fill | units | type" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
-                    <mxGeometry x="400" y="761" width="270" height="170" as="geometry"/>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-10" value="&lt;b&gt;Produce ONE Long observation audit&lt;/b&gt;&lt;br&gt;&lt;br&gt;dataset_id | run_id | chunk_file&lt;br&gt;source_row_number | observation_time&lt;br&gt;parameter_name | raw_value&lt;br&gt;source_fill_value | units | type&lt;br&gt;is_source_fill" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=12;fontSize=14;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="950" y="781" width="280" height="180" as="geometry"/>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=;endFill=1;fontSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-3" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="770" y="120" as="targetPoint"/>
-                        <Array as="points">
-                            <mxPoint x="880" y="70"/>
-                            <mxPoint x="880" y="120"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-12" value="join by (successful) run_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-5" target="rrvNJ36sfaVFXJ5VJsHE-6" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-4" edge="1">
-                    <mxGeometry x="-0.0955" relative="1" as="geometry">
-                        <Array as="points">
-                            <mxPoint x="450" y="420"/>
-                        </Array>
-                        <mxPoint x="450" y="450" as="targetPoint"/>
-                        <mxPoint as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-14" value="UNNEST(data)&lt;br&gt;WITH ORDINALITY" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-6" edge="1">
-                    <mxGeometry x="0.0667" y="-10" relative="1" as="geometry">
-                        <mxPoint x="821" y="611" as="targetPoint"/>
-                        <Array as="points">
-                            <mxPoint x="761" y="631"/>
-                            <mxPoint x="761" y="621"/>
-                            <mxPoint x="841" y="621"/>
-                        </Array>
-                        <mxPoint as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-15" value="UNNEST(row_array[2:])&lt;br&gt;WITH ORDINALITY" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.382;exitY=0.014;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-7" edge="1">
-                    <mxGeometry x="-0.0811" relative="1" as="geometry">
-                        <mxPoint x="1151" y="551" as="targetPoint"/>
-                        <Array as="points">
-                            <mxPoint x="921" y="471"/>
-                            <mxPoint x="1151" y="471"/>
-                        </Array>
-                        <mxPoint as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-16" value="UNNEST(parameters[2:])&lt;br&gt;WITH ORDINALITY" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.704;exitY=0.982;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-6" target="rrvNJ36sfaVFXJ5VJsHE-9" edge="1">
-                    <mxGeometry x="-0.2962" y="20" relative="1" as="geometry">
-                        <mxPoint x="501" y="681" as="sourcePoint"/>
-                        <Array as="points">
-                            <mxPoint x="501" y="668"/>
-                            <mxPoint x="501" y="691"/>
-                            <mxPoint x="361" y="691"/>
-                            <mxPoint x="361" y="776"/>
-                        </Array>
-                        <mxPoint as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-17" value="inner join&lt;br&gt;by&amp;nbsp;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;dataset_id + run_id +&lt;br&gt;filename + parameter_index&lt;/span&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.99;exitY=0.878;exitDx=0;exitDy=0;exitPerimeter=0;entryX=-0.005;entryY=0.401;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-9" target="rrvNJ36sfaVFXJ5VJsHE-10" edge="1">
-                    <mxGeometry x="0.0381" relative="1" as="geometry">
-                        <mxPoint x="931" y="841" as="targetPoint"/>
-                        <mxPoint as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=;endFill=1;fontSize=12;exitX=0.36;exitY=0.998;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-8" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="761" y="941" as="sourcePoint"/>
-                        <mxPoint x="911" y="851" as="targetPoint"/>
-                        <Array as="points">
-                            <mxPoint x="1140" y="741"/>
-                            <mxPoint x="911" y="741"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-19" value="The query branches here: parameter_definitions does not depend on observation_values." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#F5F5F5;strokeColor=#666666;fontSize=12;" parent="1" vertex="1">
-                    <mxGeometry x="611" y="511" width="190" height="90" as="geometry"/>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-20" value="&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;blue&amp;nbsp; &amp;nbsp;= run and chunk provenance&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;yellow = observation expansion&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;green&amp;nbsp; = parameter metadata&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;purple = final joined rows&lt;/font&gt;&lt;/div&gt;" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
-                    <mxGeometry y="40" width="200" height="130" as="geometry"/>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-22" value="Append to" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" target="rrvNJ36sfaVFXJ5VJsHE-23" edge="1">
-                    <mxGeometry x="-0.0807" relative="1" as="geometry">
-                        <mxPoint x="1500" y="631" as="targetPoint"/>
-                        <Array as="points">
-                            <mxPoint x="1230" y="873"/>
-                            <mxPoint x="1310" y="873"/>
-                            <mxPoint x="1310" y="571"/>
-                            <mxPoint x="1380" y="571"/>
-                            <mxPoint x="1380" y="570"/>
-                            <mxPoint x="1550" y="570"/>
-                            <mxPoint x="1550" y="150"/>
-                        </Array>
-                        <mxPoint as="offset"/>
-                        <mxPoint x="1230" y="871" as="sourcePoint"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-23" value="&lt;b&gt;Existing Long observation audit&lt;/b&gt;&lt;br&gt;&lt;br&gt;dataset_id | run_id | chunk_file&lt;br&gt;source_row_number | observation_time&lt;br&gt;parameter_name | raw_value&lt;br&gt;source_fill_value | units | type&lt;br&gt;is_source_fill" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#FF2200;align=left;spacingLeft=12;fontSize=14;fontStyle=1;" parent="1" vertex="1">
-                    <mxGeometry x="1220" y="60" width="280" height="180" as="geometry"/>
-                </mxCell>
-                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.006;exitY=0.6;exitDx=0;exitDy=0;exitPerimeter=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-23" target="cBMBEU7KVwkQ7vtQI2_t-4" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="730" y="110" as="sourcePoint"/>
-                        <mxPoint x="640" y="150" as="targetPoint"/>
-                        <Array as="points">
-                            <mxPoint x="1012" y="168"/>
-                            <mxPoint x="1012" y="190"/>
-                            <mxPoint x="880" y="190"/>
-                            <mxPoint x="880" y="120"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-4" value="&lt;b&gt;OLDEST successful run_id&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
-                    <mxGeometry x="591" y="90" width="230" height="60" as="geometry"/>
-                </mxCell>
-                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0;entryDx=34.49999999999999;entryDy=0;entryPerimeter=0;" parent="1" source="cBMBEU7KVwkQ7vtQI2_t-4" target="cBMBEU7KVwkQ7vtQI2_t-9" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="651" y="208" as="sourcePoint"/>
-                        <mxPoint x="250" y="160" as="targetPoint"/>
-                        <Array as="points">
-                            <mxPoint x="265" y="120"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-6" value="Extract" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="cBMBEU7KVwkQ7vtQI2_t-5" vertex="1" connectable="0">
-                    <mxGeometry x="-0.2916" y="-2" relative="1" as="geometry">
-                        <mxPoint x="1" as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-9" value="Successful&lt;div&gt;manifest&lt;/div&gt;&lt;div&gt;path&lt;/div&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;" parent="1" vertex="1">
-                    <mxGeometry x="230" y="180" width="110" height="60" as="geometry"/>
-                </mxCell>
-                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.329;entryY=0.032;entryDx=0;entryDy=0;entryPerimeter=0;exitPerimeter=0;" parent="1" source="cBMBEU7KVwkQ7vtQI2_t-9" target="rrvNJ36sfaVFXJ5VJsHE-5" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="601" y="130" as="sourcePoint"/>
-                        <mxPoint x="275" y="190" as="targetPoint"/>
-                        <Array as="points">
-                            <mxPoint x="270" y="240"/>
-                            <mxPoint x="270" y="260"/>
-                            <mxPoint x="276" y="260"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-11" value="&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;Read json&lt;/span&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="cBMBEU7KVwkQ7vtQI2_t-10" vertex="1" connectable="0">
-                    <mxGeometry x="-0.2916" y="-2" relative="1" as="geometry">
-                        <mxPoint x="1" y="54" as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0;entryDx=40;entryDy=0;entryPerimeter=0;" parent="1" source="cBMBEU7KVwkQ7vtQI2_t-4" target="cBMBEU7KVwkQ7vtQI2_t-14" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="601" y="130" as="sourcePoint"/>
-                        <mxPoint x="720" y="210" as="targetPoint"/>
-                        <Array as="points">
-                            <mxPoint x="706" y="190"/>
-                            <mxPoint x="710" y="190"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-13" value="Extract" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="cBMBEU7KVwkQ7vtQI2_t-12" vertex="1" connectable="0">
-                    <mxGeometry x="-0.2916" y="-2" relative="1" as="geometry">
-                        <mxPoint x="1" as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-14" value="Corresponding&lt;div&gt;Chunk&lt;/div&gt;&lt;div&gt;Paths&lt;/div&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;" parent="1" vertex="1">
-                    <mxGeometry x="670" y="210" width="110" height="60" as="geometry"/>
-                </mxCell>
-                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="cBMBEU7KVwkQ7vtQI2_t-14" target="rrvNJ36sfaVFXJ5VJsHE-4" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="670" y="230" as="sourcePoint"/>
-                        <mxPoint x="661" y="342" as="targetPoint"/>
-                        <Array as="points">
-                            <mxPoint x="725" y="280"/>
-                            <mxPoint x="661" y="280"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-16" value="Read json" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="cBMBEU7KVwkQ7vtQI2_t-15" vertex="1" connectable="0">
-                    <mxGeometry x="-0.2916" y="-2" relative="1" as="geometry">
-                        <mxPoint x="1" y="54" as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-17" value="&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;Long observation&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;query builder&lt;/font&gt;&lt;/div&gt;" style="text;strokeColor=none;align=center;fillColor=#B3B3B3;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
-                    <mxGeometry x="40" y="290" width="120" height="50" as="geometry"/>
+                    <mxGeometry x="120" y="360" width="120" height="50" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
     </diagram>
     <diagram name="Rebuild flow" id="XEstyzWG-Zco1rbl8DGZ">
-        <mxGraphModel dx="653" dy="546" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="1409" dy="742" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="1v6tgg2qSgBk2pH3zbnW-0"/>
                 <mxCell id="1v6tgg2qSgBk2pH3zbnW-1" parent="1v6tgg2qSgBk2pH3zbnW-0"/>
@@ -440,7 +593,7 @@
                     <mxGeometry x="11" y="10" width="900" height="40" as="geometry"/>
                 </mxCell>
                 <mxCell id="1v6tgg2qSgBk2pH3zbnW-4" value="&lt;div&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;b&gt;&lt;div&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;Extract successful manifest paths&lt;/b&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#FF550F;align=left;spacingLeft=12;fontSize=14;shadow=0;" parent="1v6tgg2qSgBk2pH3zbnW-1" vertex="1">
-                    <mxGeometry x="760" y="60" width="190" height="70" as="geometry"/>
+                    <mxGeometry x="930" y="30" width="160" height="70" as="geometry"/>
                 </mxCell>
                 <mxCell id="1v6tgg2qSgBk2pH3zbnW-5" value="&lt;b&gt;Raw chunk JSON files &lt;u&gt;associated with the picked run&lt;/u&gt;&lt;/b&gt;&lt;br&gt;&lt;br&gt;filename&lt;br&gt;parameters[]&lt;br&gt;data[][]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#FF0000;align=left;spacingLeft=12;fontSize=14;" parent="1v6tgg2qSgBk2pH3zbnW-1" vertex="1">
                     <mxGeometry x="542" y="370" width="259" height="120" as="geometry"/>
@@ -610,16 +763,395 @@
                         <mxPoint x="820" y="95" as="sourcePoint"/>
                         <mxPoint x="670" y="115" as="targetPoint"/>
                         <Array as="points">
-                            <mxPoint x="750" y="113"/>
+                            <mxPoint x="930" y="93"/>
+                            <mxPoint x="930" y="90"/>
+                            <mxPoint x="750" y="90"/>
                             <mxPoint x="750" y="106"/>
                         </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="ZxcqwkezP46KOHkI8tZN-0" value="Failure mode:&lt;br&gt;&lt;div&gt;- Ensure chunk paths recorded in the manifest actually exist in disk&lt;/div&gt;&lt;div&gt;&lt;b style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;Otherwise, fail fast.&lt;/b&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFCCCC;strokeColor=#FF550F;align=left;spacingLeft=12;fontSize=14;shadow=0;" parent="1v6tgg2qSgBk2pH3zbnW-1" vertex="1">
+                    <mxGeometry x="380" y="180" width="240" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="ZxcqwkezP46KOHkI8tZN-1" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=;endFill=1;fontSize=12;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1v6tgg2qSgBk2pH3zbnW-1" target="ZxcqwkezP46KOHkI8tZN-0" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="640" y="210" as="targetPoint"/>
+                        <mxPoint x="710" y="190" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="DQ8mhpB3VM132EspM527-0" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=;endFill=1;fontSize=12;entryX=0.619;entryY=0.038;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1v6tgg2qSgBk2pH3zbnW-1" source="1v6tgg2qSgBk2pH3zbnW-4" target="DQ8mhpB3VM132EspM527-1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1091" y="212.41" as="targetPoint"/>
+                        <mxPoint x="1205" y="150" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="DQ8mhpB3VM132EspM527-1" value="Failure mode:&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;- manifest has to be SUCCESS&lt;br&gt;&lt;/font&gt;&lt;div&gt;- Ensure audit table is created for the &lt;b&gt;specific dataset&lt;/b&gt; &lt;b&gt;id AND that&amp;nbsp;&lt;/b&gt;&lt;b style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;run directories and manifests agree with the dataset id.&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;Otherwise, fail fast.&lt;/b&gt;&lt;/div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFCCCC;strokeColor=#FF550F;align=left;spacingLeft=12;fontSize=14;shadow=0;" parent="1v6tgg2qSgBk2pH3zbnW-1" vertex="1">
+                    <mxGeometry x="840" y="120" width="280" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="lWgKO0HXnCieMxd8tlk1-0" value="" style="ellipse;shape=doubleEllipse;html=1;dashed=0;whiteSpace=wrap;aspect=fixed;" parent="1v6tgg2qSgBk2pH3zbnW-1" vertex="1">
+                    <mxGeometry x="1131" y="35" width="60" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="lWgKO0HXnCieMxd8tlk1-1" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=;endFill=1;fontSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" parent="1v6tgg2qSgBk2pH3zbnW-1" source="lWgKO0HXnCieMxd8tlk1-0" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1090" y="65" as="targetPoint"/>
+                        <mxPoint x="930" y="90" as="sourcePoint"/>
                     </mxGeometry>
                 </mxCell>
             </root>
         </mxGraphModel>
     </diagram>
+    <diagram id="LdB6RIPJI_-b1zbkGt6J" name="Incremental flow ">
+        <mxGraphModel dx="373" dy="742" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-2" value="" style="rounded=0;whiteSpace=wrap;html=1;opacity=40;strokeWidth=6;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" parent="1" vertex="1">
+                    <mxGeometry x="170" y="300" width="1580" height="940" as="geometry"/>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-1" value="OMNI long-observation audit query flow" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=24;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="11" y="10" width="900" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-3" value="&lt;b&gt;Discover successful manifests&lt;/b&gt;&lt;div&gt;One row per successful manifest&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#FF550F;align=left;spacingLeft=12;fontSize=14;shadow=0;" parent="1" vertex="1">
+                    <mxGeometry x="1240" y="25" width="169" height="85" as="geometry"/>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-4" value="&lt;b&gt;Raw chunk JSON files &lt;u&gt;associated with the picked run&lt;/u&gt;&lt;/b&gt;&lt;br&gt;&lt;br&gt;filename&lt;br&gt;parameters[]&lt;br&gt;data[][]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#FF0000;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="542" y="370" width="259" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-5" value="&lt;b&gt;successful_runs&lt;/b&gt;&lt;br&gt;&lt;br&gt;One for per SUCCESSFUL manifests (filter status=&#39;SUCCESS&#39;)&lt;br&gt;&lt;br&gt;run_id | dataset_id" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="330" width="230" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-6" value="&lt;b&gt;successful_chunks&lt;/b&gt;&lt;br&gt;&lt;br&gt;One row per chunk belonging to a successful run&lt;br&gt;&lt;br&gt;dataset_id | run_id | filename&lt;br&gt;data[][] | parameters[]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="291" y="501" width="300" height="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-7" value="&lt;b&gt;observation_rows&lt;/b&gt;&lt;br&gt;&lt;br&gt;One row per observation array&lt;br&gt;&lt;br&gt;filename | source_row_number&lt;br&gt;row_array" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="828" y="522" width="210" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-8" value="&lt;b&gt;observation_values&lt;/b&gt;&lt;br&gt;&lt;br&gt;One row per non-time value&lt;br&gt;&lt;br&gt;source_row_number | timestamp&lt;br&gt;parameter_index | raw_value" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="1061" y="551" width="200" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-9" value="&lt;b&gt;parameter_definitions&lt;/b&gt;&lt;br&gt;&lt;br&gt;One row per non-time parameter per chunk&lt;br&gt;&lt;br&gt;filename | parameter_index&lt;br&gt;name | fill | units | type" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="761" width="270" height="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-10" value="&lt;b&gt;Produce ONE Long observation audit&lt;/b&gt;&lt;br&gt;&lt;br&gt;dataset_id | run_id | chunk_file&lt;br&gt;source_row_number | observation_time&lt;br&gt;parameter_name | raw_value&lt;br&gt;source_fill_value | units | type&lt;br&gt;is_source_fill" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=12;fontSize=14;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="950" y="781" width="280" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-12" value="join by (successful) run_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-5" target="rrvNJ36sfaVFXJ5VJsHE-6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-4" edge="1">
+                    <mxGeometry x="-0.0955" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="450" y="420"/>
+                        </Array>
+                        <mxPoint x="450" y="450" as="targetPoint"/>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-14" value="UNNEST(data)&lt;br&gt;WITH ORDINALITY" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-6" edge="1">
+                    <mxGeometry x="0.0667" y="-10" relative="1" as="geometry">
+                        <mxPoint x="821" y="611" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="761" y="631"/>
+                            <mxPoint x="761" y="621"/>
+                            <mxPoint x="841" y="621"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-15" value="UNNEST(row_array[2:])&lt;br&gt;WITH ORDINALITY" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.382;exitY=0.014;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-7" edge="1">
+                    <mxGeometry x="-0.0811" relative="1" as="geometry">
+                        <mxPoint x="1151" y="551" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="921" y="471"/>
+                            <mxPoint x="1151" y="471"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-16" value="UNNEST(parameters[2:])&lt;br&gt;WITH ORDINALITY" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.704;exitY=0.982;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-6" target="rrvNJ36sfaVFXJ5VJsHE-9" edge="1">
+                    <mxGeometry x="-0.2962" y="20" relative="1" as="geometry">
+                        <mxPoint x="501" y="681" as="sourcePoint"/>
+                        <Array as="points">
+                            <mxPoint x="501" y="668"/>
+                            <mxPoint x="501" y="691"/>
+                            <mxPoint x="361" y="691"/>
+                            <mxPoint x="361" y="776"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-17" value="inner join&lt;br&gt;by&amp;nbsp;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;dataset_id + run_id +&lt;br&gt;filename + parameter_index&lt;/span&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.99;exitY=0.878;exitDx=0;exitDy=0;exitPerimeter=0;entryX=-0.005;entryY=0.401;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-9" target="rrvNJ36sfaVFXJ5VJsHE-10" edge="1">
+                    <mxGeometry x="0.0381" relative="1" as="geometry">
+                        <mxPoint x="931" y="841" as="targetPoint"/>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-18" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=;endFill=1;fontSize=12;exitX=0.36;exitY=0.998;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-8" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="761" y="941" as="sourcePoint"/>
+                        <mxPoint x="911" y="851" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="1140" y="741"/>
+                            <mxPoint x="911" y="741"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-19" value="The query branches here: parameter_definitions does not depend on observation_values." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#F5F5F5;strokeColor=#666666;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="611" y="511" width="190" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-20" value="&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;blue&amp;nbsp; &amp;nbsp;= run and chunk provenance&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;yellow = observation expansion&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;green&amp;nbsp; = parameter metadata&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;purple = final joined rows&lt;/font&gt;&lt;/div&gt;" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+                    <mxGeometry y="40" width="200" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-22" value="Append to" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" target="rrvNJ36sfaVFXJ5VJsHE-23" edge="1">
+                    <mxGeometry x="-0.0807" relative="1" as="geometry">
+                        <mxPoint x="1500" y="631" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="1230" y="873"/>
+                            <mxPoint x="1310" y="873"/>
+                            <mxPoint x="1310" y="571"/>
+                            <mxPoint x="1380" y="571"/>
+                            <mxPoint x="1380" y="570"/>
+                            <mxPoint x="1530" y="570"/>
+                            <mxPoint x="1530" y="330"/>
+                            <mxPoint x="1670" y="330"/>
+                            <mxPoint x="1670" y="290"/>
+                            <mxPoint x="1640" y="290"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                        <mxPoint x="1230" y="871" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="rrvNJ36sfaVFXJ5VJsHE-23" value="&lt;b&gt;Existing Long observation audit&lt;/b&gt;&lt;br&gt;&lt;br&gt;dataset_id | run_id | chunk_file&lt;br&gt;source_row_number | observation_time&lt;br&gt;parameter_name | raw_value&lt;br&gt;source_fill_value | units | type&lt;br&gt;is_source_fill" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#FF2200;align=left;spacingLeft=12;fontSize=14;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1500" y="120" width="280" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0;exitY=0.909;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-23" target="cBMBEU7KVwkQ7vtQI2_t-4" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1570" y="250" as="sourcePoint"/>
+                        <mxPoint x="640" y="150" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="880" y="250"/>
+                            <mxPoint x="880" y="120"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-4" value="&lt;b&gt;OLDEST successful run_id NOT in long table audit&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=12;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="520" y="90" width="260" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0;entryDx=34.49999999999999;entryDy=0;entryPerimeter=0;" parent="1" source="cBMBEU7KVwkQ7vtQI2_t-4" target="cBMBEU7KVwkQ7vtQI2_t-9" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="651" y="208" as="sourcePoint"/>
+                        <mxPoint x="250" y="160" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="265" y="120"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-6" value="Extract" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="cBMBEU7KVwkQ7vtQI2_t-5" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2916" y="-2" relative="1" as="geometry">
+                        <mxPoint x="1" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-9" value="Successful&lt;div&gt;manifest&lt;/div&gt;&lt;div&gt;path&lt;/div&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;" parent="1" vertex="1">
+                    <mxGeometry x="230" y="180" width="110" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.329;entryY=0.032;entryDx=0;entryDy=0;entryPerimeter=0;exitPerimeter=0;" parent="1" source="cBMBEU7KVwkQ7vtQI2_t-9" target="rrvNJ36sfaVFXJ5VJsHE-5" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="601" y="130" as="sourcePoint"/>
+                        <mxPoint x="275" y="190" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="270" y="240"/>
+                            <mxPoint x="270" y="260"/>
+                            <mxPoint x="276" y="260"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-11" value="&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;Read json&lt;/span&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="cBMBEU7KVwkQ7vtQI2_t-10" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2916" y="-2" relative="1" as="geometry">
+                        <mxPoint x="1" y="54" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0;entryDx=40;entryDy=0;entryPerimeter=0;" parent="1" source="cBMBEU7KVwkQ7vtQI2_t-4" target="cBMBEU7KVwkQ7vtQI2_t-14" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="601" y="130" as="sourcePoint"/>
+                        <mxPoint x="720" y="210" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="710" y="150"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-13" value="Extract" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="cBMBEU7KVwkQ7vtQI2_t-12" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2916" y="-2" relative="1" as="geometry">
+                        <mxPoint x="1" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-14" value="Corresponding&lt;div&gt;Chunk&lt;/div&gt;&lt;div&gt;Paths&lt;/div&gt;" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;" parent="1" vertex="1">
+                    <mxGeometry x="670" y="210" width="110" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-15" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="cBMBEU7KVwkQ7vtQI2_t-14" target="rrvNJ36sfaVFXJ5VJsHE-4" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="670" y="230" as="sourcePoint"/>
+                        <mxPoint x="661" y="342" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="725" y="280"/>
+                            <mxPoint x="680" y="280"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-16" value="Read json" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="cBMBEU7KVwkQ7vtQI2_t-15" vertex="1" connectable="0">
+                    <mxGeometry x="-0.2916" y="-2" relative="1" as="geometry">
+                        <mxPoint x="1" y="54" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="cBMBEU7KVwkQ7vtQI2_t-17" value="&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;Long observation&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;query builder&lt;/font&gt;&lt;/div&gt;" style="text;strokeColor=none;align=center;fillColor=#B3B3B3;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="290" width="120" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="46szejbC-AUjfqxFwkSy-1" value="" style="ellipse;shape=doubleEllipse;html=1;dashed=0;whiteSpace=wrap;aspect=fixed;" parent="1" vertex="1">
+                    <mxGeometry x="1480" y="30" width="60" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=;endFill=1;fontSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-3" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="790" y="120" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="1240" y="75"/>
+                            <mxPoint x="911" y="75"/>
+                            <mxPoint x="911" y="120"/>
+                        </Array>
+                        <mxPoint x="960" y="75" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="3" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=;endFill=1;fontSize=12;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0.561;exitY=0.996;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="rrvNJ36sfaVFXJ5VJsHE-3" target="5" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1221" y="172.41" as="targetPoint"/>
+                        <mxPoint x="1260.9999999999998" y="170.00036144578323" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="4" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=;endFill=1;fontSize=12;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="46szejbC-AUjfqxFwkSy-1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1410" y="60" as="targetPoint"/>
+                        <mxPoint x="1250" y="85" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="5" value="Failure mode:&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;- manifest has to be SUCCESS&lt;br&gt;&lt;/font&gt;&lt;div&gt;- Ensure audit table is created for the &lt;b&gt;specific dataset&lt;/b&gt; &lt;b&gt;id AND that&amp;nbsp;&lt;/b&gt;&lt;b style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;run directories and manifests agree with the dataset id.&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;Otherwise, fail fast.&lt;/b&gt;&lt;/div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFCCCC;strokeColor=#FF550F;align=left;spacingLeft=12;fontSize=14;shadow=0;" parent="1" vertex="1">
+                    <mxGeometry x="940" y="90" width="280" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="6" value="Failure mode:&lt;br&gt;&lt;div&gt;- Ensure chunk paths recorded in the manifest actually exist in disk&lt;/div&gt;&lt;div&gt;&lt;b style=&quot;color: rgb(63, 63, 63); background-color: transparent;&quot;&gt;Otherwise, fail fast.&lt;/b&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFCCCC;strokeColor=#FF550F;align=left;spacingLeft=12;fontSize=14;shadow=0;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="170" width="240" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=;endFill=1;fontSize=12;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="640" y="210" as="targetPoint"/>
+                        <mxPoint x="710" y="190" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram id="omni-worked-example" name="Worked example (generic flow)">
+        <mxGraphModel dx="1096" dy="890" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2200" pageHeight="1400" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="w-title" value="Worked example: one successful run, two chunks, two non-time parameters" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=24;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="25" width="1300" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-legend" value="Abbreviations below: c1 = chunk_0000__0002.json, c2 = chunk_0002__0003.json. WITH ORDINALITY is one-based and restarts for each chunk." style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=#4D4D4D;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="65" width="1500" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-manifest" value="&lt;b&gt;Manifest&lt;/b&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;{&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;run&amp;quot;: {&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;quot;run_id&amp;quot;: &amp;quot;20260801T021300Z&amp;quot;,&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;quot;status&amp;quot;: &amp;quot;SUCCESS&amp;quot;&lt;br&gt;&amp;nbsp;&amp;nbsp;},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;source&amp;quot;: {&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;quot;dataset_id&amp;quot;: &amp;quot;OMNI_HRO2_1MIN&amp;quot;&lt;br&gt;&amp;nbsp;&amp;nbsp;}&lt;br&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="110" width="250" height="230" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-chunk1" value="&lt;b&gt;c1: chunk_0000__0002.json&lt;/b&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;{&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;parameters&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;Time&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;isotime&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;UTC&amp;quot;},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;F&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;BX_GSE&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99}&lt;br&gt;&amp;nbsp;&amp;nbsp;],&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;data&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;[&amp;quot;2026-01-01T00:00:00.000Z&amp;quot;, 9.85, -1.39],&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;[&amp;quot;2026-01-01T00:01:00.000Z&amp;quot;, 9.77, 9999.99]&lt;br&gt;&amp;nbsp;&amp;nbsp;]&lt;br&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="390" y="110" width="380" height="270" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-chunk2" value="&lt;b&gt;c2: chunk_0002__0003.json&lt;/b&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;{&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;parameters&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;Time&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;isotime&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;UTC&amp;quot;},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;F&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;BX_GSE&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99}&lt;br&gt;&amp;nbsp;&amp;nbsp;],&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;data&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;[&amp;quot;2026-01-01T00:02:00.000Z&amp;quot;, 9.65, -1.95]&lt;br&gt;&amp;nbsp;&amp;nbsp;]&lt;br&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="790" y="120" width="270" height="250" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-successful-runs" value="&lt;b&gt;1. successful_runs (1 row)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;run_id&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;| dataset_id&lt;br&gt;20260801T021300Z | OMNI_HRO2_1MIN&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="120" y="510" width="250" height="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-successful-chunks" value="&lt;b&gt;2. successful_chunks (2 rows)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;file | data rows | parameters&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | [Time, F, BX_GSE]&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | [Time, F, BX_GSE]&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="500" width="320" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-observation-rows" value="&lt;b&gt;3. observation_rows (3 rows)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;file | row | row_array&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | [00:00, 9.85, -1.39]&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | [00:01, 9.77, 9999.99]&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | [00:02, 9.65, -1.95]&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=10;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="480" width="270" height="180" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-observation-values" value="&lt;b&gt;4a. observation_values (6 rows)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;file | row | time&amp;nbsp; | idx | raw_value&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:00 | 1&amp;nbsp;&amp;nbsp; | 9.85&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:00 | 2&amp;nbsp;&amp;nbsp; | -1.39&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | 00:01 | 1&amp;nbsp;&amp;nbsp; | 9.77&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | 00:01 | 2&amp;nbsp;&amp;nbsp; | 9999.99&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:02 | 1&amp;nbsp;&amp;nbsp; | 9.65&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:02 | 2&amp;nbsp;&amp;nbsp; | -1.95&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;spacingLeft=10;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="780" y="770" width="320" height="210" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-parameter-definitions" value="&lt;b&gt;4b. parameter_definitions (4 rows)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;file | idx | name&amp;nbsp;&amp;nbsp; | fill&amp;nbsp;&amp;nbsp;&amp;nbsp; | units | type&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | F&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | 9999.99 | nT&amp;nbsp;&amp;nbsp;&amp;nbsp; | double&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | BX_GSE | 9999.99 | nT&amp;nbsp;&amp;nbsp;&amp;nbsp; | double&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | F&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | 9999.99 | nT&amp;nbsp;&amp;nbsp;&amp;nbsp; | double&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | BX_GSE | 9999.99 | nT&amp;nbsp;&amp;nbsp;&amp;nbsp; | double&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;align=left;spacingLeft=10;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="290" y="815" width="390" height="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-final" value="&lt;b&gt;5. Long observation audit (6 rows)&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;file | row | time&amp;nbsp; | parameter | raw&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | fill?&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:00 | F&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | 9.85&amp;nbsp;&amp;nbsp;&amp;nbsp; | false&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:00 | BX_GSE&amp;nbsp;&amp;nbsp; | -1.39&amp;nbsp;&amp;nbsp; | false&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | 00:01 | F&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | 9.77&amp;nbsp;&amp;nbsp;&amp;nbsp; | false&lt;br&gt;c1&amp;nbsp;&amp;nbsp; | 2&amp;nbsp;&amp;nbsp; | 00:01 | BX_GSE&amp;nbsp;&amp;nbsp; | 9999.99 | true&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:02 | F&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp; | 9.65&amp;nbsp;&amp;nbsp;&amp;nbsp; | false&lt;br&gt;c2&amp;nbsp;&amp;nbsp; | 1&amp;nbsp;&amp;nbsp; | 00:02 | BX_GSE&amp;nbsp;&amp;nbsp; | -1.95&amp;nbsp;&amp;nbsp; | false&lt;/div&gt;&lt;br&gt;&lt;b&gt;Join keys:&lt;/b&gt; dataset_id + run_id + filename + parameter_index" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;align=left;spacingLeft=10;fontSize=13;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="1010" width="380" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-counts" value="Row-count trace: 1 successful run -&gt; 2 chunks -&gt; 3 observation arrays -&gt; 6 values + 4 repeated parameter definitions -&gt; 6 joined long rows." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#F5F5F5;strokeColor=#666666;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="310" y="1190" width="500" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-e1" value="filter SUCCESS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="w-manifest" target="w-successful-runs" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-e2" value="join by&lt;div&gt;(successful)&lt;/div&gt;&lt;div&gt;run_id&lt;/div&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="w-successful-runs" target="w-successful-chunks" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="w-chunk1" target="w-successful-chunks" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="600" y="450"/>
+                            <mxPoint x="675" y="450"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="w-e4" value="read both chunks" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.25;exitY=1;exitDx=0;exitDy=0;" parent="1" source="w-chunk2" target="w-successful-chunks" edge="1">
+                    <mxGeometry x="0.6366" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="860" y="370"/>
+                            <mxPoint x="860" y="450"/>
+                            <mxPoint x="675" y="450"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="w-e5" value="UNNEST data" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="w-successful-chunks" target="w-observation-rows" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-e6" value="UNNEST values" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.044;exitY=1.011;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="w-observation-rows" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="910" y="770" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="913" y="740"/>
+                            <mxPoint x="910" y="740"/>
+                            <mxPoint x="910" y="770"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="w-e7" value="UNNEST parameter definitions" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;" parent="1" source="w-successful-chunks" target="w-parameter-definitions" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="w-e8" value="inner join to match filename and index&lt;br&gt;join keys: dataset_id + run_id +&lt;br&gt;filename + parameter index&lt;div&gt;&amp;nbsp;&lt;/div&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;fontSize=12;exitX=0.086;exitY=1.003;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="w-observation-values" target="w-final" edge="1">
+                    <mxGeometry x="0.0043" y="-20" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="810" y="981"/>
+                            <mxPoint x="810" y="1190"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="w-e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=;endFill=1;fontSize=12;" parent="1" source="w-parameter-definitions" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="810" y="1190" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="485" y="1170"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="lNoQbXvZiYd4_bXEUqeE-2" value="&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;blue&amp;nbsp; &amp;nbsp;= run and chunk provenance&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;yellow = observation expansion&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;green&amp;nbsp; = parameter metadata&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;purple = final joined rows&lt;/font&gt;&lt;/div&gt;" style="text;strokeColor=none;align=center;fillColor=none;html=1;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+                    <mxGeometry x="860" y="350" width="280" height="130" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
     <diagram id="UMAaWAlnDUdCo_jkCF_t" name="Scratchpad">
-        <mxGraphModel dx="2630" dy="1024" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="1617" dy="623" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -1026,6 +1558,50 @@
                 </mxCell>
                 <mxCell id="191" value="parameter metadata related fields" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#99FF99;strokeColor=0;shadow=0;" parent="1" vertex="1">
                     <mxGeometry x="204" y="1110" width="266" height="20" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram id="b_haZT9qpLP8nYugF1O7" name="Scratchpad for tests">
+        <mxGraphModel dx="1990" dy="1990" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="c-WOlqdMjeJK5yqpwnVM-1" value="&lt;b&gt;Manifest&lt;/b&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;{&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;run&amp;quot;: {&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;quot;run_id&amp;quot;: &amp;quot;20260801T021300Z&amp;quot;,&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;quot;status&amp;quot;: &amp;quot;SUCCESS&amp;quot;&lt;br&gt;&amp;nbsp;&amp;nbsp;},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;source&amp;quot;: {&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;quot;dataset_id&amp;quot;: &amp;quot;OMNI_HRO2_1MIN&amp;quot;&lt;br&gt;&amp;nbsp;&amp;nbsp;}&lt;br&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="-200" y="-120" width="250" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="c-WOlqdMjeJK5yqpwnVM-2" value="&lt;b&gt;c1: chunk_0000__0002.json&lt;/b&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;{&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;parameters&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;Time&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;isotime&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;UTC&amp;quot;},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;F&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;BX_GSE&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99}&lt;br&gt;&amp;nbsp;&amp;nbsp;],&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;data&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;[&amp;quot;2026-01-01T00:00:00.000Z&amp;quot;, 9.85, -1.39],&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;[&amp;quot;2026-01-01T00:01:00.000Z&amp;quot;, 9.77, 9999.99]&lt;br&gt;&amp;nbsp;&amp;nbsp;]&lt;br&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="70" y="-120" width="380" height="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="c-WOlqdMjeJK5yqpwnVM-3" value="&lt;b&gt;c2: chunk_0002__0003.json&lt;/b&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;{&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;parameters&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;Time&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;isotime&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;UTC&amp;quot;},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;F&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;BX_GSE&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99}&lt;br&gt;&amp;nbsp;&amp;nbsp;],&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;data&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;[&amp;quot;2026-01-01T00:02:00.000Z&amp;quot;, 9.65, -1.95]&lt;br&gt;&amp;nbsp;&amp;nbsp;]&lt;br&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="480" y="-110" width="380" height="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="deCrxwYe7j51vunatAkl-1" value="Happy path" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=24;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="-210" y="-190" width="160" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="deCrxwYe7j51vunatAkl-3" value="&lt;b&gt;Manifest&lt;/b&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;{&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;run&amp;quot;: {&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;quot;run_id&amp;quot;: &amp;quot;20260801T021300Z&amp;quot;,&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;quot;status&amp;quot;: &amp;quot;SUCCESS&amp;quot;&lt;br&gt;&amp;nbsp;&amp;nbsp;},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;source&amp;quot;: {&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;quot;dataset_id&amp;quot;: &amp;quot;OMNI_HRO2_1MIN&amp;quot;&lt;br&gt;&amp;nbsp;&amp;nbsp;}&lt;br&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="-200" y="243" width="250" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="deCrxwYe7j51vunatAkl-4" value="&lt;b&gt;c1: chunk_0000__0002.json&lt;/b&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;{&lt;br&gt;&amp;nbsp;&amp;nbsp;&quot;parameters&quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&quot;name&quot;:&quot;Time&quot;, &quot;type&quot;:&quot;isotime&quot;, &quot;units&quot;:&quot;UTC&quot;},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&quot;name&quot;:&quot;F&quot;, &quot;type&quot;:&quot;double&quot;, &quot;units&quot;:&quot;nT&quot;, &quot;fill&quot;:9999.99},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&quot;name&quot;:&quot;BX_GSE&quot;, &quot;type&quot;:&quot;double&quot;, &quot;units&quot;:&quot;nT&quot;, &quot;fill&quot;:9999.99}&lt;br&gt;&amp;nbsp;&amp;nbsp;],&lt;br&gt;&amp;nbsp;&amp;nbsp;&quot;data&quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;[&quot;2026-01-01T00:00:00.000Z&quot;, 9.85, -1.39],&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;[&quot;2026-01-01T00:01:00.000Z&quot;, 9.77]&lt;br&gt;&amp;nbsp;&amp;nbsp;]&lt;br&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="70" y="243" width="380" height="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="deCrxwYe7j51vunatAkl-5" value="&lt;b&gt;c2: chunk_0002__0003.json&lt;/b&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;{&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;parameters&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;Time&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;isotime&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;UTC&amp;quot;},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;F&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;BX_GSE&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99}&lt;br&gt;&amp;nbsp;&amp;nbsp;],&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;data&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;[&amp;quot;2026-01-01T00:02:00.000Z&amp;quot;, 9.65, -1.95]&lt;br&gt;&amp;nbsp;&amp;nbsp;]&lt;br&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="480" y="253" width="380" height="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="deCrxwYe7j51vunatAkl-6" value="Expected number of observations not consistent with parameter" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=24;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="-210" y="173" width="160" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="deCrxwYe7j51vunatAkl-7" value="&lt;b&gt;Manifest&lt;/b&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;{&lt;br&gt;&amp;nbsp;&amp;nbsp;&quot;run&quot;: {&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&quot;run_id&quot;: &quot;20260801T021300Z&quot;,&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&quot;status&quot;: &quot;RUNNING&quot;&lt;br&gt;&amp;nbsp;&amp;nbsp;},&lt;br&gt;&amp;nbsp;&amp;nbsp;&quot;source&quot;: {&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&quot;dataset_id&quot;: &quot;OMNI_HRO2_1MIN&quot;&lt;br&gt;&amp;nbsp;&amp;nbsp;}&lt;br&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="-180" y="593" width="250" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="deCrxwYe7j51vunatAkl-8" value="&lt;b&gt;c1: chunk_0000__0002.json&lt;/b&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;{&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;parameters&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;Time&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;isotime&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;UTC&amp;quot;},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;F&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;BX_GSE&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99}&lt;br&gt;&amp;nbsp;&amp;nbsp;],&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;data&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;[&amp;quot;2026-01-01T00:00:00.000Z&amp;quot;, 9.85, -1.39],&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;[&amp;quot;2026-01-01T00:01:00.000Z&amp;quot;, 9.77, 9999.99]&lt;br&gt;&amp;nbsp;&amp;nbsp;]&lt;br&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="90" y="593" width="380" height="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="deCrxwYe7j51vunatAkl-9" value="&lt;b&gt;c2: chunk_0002__0003.json&lt;/b&gt;&lt;div style=&quot;text-align:left;font-family:monospace;&quot;&gt;{&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;parameters&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;Time&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;isotime&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;UTC&amp;quot;},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;F&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99},&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;{&amp;quot;name&amp;quot;:&amp;quot;BX_GSE&amp;quot;, &amp;quot;type&amp;quot;:&amp;quot;double&amp;quot;, &amp;quot;units&amp;quot;:&amp;quot;nT&amp;quot;, &amp;quot;fill&amp;quot;:9999.99}&lt;br&gt;&amp;nbsp;&amp;nbsp;],&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;quot;data&amp;quot;: [&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;[&amp;quot;2026-01-01T00:02:00.000Z&amp;quot;, 9.65, -1.95]&lt;br&gt;&amp;nbsp;&amp;nbsp;]&lt;br&gt;}&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;verticalAlign=top;spacingTop=10;fontSize=12;" vertex="1" parent="1">
+                    <mxGeometry x="500" y="603" width="380" height="240" as="geometry"/>
+                </mxCell>
+                <mxCell id="deCrxwYe7j51vunatAkl-10" value="Manifest status is non-SUCCESS" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=24;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="-200" y="553" width="160" height="40" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>

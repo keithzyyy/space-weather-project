@@ -76,6 +76,17 @@ def _discover_successful_manifests(
     raw_dataset_dir: str | Path,
 ) -> list[Path]:
     """Return validated successful manifests ordered by run ID."""
+
+    # First, check that the raw dataset directory exists on disk to begin with
+    raw_path = Path(raw_dataset_dir)
+    if not raw_path.is_dir():
+        raise FileNotFoundError(f"Raw dataset directory ({raw_path.as_posix()}) does not exist.")
+    
+    # we assume that /info HAPI first pass before ingestion already validates dataset id. 
+    # Use the dataset-specific directory name as the expected local dataset ID.
+    # Remote dataset validity was established by ingestion through /info.
+    expected_dataset_id = raw_path.name
+
     # Discover every raw run manifest before filtering by status.
     manifest_paths = sorted(
         Path(raw_dataset_dir).glob("run_id=*/_manifest.json")
@@ -94,6 +105,10 @@ def _discover_successful_manifests(
         seen_run_ids.add(run_id)
 
         if payload["run"]["status"] == "SUCCESS":
+            # ensure that all successful manifests under a dataset specific run
+            # have valid recorded dataset ids.
+            if payload["source"]["dataset_id"] != expected_dataset_id:
+                raise OmniPreprocessSpecError(f"Recorded dataset id in {manifest_path} does not match the raw dataset directory ({raw_path.as_posix()}).")
             successful.append((run_id, manifest_path))
 
     # Run IDs are UTC timestamps, so lexical order is oldest first.
