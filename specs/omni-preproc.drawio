@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="omniIncrementalFlow20" name="Incremental Flow 2.0">
-        <mxGraphModel dx="1370" dy="1237" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2300" pageHeight="1250" math="0" shadow="0">
+        <mxGraphModel dx="824" dy="740" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2300" pageHeight="1250" math="0" shadow="0">
             <root>
                 <mxCell id="inc2-0"/>
                 <mxCell id="inc2-1" parent="inc2-0"/>
@@ -11,19 +11,10 @@
                     <mxGeometry x="30" y="60" width="1500" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="inc2-container-manifest" value="" style="rounded=0;whiteSpace=wrap;html=1;opacity=20;strokeWidth=2;fillColor=#f5f5f5;strokeColor=#666666;" parent="inc2-1" vertex="1">
-                    <mxGeometry x="20" y="110" width="2152" height="310" as="geometry"/>
+                    <mxGeometry x="20" y="110" width="2152" height="330" as="geometry"/>
                 </mxCell>
                 <mxCell id="inc2-label-manifest" value="1. Dataset boundary and manifest eligibility" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;" parent="inc2-1" vertex="1">
                     <mxGeometry x="40" y="115" width="500" height="30" as="geometry"/>
-                </mxCell>
-                <mxCell id="inc2-raw-input" value="&lt;b&gt;Input: dataset-specific raw directory&lt;/b&gt;&lt;br&gt;&lt;br&gt;&amp;lt;raw_output_dir&amp;gt;/&amp;lt;dataset_id&amp;gt;/" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
-                    <mxGeometry x="50" y="165" width="230" height="90" as="geometry"/>
-                </mxCell>
-                <mxCell id="inc2-raw-check" value="&lt;b&gt;Validate local dataset boundary&lt;/b&gt;&lt;br&gt;&lt;br&gt;Directory exists&lt;br&gt;Expected dataset ID = directory leaf name" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
-                    <mxGeometry x="330" y="155" width="240" height="110" as="geometry"/>
-                </mxCell>
-                <mxCell id="inc2-discover" value="&lt;b&gt;Discover candidate manifests&lt;/b&gt;&lt;br&gt;&lt;br&gt;run_id=*/_manifest.json" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
-                    <mxGeometry x="620" y="165" width="210" height="90" as="geometry"/>
                 </mxCell>
                 <mxCell id="inc2-identity" value="&lt;b&gt;Read JSON and validate run identity&lt;/b&gt;&lt;br&gt;&lt;br&gt;Top-level object&lt;br&gt;run_id + known status&lt;br&gt;created_at_utc and directory agree" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
                     <mxGeometry x="878" y="119" width="250" height="130" as="geometry"/>
@@ -39,9 +30,6 @@
                 </mxCell>
                 <mxCell id="inc2-success-paths" value="&lt;b&gt;Successful manifest paths&lt;/b&gt;&lt;br&gt;&lt;br&gt;Validated and ordered oldest first" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
                     <mxGeometry x="1930" y="380" width="220" height="90" as="geometry"/>
-                </mxCell>
-                <mxCell id="inc2-fail-raw" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Raw dataset directory is missing.&lt;br&gt;&lt;b&gt;Fail fast.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="inc2-1" vertex="1">
-                    <mxGeometry x="330" y="300" width="220" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="inc2-fail-identity" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Unreadable/non-object JSON, missing run identity, unknown status, or run ID disagreement.&lt;br&gt;&lt;b&gt;Eligibility is unknown: fail fast.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="inc2-1" vertex="1">
                     <mxGeometry x="890" y="290" width="260" height="100" as="geometry"/>
@@ -59,10 +47,7 @@
                     <mxGeometry x="36" y="505" width="210" height="90" as="geometry"/>
                 </mxCell>
                 <mxCell id="inc2-read-processed" value="&lt;b&gt;Read existing audit identity&lt;/b&gt;&lt;br&gt;&lt;br&gt;Distinct dataset_id + run_id from Parquet" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
-                    <mxGeometry x="264" y="490" width="230" height="110" as="geometry"/>
-                </mxCell>
-                <mxCell id="inc2-audit-validate" value="&lt;b&gt;Validate existing audit dataset&lt;/b&gt;&lt;br&gt;&lt;br&gt;Every row belongs to the raw directory dataset ID" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
-                    <mxGeometry x="540" y="490" width="240" height="110" as="geometry"/>
+                    <mxGeometry x="413" y="495" width="230" height="110" as="geometry"/>
                 </mxCell>
                 <mxCell id="inc2-pick" value="&lt;b&gt;Pick oldest unprocessed success&lt;/b&gt;&lt;br&gt;&lt;br&gt;Successful run IDs minus processed run IDs" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="inc2-1" vertex="1">
                     <mxGeometry x="880" y="495" width="240" height="110" as="geometry"/>
@@ -81,9 +66,6 @@
                 </mxCell>
                 <mxCell id="inc2-query" value="&lt;b&gt;build_long_observation_select_sql&lt;/b&gt;&lt;br&gt;&lt;br&gt;Input: ONE successful manifest + its recorded chunks&lt;br&gt;See &lt;b&gt;Generic flow&lt;/b&gt; for CTE internals.&lt;br&gt;&lt;br&gt;Important contracts:&lt;br&gt;- Time is first; [2:] means non-time values/definitions&lt;br&gt;- observation and parameter lengths match&lt;br&gt;- successful run LEFT JOIN preserves one sentinel when no non-time values exist&lt;br&gt;- source fill values remain raw and are flagged" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#666666;strokeWidth=3;align=left;spacingLeft=12;verticalAlign=top;spacingTop=10;fontSize=13;" parent="inc2-1" vertex="1">
                     <mxGeometry x="1895" y="500" width="290" height="230" as="geometry"/>
-                </mxCell>
-                <mxCell id="inc2-fail-audit" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Existing audit contains another dataset ID or cannot be read.&lt;br&gt;&lt;b&gt;Fail fast.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="inc2-1" vertex="1">
-                    <mxGeometry x="540" y="645" width="240" height="90" as="geometry"/>
                 </mxCell>
                 <mxCell id="inc2-fail-chunk" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Missing/duplicate/invalid recorded chunk path.&lt;br&gt;&lt;b&gt;Fail fast before DuckDB reads it.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="inc2-1" vertex="1">
                     <mxGeometry x="1562" y="645" width="240" height="90" as="geometry"/>
@@ -124,14 +106,16 @@
                 <mxCell id="inc2-fail-move" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Filesystem move fails during commit.&lt;br&gt;&lt;b&gt;Propagate; no success reported.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="inc2-1" vertex="1">
                     <mxGeometry x="1360" y="1100" width="240" height="90" as="geometry"/>
                 </mxCell>
-                <mxCell id="inc2-e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-raw-input" target="inc2-raw-check" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="inc2-e2" value="valid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-raw-check" target="inc2-discover" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="inc2-e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-discover" target="inc2-identity" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
+                <mxCell id="inc2-e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="inc2-1" source="StXQd2bvQtlC-oR-3Rze-2" target="inc2-identity" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="830" y="210.0666666666666" as="sourcePoint"/>
+                        <Array as="points">
+                            <mxPoint x="840" y="324"/>
+                            <mxPoint x="840" y="210"/>
+                            <mxPoint x="837" y="210"/>
+                            <mxPoint x="837" y="184"/>
+                        </Array>
+                    </mxGeometry>
                 </mxCell>
                 <mxCell id="inc2-e4" value="valid identity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-identity" target="inc2-status" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
@@ -145,8 +129,10 @@
                 <mxCell id="inc2-e7" value="valid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-success-validate" target="inc2-success-paths" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="inc2-ef1" value="missing" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-raw-check" target="inc2-fail-raw" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
+                <mxCell id="inc2-ef1" value="missing" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="inc2-1" target="inc2-fail-raw" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="450.0666666666666" y="265" as="sourcePoint"/>
+                    </mxGeometry>
                 </mxCell>
                 <mxCell id="inc2-ef2" value="invalid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-identity" target="inc2-fail-identity" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
@@ -157,11 +143,10 @@
                 <mxCell id="inc2-e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-audit-input" target="inc2-read-processed" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="inc2-e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-read-processed" target="inc2-audit-validate" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="inc2-e10" value="processed&lt;div&gt;run IDs&lt;/div&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-audit-validate" target="inc2-pick" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
+                <mxCell id="inc2-e10" value="processed&lt;div&gt;run IDs&lt;/div&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="inc2-1" source="inc2-read-processed" target="inc2-pick" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="780" y="545" as="sourcePoint"/>
+                    </mxGeometry>
                 </mxCell>
                 <mxCell id="inc2-e11" value="successful run IDs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-success-paths" target="inc2-pick" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
@@ -179,9 +164,6 @@
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="inc2-e16" value="validated paths" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-chunk-validate" target="inc2-query" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="inc2-ef4" value="invalid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-audit-validate" target="inc2-fail-audit" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="inc2-ef5" value="invalid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-chunk-validate" target="inc2-fail-chunk" edge="1">
@@ -222,23 +204,41 @@
                 <mxCell id="inc2-ef9" value="move failure" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="inc2-1" source="inc2-commit" target="inc2-fail-move" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="vI-JYYQeCX6wK3giBf9d-3" value="&lt;i&gt;_discover_successful_manifests()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" vertex="1" parent="inc2-1">
-                    <mxGeometry x="54" y="263" width="200" height="30" as="geometry"/>
-                </mxCell>
-                <mxCell id="vI-JYYQeCX6wK3giBf9d-4" value="&lt;i&gt;_read_processed_run_ids()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" vertex="1" parent="inc2-1">
+                <mxCell id="vI-JYYQeCX6wK3giBf9d-4" value="&lt;i&gt;_read_processed_run_ids()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" parent="inc2-1" vertex="1">
                     <mxGeometry x="36" y="605" width="200" height="30" as="geometry"/>
                 </mxCell>
-                <mxCell id="vI-JYYQeCX6wK3giBf9d-5" value="&lt;i&gt;pick_oldest_unprocessed_successful_run()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" vertex="1" parent="inc2-1">
+                <mxCell id="vI-JYYQeCX6wK3giBf9d-5" value="&lt;i&gt;pick_oldest_unprocessed_successful_run()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" parent="inc2-1" vertex="1">
                     <mxGeometry x="861" y="615" width="253" height="30" as="geometry"/>
                 </mxCell>
-                <mxCell id="XOy-lfGtwATaT-7U9pt1-0" value="&lt;i&gt;write_audit_table()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" vertex="1" parent="inc2-1">
+                <mxCell id="XOy-lfGtwATaT-7U9pt1-0" value="&lt;i&gt;write_audit_table()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" parent="inc2-1" vertex="1">
                     <mxGeometry x="77" y="1015" width="200" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="StXQd2bvQtlC-oR-3Rze-0" value="&lt;b&gt;Inputs: dataset-specific raw and audit paths.&lt;/b&gt;&lt;br&gt;&lt;br&gt;raw: &amp;lt;raw_output_dir&amp;gt;/&amp;lt;dataset_id&amp;gt;/&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;pre dir=&quot;ltr&quot;&gt;&lt;code&gt;audit:&lt;br&gt;&amp;lt;audit_output_root&amp;gt;/&amp;lt;dataset_id&amp;gt;/long-observations/&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" vertex="1" parent="inc2-1">
+                    <mxGeometry x="48" y="147" width="396" height="147" as="geometry"/>
+                </mxCell>
+                <mxCell id="StXQd2bvQtlC-oR-3Rze-1" value="&lt;b&gt;Validate local dataset boundary&lt;/b&gt;&lt;br&gt;&lt;br&gt;Raw Directory exists&lt;br&gt;Expected dataset ID = raw directory leaf&amp;nbsp;&lt;div&gt;&lt;pre dir=&quot;ltr&quot;&gt;&lt;code&gt;Audit parent directory&lt;br&gt;= expected dataset ID&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" vertex="1" parent="inc2-1">
+                    <mxGeometry x="493" y="124" width="259" height="127" as="geometry"/>
+                </mxCell>
+                <mxCell id="StXQd2bvQtlC-oR-3Rze-2" value="&lt;b&gt;Discover candidate manifests&lt;/b&gt;&lt;br&gt;&lt;br&gt;run_id=*/_manifest.json" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" vertex="1" parent="inc2-1">
+                    <mxGeometry x="601" y="279" width="210" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="StXQd2bvQtlC-oR-3Rze-3" value="&lt;b&gt;Failure mode, either:&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;div&gt;Raw dataset directory is missing.&lt;div&gt;&lt;font color=&quot;#000000&quot;&gt;Raw and audit dataset paths disagree on dataset id&lt;br&gt;&lt;/font&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;b&gt;Fail fast.&lt;/b&gt;&lt;/div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" vertex="1" parent="inc2-1">
+                    <mxGeometry x="222" y="313" width="318" height="107" as="geometry"/>
+                </mxCell>
+                <mxCell id="StXQd2bvQtlC-oR-3Rze-4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" edge="1" parent="inc2-1" source="StXQd2bvQtlC-oR-3Rze-0" target="StXQd2bvQtlC-oR-3Rze-1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="StXQd2bvQtlC-oR-3Rze-5" value="valid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;entryX=0.843;entryY=0.012;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryPerimeter=0;" edge="1" parent="inc2-1" source="StXQd2bvQtlC-oR-3Rze-1" target="StXQd2bvQtlC-oR-3Rze-2">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="StXQd2bvQtlC-oR-3Rze-6" value="missing" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;entryX=0.847;entryY=-0.001;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.25;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="inc2-1" source="StXQd2bvQtlC-oR-3Rze-1" target="StXQd2bvQtlC-oR-3Rze-3">
+                    <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
     </diagram>
     <diagram id="omniRebuildFlow20" name="Rebuild flow 2.0">
-        <mxGraphModel dx="1265" dy="1142" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2300" pageHeight="1250" math="0" shadow="0">
+        <mxGraphModel dx="1103" dy="911" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2300" pageHeight="1250" math="0" shadow="0">
             <root>
                 <mxCell id="reb2-0"/>
                 <mxCell id="reb2-1" parent="reb2-0"/>
@@ -254,14 +254,14 @@
                 <mxCell id="reb2-label-manifest" value="1. Dataset boundary and manifest eligibility" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=16;fontStyle=1;" parent="reb2-1" vertex="1">
                     <mxGeometry x="40" y="115" width="500" height="30" as="geometry"/>
                 </mxCell>
-                <mxCell id="reb2-raw-input" value="&lt;b&gt;Input: dataset-specific raw directory&lt;/b&gt;&lt;br&gt;&lt;br&gt;&amp;lt;raw_output_dir&amp;gt;/&amp;lt;dataset_id&amp;gt;/" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
-                    <mxGeometry x="50" y="165" width="230" height="90" as="geometry"/>
+                <mxCell id="reb2-raw-input" value="&lt;b&gt;Input: dataset-specific raw directory&lt;/b&gt;&lt;br&gt;&lt;br&gt;raw: &amp;lt;raw_output_dir&amp;gt;/&amp;lt;dataset_id&amp;gt;/&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;pre dir=&quot;ltr&quot;&gt;&lt;code&gt;audit:&lt;br/&gt;&amp;lt;audit_output_root&amp;gt;/&amp;lt;dataset_id&amp;gt;/long-observations/&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="55" y="155" width="396" height="147" as="geometry"/>
                 </mxCell>
-                <mxCell id="reb2-raw-check" value="&lt;b&gt;Validate local dataset boundary&lt;/b&gt;&lt;br&gt;&lt;br&gt;Directory exists&lt;br&gt;Expected dataset ID = directory leaf name" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
-                    <mxGeometry x="330" y="155" width="240" height="110" as="geometry"/>
+                <mxCell id="reb2-raw-check" value="&lt;b style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;Validate local dataset boundary&lt;/b&gt;&lt;br style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;br style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;Raw Directory exists&lt;/span&gt;&lt;br style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;Expected dataset ID = raw directory leaf&amp;nbsp;&lt;/span&gt;&lt;div style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;pre style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot; dir=&quot;ltr&quot;&gt;&lt;code style=&quot;font-family: monospace; color: rgb(63, 63, 63); background-color: rgba(0, 0, 0, 0.1); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;Audit parent directory&lt;br style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;= expected dataset ID&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="496" y="128" width="240" height="136" as="geometry"/>
                 </mxCell>
                 <mxCell id="reb2-discover" value="&lt;b&gt;Discover candidate manifests&lt;/b&gt;&lt;br&gt;&lt;br&gt;run_id=*/_manifest.json" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
-                    <mxGeometry x="620" y="165" width="210" height="90" as="geometry"/>
+                    <mxGeometry x="599" y="272" width="210" height="90" as="geometry"/>
                 </mxCell>
                 <mxCell id="reb2-identity" value="&lt;b&gt;Read JSON and validate run identity&lt;/b&gt;&lt;br&gt;&lt;br&gt;Top-level object&lt;br&gt;run_id + known status&lt;br&gt;created_at_utc and directory agree" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
                     <mxGeometry x="880" y="145" width="250" height="130" as="geometry"/>
@@ -278,11 +278,11 @@
                 <mxCell id="reb2-success-paths" value="&lt;b&gt;All successful manifest paths&lt;/b&gt;&lt;br&gt;&lt;br&gt;Validated and ordered by run ID" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;align=left;spacingLeft=10;fontSize=13;" parent="reb2-1" vertex="1">
                     <mxGeometry x="1791" y="165" width="220" height="90" as="geometry"/>
                 </mxCell>
-                <mxCell id="reb2-fail-raw" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Raw dataset directory is missing.&lt;br&gt;&lt;b&gt;Fail fast.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="reb2-1" vertex="1">
-                    <mxGeometry x="330" y="300" width="220" height="80" as="geometry"/>
+                <mxCell id="reb2-fail-raw" value="&lt;b style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;Failure mode, either:&lt;/b&gt;&lt;br style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;br style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;div style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;Raw dataset directory is missing.&lt;div style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;font style=&quot;scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;Raw and audit dataset paths disagree on dataset id&lt;br style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;/font&gt;&lt;b style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;br style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;b style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;Fail fast.&lt;/b&gt;&lt;/div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="reb2-1" vertex="1">
+                    <mxGeometry x="135" y="315" width="398" height="89" as="geometry"/>
                 </mxCell>
                 <mxCell id="reb2-fail-identity" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Unreadable/non-object JSON, missing run identity, unknown status, or run ID disagreement.&lt;br&gt;&lt;b&gt;Eligibility is unknown: fail fast.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="reb2-1" vertex="1">
-                    <mxGeometry x="850" y="300" width="260" height="100" as="geometry"/>
+                    <mxGeometry x="870" y="304" width="260" height="100" as="geometry"/>
                 </mxCell>
                 <mxCell id="reb2-fail-success" value="&lt;b&gt;Failure mode&lt;/b&gt;&lt;br&gt;Successful manifest is ❓missing required metadata&amp;nbsp;&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;❓&lt;/span&gt;&amp;nbsp;or its dataset ID disagrees with the raw directory.&lt;br&gt;&lt;b&gt;Fail fast.&lt;/b&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;spacingLeft=10;fontSize=12;" parent="reb2-1" vertex="1">
                     <mxGeometry x="1400" y="300" width="280" height="100" as="geometry"/>
@@ -356,10 +356,10 @@
                 <mxCell id="reb2-e1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-raw-input" target="reb2-raw-check" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="reb2-e2" value="valid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-raw-check" target="reb2-discover" edge="1">
+                <mxCell id="reb2-e2" value="valid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;entryX=0.816;entryY=-0.028;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryPerimeter=0;" parent="reb2-1" source="reb2-raw-check" target="reb2-discover" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="reb2-e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-discover" target="reb2-identity" edge="1">
+                <mxCell id="reb2-e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="reb2-1" source="reb2-discover" target="reb2-identity" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="reb2-e4" value="valid identity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-identity" target="reb2-status" edge="1">
@@ -374,7 +374,7 @@
                 <mxCell id="reb2-e7" value="valid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-success-validate" target="reb2-success-paths" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="reb2-ef1" value="missing" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-raw-check" target="reb2-fail-raw" edge="1">
+                <mxCell id="reb2-ef1" value="missing" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;entryX=0.847;entryY=-0.001;entryDx=0;entryDy=0;entryPerimeter=0;exitX=0.25;exitY=1;exitDx=0;exitDy=0;" parent="reb2-1" source="reb2-raw-check" target="reb2-fail-raw" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="reb2-ef2" value="invalid" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-identity" target="reb2-fail-identity" edge="1">
@@ -459,23 +459,20 @@
                 <mxCell id="reb2-ef9" value="restore may fail" style="edgeStyle=orthogonalEdgeStyle;rounded=0;dashed=1;strokeColor=#B85450;html=1;endArrow=block;endFill=1;" parent="reb2-1" source="reb2-restore" target="reb2-residual" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="PC5n1m0W9N5Md4XX_FPm-0" value="&lt;i&gt;_discover_successful_manifests()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" vertex="1" parent="reb2-1">
-                    <mxGeometry x="54" y="263" width="200" height="30" as="geometry"/>
-                </mxCell>
-                <mxCell id="PC5n1m0W9N5Md4XX_FPm-1" value="&lt;i&gt;_discover_chunk_paths()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" vertex="1" parent="reb2-1">
+                <mxCell id="PC5n1m0W9N5Md4XX_FPm-1" value="&lt;i&gt;_discover_chunk_paths()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" parent="reb2-1" vertex="1">
                     <mxGeometry x="367" y="707" width="200" height="30" as="geometry"/>
                 </mxCell>
-                <mxCell id="hEfuENSlWpCC6ep9NGJW-0" value="&lt;i style=&quot;forced-color-adjust: none; color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251); font-family: Helvetica; font-size: 13px; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: left; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: nowrap; background-color: rgb(251, 251, 251); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;&quot;&gt;write_audit_table()&lt;/i&gt;" style="text;whiteSpace=wrap;html=1;" vertex="1" parent="reb2-1">
+                <mxCell id="hEfuENSlWpCC6ep9NGJW-0" value="&lt;i style=&quot;forced-color-adjust: none; color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251); font-family: Helvetica; font-size: 13px; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: left; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: nowrap; background-color: rgb(251, 251, 251); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial;&quot;&gt;write_audit_table()&lt;/i&gt;" style="text;whiteSpace=wrap;html=1;" parent="reb2-1" vertex="1">
                     <mxGeometry x="1445.996094501202" y="535.9976929649936" width="135" height="38" as="geometry"/>
                 </mxCell>
-                <mxCell id="zoNAhnYyJgMdwSh_8Jqt-0" value="&lt;i&gt;_read_manifest_json()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" vertex="1" parent="reb2-1">
+                <mxCell id="zoNAhnYyJgMdwSh_8Jqt-0" value="&lt;i&gt;_read_manifest_json()&lt;/i&gt;" style="text;strokeColor=none;fillColor=none;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=light-dark(#d6d1d1, #ededed);labelBorderColor=none;" parent="reb2-1" vertex="1">
                     <mxGeometry x="880" y="118" width="200" height="30" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
     </diagram>
     <diagram id="omni-query-flow" name="Generic flow">
-        <mxGraphModel dx="1383" dy="1060" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1000" math="0" shadow="0">
+        <mxGraphModel dx="977" dy="592" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1000" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -582,7 +579,7 @@
         </mxGraphModel>
     </diagram>
     <diagram name="Rebuild flow" id="XEstyzWG-Zco1rbl8DGZ">
-        <mxGraphModel dx="1409" dy="742" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+        <mxGraphModel dx="977" dy="592" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
             <root>
                 <mxCell id="1v6tgg2qSgBk2pH3zbnW-0"/>
                 <mxCell id="1v6tgg2qSgBk2pH3zbnW-1" parent="1v6tgg2qSgBk2pH3zbnW-0"/>
