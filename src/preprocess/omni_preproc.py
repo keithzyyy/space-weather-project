@@ -15,7 +15,7 @@ class OmniPreprocessSpecError(RuntimeError):
 
 
 def _read_manifest_json(path: Path) -> dict:
-    """Read and validate one raw OMNI ingestion manifest."""
+    """Read one raw OMNI manifest as a JSON object."""
     # Parse the manifest before validating its preprocessing contract.
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -29,24 +29,45 @@ def _read_manifest_json(path: Path) -> dict:
             f"OMNI manifest must contain a JSON object: {path}"
         )
 
-    # Validate sections needed for run discovery and chunk lookup.
+    return payload
+
+
+def _validate_dataset_paths(
+    raw_dataset_dir: str | Path,
+    audit_output_dir: str | Path,
+) -> None:
+    """Validate one-dataset input and output path alignment."""
+    raw_path = Path(raw_dataset_dir)
+    audit_path = Path(audit_output_dir)
+
+    if not raw_path.is_dir():
+        raise FileNotFoundError(
+            f"Raw dataset directory does not exist: {raw_path}"
+        )
+
+    expected_dataset_id = raw_path.name
+
+    if audit_path.parent.name != expected_dataset_id:
+        raise OmniPreprocessSpecError(
+            "Raw and audit paths identify different datasets: "
+            f"raw={expected_dataset_id!r}, "
+            f"audit={audit_path.parent.name!r}"
+        )
+
+
+def _validate_manifest_for_preprocessing(
+    payload: dict,
+    path: Path,
+    expected_dataset_id: str,
+) -> tuple[str, str]:
+    """Validate status-aware metadata needed for OMNI preprocessing."""
+    # Validate the run identity and recognized lifecycle status for every run.
     run = payload.get("run")
-    source = payload.get("source")
-    artifacts = payload.get("artifacts")
     if not isinstance(run, dict):
         raise OmniPreprocessSpecError(
             f"OMNI manifest is missing run metadata: {path}"
         )
-    if not isinstance(source, dict) or not source.get("dataset_id"):
-        raise OmniPreprocessSpecError(
-            f"OMNI manifest is missing source.dataset_id: {path}"
-        )
-    if not isinstance(artifacts, dict):
-        raise OmniPreprocessSpecError(
-            f"OMNI manifest is missing artifact metadata: {path}"
-        )
 
-    # Validate the run identity and lifecycle status.
     run_id = run.get("run_id")
     status = run.get("status")
     if not isinstance(run_id, str) or not run_id:
@@ -56,6 +77,10 @@ def _read_manifest_json(path: Path) -> dict:
     if not isinstance(status, str) or not status:
         raise OmniPreprocessSpecError(
             f"OMNI manifest is missing run.status: {path}"
+        )
+    if status not in {"RUNNING", "SUCCESS", "FAILED"}:
+        raise OmniPreprocessSpecError(
+            f"OMNI manifest has unknown run.status={status!r}: {path}"
         )
     if run.get("created_at_utc") != run_id:
         raise OmniPreprocessSpecError(
@@ -69,7 +94,28 @@ def _read_manifest_json(path: Path) -> dict:
             f"OMNI manifest run ID disagrees with directory: {path}"
         )
 
-    return payload
+    # Non-successful runs are valid identities but ineligible for preprocessing.
+    if status != "SUCCESS":
+        return run_id, status
+
+    # Successful runs require metadata used to select their raw artifacts.
+    source = payload.get("source")
+    artifacts = payload.get("artifacts")
+    if not isinstance(source, dict) or not source.get("dataset_id"):
+        raise OmniPreprocessSpecError(
+            f"OMNI manifest is missing source.dataset_id: {path}"
+        )
+    if not isinstance(artifacts, dict):
+        raise OmniPreprocessSpecError(
+            f"OMNI manifest is missing artifact metadata: {path}"
+        )
+    if source["dataset_id"] != expected_dataset_id:
+        raise OmniPreprocessSpecError(
+            f"Recorded dataset id in {path} does not match "
+            f"expected dataset id {expected_dataset_id!r}."
+        )
+
+    return run_id, status
 
 
 def _discover_successful_manifests(
@@ -89,7 +135,7 @@ def _discover_successful_manifests(
 
     # Discover every raw run manifest before filtering by status.
     manifest_paths = sorted(
-        Path(raw_dataset_dir).glob("run_id=*/_manifest.json")
+        raw_path.glob("run_id=*/_manifest.json")
     )
     successful: list[tuple[str, Path]] = []
     seen_run_ids: set[str] = set()
@@ -97,18 +143,19 @@ def _discover_successful_manifests(
     # Validate every discovered run and retain successful runs only.
     for manifest_path in manifest_paths:
         payload = _read_manifest_json(manifest_path)
-        run_id = payload["run"]["run_id"]
+        run_id, status = _validate_manifest_for_preprocessing(
+            payload,
+            manifest_path,
+            expected_dataset_id,
+        )
         if run_id in seen_run_ids:
             raise OmniPreprocessSpecError(
                 f"Duplicate OMNI manifest for run_id={run_id}"
             )
         seen_run_ids.add(run_id)
 
-        if payload["run"]["status"] == "SUCCESS":
-            # ensure that all successful manifests under a dataset specific run
-            # have valid recorded dataset ids.
-            if payload["source"]["dataset_id"] != expected_dataset_id:
-                raise OmniPreprocessSpecError(f"Recorded dataset id in {manifest_path} does not match the raw dataset directory ({raw_path.as_posix()}).")
+        # Skip valid but ineligible runs without inspecting success-only metadata.
+        if status == "SUCCESS":
             successful.append((run_id, manifest_path))
 
     # Run IDs are UTC timestamps, so lexical order is oldest first.
@@ -146,7 +193,13 @@ def _discover_chunk_paths(manifest_path: Path) -> list[Path]:
     """Return existing chunk files recorded by one successful manifest."""
     # Revalidate the manifest because it controls raw artifact selection.
     payload = _read_manifest_json(manifest_path)
-    if payload["run"]["status"] != "SUCCESS":
+    expected_dataset_id = manifest_path.parent.parent.name
+    _, status = _validate_manifest_for_preprocessing(
+        payload,
+        manifest_path,
+        expected_dataset_id,
+    )
+    if status != "SUCCESS":
         raise OmniPreprocessSpecError(
             f"Cannot preprocess chunks from a non-successful run: {manifest_path}"
         )
@@ -557,6 +610,12 @@ def increment_successful_run(
         audit_output_dir,
     )
 
+    # Check that the raw and audit paths identify the same dataset.
+    _validate_dataset_paths(
+        raw_dataset_dir,
+        audit_output_dir,
+    )
+
     # Pick oldest from successful raw runs minus processed audit runs.
     run_id = pick_oldest_unprocessed_successful_run(
         raw_dataset_dir,
@@ -606,13 +665,22 @@ def rebuild_successful_runs(
     raw_dataset_dir: str | Path,
     audit_output_dir: str | Path,
 ) -> Path:
+    
     """Rebuild the long audit from every successful raw run."""
+
     logger.info(
         "Starting OMNI long-audit rebuild"
         " | raw_dataset_dir=%s | audit_output_dir=%s",
         raw_dataset_dir,
         audit_output_dir,
     )
+
+    # Check that the raw and audit paths identify the same dataset.
+    _validate_dataset_paths(
+        raw_dataset_dir,
+        audit_output_dir,
+    )
+
 
     # Discover all successful manifests before selecting raw chunks.
     successful_manifests = _discover_successful_manifests(raw_dataset_dir)
