@@ -230,6 +230,7 @@ def _discover_chunk_paths(manifest_path: Path) -> list[Path]:
             )
         seen_names.add(file_name)
 
+        # verify that chunk path recorded in manifest exists on disk.
         chunk_path = manifest_path.parent / file_name
         if not chunk_path.is_file():
             raise OmniPreprocessSpecError(

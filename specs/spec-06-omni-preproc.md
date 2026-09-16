@@ -47,7 +47,7 @@ Intentionally out of scope:
 - Cross-run deduplication or inconsistency flags.
 - Wide predictor-table construction or feature engineering.
 - Joining OMNI predictors to K-index observations.
-- A preprocessing CLI, configuration keys, or entrypoint integration.
+- Interactive dataset selection or a CLI dataset-ID override.
 - Retrying or continuing after a preprocessing failure.
 - Revalidating the remote dataset through CDAWeb `/info`.
 - Validating the dataset IDs already stored inside an existing audit dataset.
@@ -65,8 +65,8 @@ Relevant existing decisions and conventions:
 - DuckDB is the local query engine for JSON and Parquet preprocessing.
 - Audit-oriented preprocessing should preserve raw-run provenance before
   canonicalization.
-- Source functions raise contract and dependency failures. A future entrypoint
-  logging wrapper will own fatal stack-trace logging and terminal log status.
+- Source functions raise contract and dependency failures. The entrypoint
+  logging wrapper owns fatal stack-trace logging and terminal log status.
 - Tests are derived from this specification rather than incidental source
   implementation details.
 
@@ -87,6 +87,8 @@ Current source and planning-material differences:
   implementation debt.
 - Processed membership is currently read by `run_id` from the dedicated audit
   directory. Existing audit rows are not scanned to reconfirm `dataset_id`.
+- `entrypoint/preproc_omni.py` and the configured preprocessing audit base
+  directory are target contracts that are not yet implemented.
 
 Resolution:
 
@@ -96,6 +98,8 @@ Resolution:
   implementation explicitly.
 - Rely on path alignment and successful-manifest validation for the current
   one-dataset boundary. Existing-audit content validation remains deferred.
+- Resolve dataset-specific raw and audit paths in the entrypoint from stable
+  config values plus optional CLI base-directory overrides.
 
 ## 3. High-Level Approach
 
@@ -167,7 +171,29 @@ if final replacement fails before the new output exists:
 return the audit output path
 ```
 
-### 3.4 Long-observation query flow
+### 3.4 Entrypoint flow
+
+```text
+parse CLI arguments before the logging wrapper
+run main logic inside the shared logging wrapper
+load configuration inside the wrapped callback
+read dataset ID, raw base, audit base, and audit output name
+apply optional CLI overrides to the two base directories
+compose dataset-specific raw and audit paths
+
+if --rebuild is set:
+    call rebuild_successful_runs(...)
+else:
+    call increment_successful_run(...)
+
+allow source failures to propagate to the logging wrapper
+```
+
+The entrypoint resolves `Path` values but does not create raw or audit
+directories. Raw-directory validation and audit materialization remain source
+responsibilities.
+
+### 3.5 Long-observation query flow
 
 The query is composed from fixed, module-local CTE names:
 
@@ -246,6 +272,12 @@ The feature should:
 - Log lifecycle-level starts, selections, input counts, staging, commits,
   caught-up outcomes, and completions.
 - Propagate validation, DuckDB, and filesystem failures to the caller.
+- Parse CLI arguments before initializing the logging wrapper.
+- Default to incremental mode unless `--rebuild` is present.
+- Read stable dataset and path components from configuration.
+- Apply CLI overrides only to raw and audit base directories.
+- Compose dataset-specific paths before calling either source orchestrator.
+- Run preprocessing through the shared logging wrapper using `logs/`.
 
 The feature should not:
 
@@ -258,11 +290,18 @@ The feature should not:
 - Overwrite an existing run partition during incremental processing.
 - Continue with later runs or chunks after a failure.
 - Catch failures merely to duplicate fatal stack traces in source logs.
+- Accept dataset ID or audit output name as per-run CLI arguments.
+- Create directories merely while resolving entrypoint paths.
 
 ## 5. Invariants
 
 - One preprocessing invocation handles one dataset-specific raw directory and
   one corresponding audit directory.
+- The configured dataset ID is the only dataset identity used for entrypoint
+  path composition.
+- CLI path overrides replace base directories only; they do not replace the
+  dataset ID or `long-observations` output name.
+- CLI parsing completes before the logging wrapper is called.
 - The raw directory name is the expected local dataset ID.
 - `audit_output_dir.parent.name` equals the raw directory name.
 - Every selected successful manifest has
@@ -309,6 +348,9 @@ yet implemented in `src/preprocess/omni_preproc.py`.
 | One run contains multiple chunks                                             | Restart row and parameter ordinality per chunk and use the filename in the positional join. |
 | Incremental output already contains the selected`run_id` partition         | Raise`OmniPreprocessSpecError`; never replace the partition.                              |
 | Rebuild output does not yet exist                                            | Move the staged rebuild directly into the final path.                                       |
+| `--rebuild` is omitted                                                       | Run one incremental preprocessing attempt.                                                  |
+| Raw or audit base CLI override is supplied                                    | Replace only that configured base before composing the dataset-specific path.                |
+| Incremental mode is already caught up                                         | Return successfully with `None`; the logging wrapper finalizes a success log.                |
 
 ## 7. Failure Modes
 
@@ -316,6 +358,9 @@ yet implemented in `src/preprocess/omni_preproc.py`.
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Dataset paths       | Raw dataset directory does not exist                                                                                          | Raise`FileNotFoundError` before run discovery or writing.                                                                    |
 | Dataset paths       | Raw directory name and audit parent name disagree                                                                             | Raise`OmniPreprocessSpecError` before run discovery or writing.                                                              |
+| CLI parsing         | Required config path is absent or an argument is invalid                                                                      | Let `argparse` raise `SystemExit` before the logging wrapper is initialized.                                                   |
+| Configuration       | A required OMNI preprocessing key is missing                                                                                    | Let `KeyError` propagate inside wrapped main logic so the logging wrapper finalizes an error log.                              |
+| Configuration       | A required path component is not a non-empty string, or the audit output name is not `long-observations`                      | Raise `ValueError` inside wrapped main logic so the logging wrapper finalizes an error log.                                    |
 | Manifest parsing    | JSON is malformed or its top level is not an object                                                                           | Raise`OmniPreprocessSpecError`.                                                                                              |
 | Manifest identity   | Missing run object, empty run ID/status, unknown status, timestamp disagreement, or run-directory disagreement                | Raise`OmniPreprocessSpecError`; eligibility cannot be established safely.                                                    |
 | Successful manifest | Missing`source.dataset_id`, missing artifact object, or dataset mismatch                                                    | Raise`OmniPreprocessSpecError`.                                                                                              |
@@ -491,6 +536,15 @@ def rebuild_successful_runs(
     audit_output_dir: str | Path,
 ) -> Path:
     """Rebuild the long audit from every successful raw run."""
+
+
+# entrypoint/preproc_omni.py
+def parse_args() -> argparse.Namespace:
+    """Parse OMNI preprocessing CLI arguments."""
+
+
+def main() -> None:
+    """Resolve paths and run incremental or rebuild preprocessing."""
 ```
 
 `write_audit_table()` accepts only `mode="append"` or `mode="overwrite"`.
@@ -530,9 +584,97 @@ are implementation details and should not be tested through exact SQL text.
 
 ### 9.3 CLI and configuration
 
-No OMNI preprocessing entrypoint or configuration contract is defined in this
-version. A future CLI should follow ADR 027 and the shared logging wrapper, but
-its arguments and keys must be specified before implementation.
+The user-facing module is:
+
+```text
+entrypoint/preproc_omni.py
+```
+
+Run it from the project root:
+
+```powershell
+# Incremental mode
+python -m entrypoint.preproc_omni --config_path config/local.yaml
+
+# Rebuild mode
+python -m entrypoint.preproc_omni `
+    --config_path config/local.yaml `
+    --rebuild
+```
+
+Configuration contract:
+
+```yaml
+omni:
+  hapi:
+    dataset_id: "OMNI_HRO2_1MIN"
+    raw_output_dir: "data/01-raw/omni"
+  preprocessing:
+    audit_base_dir: "data/02-preprocessed/omni"
+    audit_output_name: "long-observations"
+```
+
+The entrypoint uses these required values:
+
+| Key                                       | Meaning |
+| ----------------------------------------- | ------- |
+| `omni.hapi.dataset_id`                  | Stable dataset identity shared with ingestion. |
+| `omni.hapi.raw_output_dir`              | Default raw base containing dataset directories. |
+| `omni.preprocessing.audit_base_dir`     | Default preprocessed base containing dataset directories. |
+| `omni.preprocessing.audit_output_name`  | Stable audit dataset leaf, currently `long-observations`. |
+
+Each value must be a non-empty string. The current audit output name is
+`long-observations`; changing that physical contract requires a future spec
+change. Missing keys propagate as `KeyError`. The entrypoint raises
+`ValueError` when a required value is not a non-empty string or when the audit
+output name differs from `long-observations`.
+
+CLI contract:
+
+| Argument             | Required | Behavior |
+| -------------------- | -------- | -------- |
+| `--config_path`    | Yes      | YAML configuration path. |
+| `--rebuild`        | No       | Rebuild all successful runs; otherwise process one increment. |
+| `--raw_base_dir`   | No       | Replace `omni.hapi.raw_output_dir` for this invocation. |
+| `--audit_base_dir` | No       | Replace `omni.preprocessing.audit_base_dir` for this invocation. |
+
+The CLI does not accept `dataset_id` or `audit_output_name` overrides.
+
+After applying optional base-directory overrides, the entrypoint composes:
+
+```python
+raw_dataset_dir = Path(raw_base_dir) / dataset_id
+audit_output_dir = (
+    Path(audit_base_dir)
+    / dataset_id
+    / audit_output_name
+)
+```
+
+With the example configuration, this resolves to:
+
+```text
+data/01-raw/omni/OMNI_HRO2_1MIN/
+data/02-preprocessed/omni/OMNI_HRO2_1MIN/long-observations/
+```
+
+`parse_args()` runs before `run_entrypoint_with_logging()`. The wrapper is
+called with:
+
+```python
+entrypoint_name="preproc_omni"
+log_dir="logs"
+```
+
+Configuration loading, value validation, path composition, and source
+orchestrator invocation occur inside the wrapped callback. The callback calls
+exactly one source orchestrator:
+
+- `increment_successful_run()` when `--rebuild` is absent;
+- `rebuild_successful_runs()` when `--rebuild` is present.
+
+The callback does not catch source failures. They propagate to the shared
+logging wrapper, which owns fatal logging and terminal `.error.log` status.
 
 ## 10. Test Blueprint
 
@@ -548,10 +690,13 @@ Testing framework:
 
 Test files:
 
-- `tests/omni/test_preproc_validation.py`
-- `tests/omni/test_preproc_selection.py`
-- `tests/omni/test_preproc_run.py`
-- `tests/omni/support.py` for fresh deterministic builders shared across
+- `tests/omni_audit/test_raw_validation.py`
+- `tests/omni_audit/test_discovery.py`
+- `tests/omni_audit/test_incremental_selection.py`
+- `tests/omni_audit/test_audit_operations.py`
+- `tests/omni_audit/test_orchestration.py`
+- `tests/omni_audit/test_entrypoint.py`
+- `tests/omni_audit/support.py` for fresh deterministic builders shared across
   modules
 
 Chosen boundary:
@@ -561,18 +706,22 @@ Chosen boundary:
 - Small manifest and chunk files may be created inside
   `tempfile.TemporaryDirectory()` because parsing and path validation are the
   unit under test.
+- Entrypoint tests use mocked CLI, config, logging-wrapper, and source
+  boundaries; they do not create runtime directories.
 - Do not execute generated SQL against DuckDB or exercise real Parquet writes
   in this matrix. Those are deferred integration boundaries.
 
 Suggested deterministic fixtures:
 
-- Dataset ID `OMNI_HRO2_1MIN` and two ordered UTC run IDs.
+- Dataset ID `OMNI_HRO2_1MIN` and three ordered UTC run IDs.
 - Dataset-specific raw and audit paths owned by one temporary directory.
 - Fresh valid `SUCCESS`, minimal `RUNNING`, and minimal `FAILED` manifest
   builders.
 - Fresh valid chunk-record builders and empty placeholder chunk files.
 - Sentinel SQL strings used only as mocked collaborator return values in
   orchestrator tests.
+- A complete OMNI config mapping plus incremental and rebuild
+  `argparse.Namespace` fixtures for entrypoint tests.
 
 Mocks and exact patch targets:
 
@@ -590,6 +739,12 @@ Mocks and exact patch targets:
   - `src.preprocess.omni_preproc.write_audit_table`
 - Early write-validation tests may patch
   `src.preprocess.omni_preproc.duckdb.connect` to prove no DuckDB work begins.
+- Entrypoint tests patch objects where `entrypoint.preproc_omni` imports them:
+  - `entrypoint.preproc_omni.parse_args`
+  - `entrypoint.preproc_omni.load_config`
+  - `entrypoint.preproc_omni.increment_successful_run`
+  - `entrypoint.preproc_omni.rebuild_successful_runs`
+  - `entrypoint.preproc_omni.run_entrypoint_with_logging`
 
 ### Unit test matrix
 
@@ -613,6 +768,7 @@ Mocks and exact patch targets:
 | `TestReadProcessedRunIds`                | `test_read_processed_run_ids_absent_audit_returns_empty_set`                          | Treat an absent or empty audit dataset as having no processed runs.       | Temporary-filesystem unit | Missing audit directory and existing directory with no Parquet files                                                     | No runs are processed yet                     | Patch`src.preprocess.omni_preproc.duckdb.connect`                       | Both cases return an empty set; DuckDB is not opened                                                                  |
 | `TestPickOldestUnprocessedSuccessfulRun` | `test_pick_oldest_unprocessed_successful_run_returns_oldest_missing_run`              | Select the first successful run not represented in the audit.             | Orchestrator unit         | Ordered successful paths with the first run processed                                                                    | Select next oldest run                        | Patch discovery, processed-ID reader, and manifest reader                 | Exact next run ID returned; collaborators called with supplied paths                                                  |
 |                                            | `test_pick_oldest_unprocessed_successful_run_all_processed_returns_none`              | Report that preprocessing is caught up when every success is represented. | Orchestrator unit         | Every successful run ID is in processed set                                                                              | Report caught-up state                        | Patch discovery, processed-ID reader, and manifest reader                 | Returns`None`; no unrelated I/O occurs                                                                              |
+|                                            | `test_pick_oldest_unprocessed_successful_run_multiple_missing_returns_first`           | Select the oldest pending run when several successful runs are unprocessed. | Orchestrator unit        | Three ordered successes: oldest processed, middle and newest unprocessed                                                 | Select middle run                             | Patch discovery, processed-ID reader, and manifest reader                 | Exact middle run ID returned; collaborators called with supplied paths                                                |
 | `TestBuildLongObservationSelectSql`      | `test_build_long_observation_select_sql_empty_path_lists_raise`                       | Reject query construction without both manifest and chunk inputs.         | Pure helper               | Empty manifest list and empty chunk list as named subtests                                                               | Reject unusable query inputs                  | None                                                                      | Each case raises`ValueError`; no assertion depends on SQL formatting                                                |
 | `TestWriteAuditTableValidation`          | `test_write_audit_table_invalid_arguments_raise_before_duckdb`                        | Reject unsupported write requests before staging or opening DuckDB.       | Pure coordination unit    | Unsupported mode and blank SQL as named subtests                                                                         | Reject before staging                         | Patch`src.preprocess.omni_preproc.duckdb.connect`                       | Each case raises`ValueError`; DuckDB is not opened; output is not created                                           |
 | `TestIncrementSuccessfulRun`             | `test_increment_successful_run_validates_paths_before_selection`                      | Enforce the dataset boundary before incremental run selection.            | Orchestrator unit         | Dataset-path validator raises fixed exception                                                                            | Stop before selection                         | Patch validator and all later collaborators                               | Same exception propagates; picker, query builder, and writer are not called                                           |
@@ -623,6 +779,12 @@ Mocks and exact patch targets:
 |                                            | `test_rebuild_successful_runs_no_successful_manifests_raises`                         | Refuse to replace the audit when no successful runs exist.                | Orchestrator unit         | Discovery returns an empty list                                                                                          | Reject empty rebuild                          | Patch validator, successful-manifest discovery, query builder, and writer | Raises`OmniPreprocessSpecError`; builder and writer are not called                                                  |
 |                                            | `test_rebuild_successful_runs_coordinates_all_runs_overwrite`                         | Coordinate one complete overwrite from every eligible run and chunk.      | Orchestrator unit         | Two successful manifests with deterministic chunk lists                                                                  | Build and replace complete audit              | Patch validator, manifest/chunk discovery, query builder, and writer      | Every manifest and chunk reaches builder in order; writer receives`mode="overwrite"`; exact writer path is returned |
 |                                            | `test_rebuild_successful_runs_chunk_discovery_failure_stops_rebuild`                  | Propagate chunk discovery failure before rebuilding or replacing output.  | Orchestrator unit         | A successful manifest's chunk discovery raises fixed exception                                                           | Fail before query/write                       | Patch validator, manifest/chunk discovery, query builder, and writer      | Same exception propagates; query builder and writer are not called                                                    |
+| `TestParseArgs`                          | `test_parse_args_minimal_values_default_to_incremental`                               | Parse the required config path while retaining incremental defaults.       | CLI unit                  | `sys.argv` contains only `--config_path`                                                                                 | Incremental arguments                         | Patch `sys.argv`                                                          | Config path preserved; `rebuild` is false; both base overrides are `None`                                              |
+|                                            | `test_parse_args_rebuild_and_path_overrides`                                           | Parse rebuild mode and both per-run base-directory overrides.              | CLI unit                  | `sys.argv` contains config path, `--rebuild`, and both override arguments                                               | Rebuild arguments                             | Patch `sys.argv`                                                          | Rebuild is true; raw and audit override strings are preserved                                                          |
+| `TestMain`                               | `test_main_incremental_composes_config_paths_and_forwards_arguments`                   | Compose default dataset paths and invoke incremental preprocessing.         | CLI/logging lifecycle     | Incremental namespace and complete config mapping                                                                         | Run one increment inside wrapper              | Patch entrypoint-local parser, config loader, source functions, and wrapper | Config and source calls wait for callback execution; wrapper receives `preproc_omni` and `logs`; increment receives exact composed `Path` values; rebuild is not called |
+|                                            | `test_main_rebuild_uses_base_overrides_and_forwards_arguments`                         | Compose dataset paths from CLI base overrides and invoke rebuild.           | CLI/logging lifecycle     | Rebuild namespace with raw and audit base overrides                                                                       | Run one rebuild inside wrapper                | Patch entrypoint-local parser, config loader, source functions, and wrapper | Rebuild receives exact override-based `Path` values; increment is not called                                           |
+|                                            | `test_main_invalid_required_config_values_raise_before_source_call`                    | Reject missing, empty, or unsupported preprocessing path configuration.     | CLI/logging lifecycle     | Named cases for a missing key, empty required value, and changed audit output name                                        | Fail inside wrapped callback                  | Patch entrypoint-local parser, config loader, source functions, and wrapper | Missing key raises `KeyError`; other cases raise `ValueError`; neither source orchestrator is called                  |
+|                                            | `test_main_parse_failure_occurs_before_logging_wrapper`                                | Keep argument parsing failures outside the logging lifecycle.               | CLI/logging lifecycle     | Parser raises a fixed `SystemExit`                                                                                         | Propagate parse failure                       | Patch entrypoint-local parser, config loader, source functions, and wrapper | Same `SystemExit` propagates; wrapper, config loader, and source functions are not called                              |
 
 Things not to over-test:
 
@@ -684,7 +846,12 @@ The audit preprocessing feature satisfies this specification when:
   caught up.
 - Rebuild stages a complete replacement and preserves the prior audit when a
   pre-commit query failure occurs.
-- Source exceptions continue to propagate for a future logging wrapper.
+- The entrypoint composes dataset-specific paths from config defaults or CLI
+  base overrides without creating runtime directories itself.
+- Incremental mode is the CLI default and `--rebuild` selects rebuild mode.
+- The entrypoint runs source orchestration through the shared logging wrapper
+  with `entrypoint_name="preproc_omni"` and `log_dir="logs"`.
+- Source exceptions continue to propagate to the logging wrapper.
 - Every unit-test row in Section 10 is implemented and passes.
 - Deferred integration coverage is specified before it is generated.
 
@@ -700,7 +867,6 @@ Questions intentionally deferred:
   `(observation_time_utc, parameter_name)`, and record disagreements?
 - Should parameter metadata disagreements across runs become canonical-table
   diagnostics or hard failures?
-- What config keys and CLI overrides should the preprocessing entrypoint use?
 - Should future hardening re-read existing audit rows to validate dataset ID,
   or is the dedicated directory boundary sufficient?
 - Should raw chunk integrity later include checksums in addition to existence
@@ -714,3 +880,7 @@ Decisions already settled for this version:
 - Do not partition one physical audit dataset by both dataset ID and run ID.
 - Do not replace source fill placeholders in the audit layer.
 - Do not add partial-success preprocessing semantics.
+- Use `entrypoint/preproc_omni.py` with incremental mode by default and a
+  `--rebuild` flag for complete replacement.
+- Keep dataset ID and audit output name in config; expose only raw and audit
+  base-directory overrides through the CLI.

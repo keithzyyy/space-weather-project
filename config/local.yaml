@@ -68,13 +68,10 @@ omni:
     raw_output_dir: "data/01-raw/omni"
     CLI_UTC_FMT: "%Y-%m-%d %H:%M:%S"
     HAPI_UTC_FMT: "%Y-%m-%dT%H:%M:%SZ"
+  preprocessing:
+    audit_base_dir: "data/02-preprocessed/omni"
+    audit_output_name: "long-observations"
 
-# noaa:
-#   base_url: "https://services.swpc.noaa.gov/json"
-#   api_key_env: null       
-#   output_dir: "data/01-raw/noaa"
-#   endpoints:
-#     solar_wind: "solar-wind.json"
 data:
   processed_dir: "data/02-preprocessed"
   features_dir: "data/03-features"
