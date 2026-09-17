@@ -7,7 +7,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import src.ingest.omni as omni
-from tests.omni.support import (
+from tests.omni_ingestion.support import (
     CHUNK_END_DATETIME,
     CHUNK_START_DATETIME,
     COMPLETED_AT_UTC,

@@ -7,7 +7,7 @@ from unittest.mock import patch
 import requests
 
 import src.ingest.omni as omni
-from tests.omni.support import (
+from tests.omni_ingestion.support import (
     CHUNK_END_DATETIME,
     CHUNK_START_DATETIME,
     DATASET_START_DATETIME,

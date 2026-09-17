@@ -1,0 +1,1113 @@
+---
+status: Draft
+owner: Keith
+branch: feature/omni-preproc
+related_adrs:
+  - docs/adr/adr-006-fail-fast-ingestion.md
+  - docs/adr/adr-009-raw-data-lake-manifest.md
+  - docs/adr/adr-022-preprocessing-stages.md
+  - docs/adr/adr-024-duckdb-for-preprocessing.md
+  - docs/adr/adr-025-spec-driven-preprocessing.md
+  - docs/adr/adr-026-contract-driven-tests.md
+  - docs/adr/adr-027-config-driven-preprocessing-cli.md
+  - docs/adr/adr-028-entrypoint-logging.md
+  - docs/adr/adr-029-source-exceptions-determine-entrypoint-status.md
+related_specs:
+  - specs/spec-template.md
+  - specs/spec-02-k-index-preproc.md
+  - specs/spec-03-entrypoint-with-logging.md
+  - specs/spec-05-ingest-omni-dataset.md
+supersedes: []
+---
+# Spec: `omni-preprocessing`
+
+## 1. Purpose
+
+This feature converts immutable, run-oriented OMNI ingestion artifacts into
+one audit-friendly long-observation Parquet dataset. It provides the
+intermediate record needed before source fill values are replaced,
+observations are deduplicated, or predictors are reshaped for modelling.
+
+The feature supports two operating modes:
+
+- Incremental preprocessing appends the oldest successful ingestion run that
+  is not already represented in the long audit.
+- Rebuild preprocessing reconstructs the complete long audit from every
+  eligible successful ingestion run.
+
+The expected outcome is a dataset that preserves raw values, source parameter
+metadata, run and chunk provenance, and successful runs that contain no
+non-time observation values.
+
+Intentionally out of scope:
+
+- A separate persisted run-audit table.
+- Canonical OMNI observation construction.
+- Replacing source fill placeholders with null.
+- Cross-run deduplication or inconsistency flags.
+- Wide predictor-table construction or feature engineering.
+- Joining OMNI predictors to K-index observations.
+- Interactive dataset selection or a CLI dataset-ID override.
+- Retrying or continuing after a preprocessing failure.
+- Revalidating the remote dataset through CDAWeb `/info`.
+- Validating the dataset IDs already stored inside an existing audit dataset.
+
+## 2. Context Check
+
+Relevant existing decisions and conventions:
+
+- Raw ingestion artifacts are append-only and are not modified by
+  preprocessing.
+- Each OMNI ingestion run is stored under a dataset-specific
+  `run_id=<run_id>` directory with `_manifest.json` and raw chunk JSON files.
+- Manifest `run.status` is authoritative for preprocessing eligibility;
+  `_SUCCESS` and `_FAILED` are supplementary ingestion evidence.
+- DuckDB is the local query engine for JSON and Parquet preprocessing.
+- Audit-oriented preprocessing should preserve raw-run provenance before
+  canonicalization.
+- Source functions raise contract and dependency failures. The entrypoint
+  logging wrapper owns fatal stack-trace logging and terminal log status.
+- Tests are derived from this specification rather than incidental source
+  implementation details.
+
+The first design considered separate run-audit and long-observation tables.
+That design was reduced to one persisted long audit because raw manifests
+already preserve run-level metadata and a sentinel row can record a
+successful run that has no long-observation values. The long audit therefore
+also acts as the processed-run record.
+
+Current source and planning-material differences:
+
+- `src/preprocess/omni_preproc.py` already implements the one-table incremental
+  and rebuild flows.
+- `specs/omni-preproc.drawio` is a non-normative visual explanation of the
+  flows and SQL relations.
+- The source validates non-null, non-empty, Time-first parameter metadata in
+  `successful_chunks` before downstream slicing. The user reports the audit
+  unit/integration suite passed, including invalid metadata with `data=[]`
+  and case-specific contract diagnostics; this is not an independent agent rerun.
+- Processed membership is currently read by `run_id` from the dedicated audit
+  directory. Existing audit rows are not scanned to reconfirm `dataset_id`.
+- `entrypoint/preproc_omni.py` and the configured preprocessing audit base
+  directory are implemented, including parser-owned `--log_dir` defaults and
+  per-invocation overrides.
+
+Resolution:
+
+- This Markdown specification is the normative target contract.
+- Use one dataset-specific long audit partitioned by `run_id`.
+- Keep Time-first validation in the target contract and verify its execution
+  with bounded synthetic integration tests.
+- Rely on path alignment and successful-manifest validation for the current
+  one-dataset boundary. Existing-audit content validation remains deferred.
+- Resolve dataset-specific raw and audit paths in the entrypoint from stable
+  config values plus optional CLI base-directory overrides.
+
+## 3. High-Level Approach
+
+### 3.1 Shared input validation
+
+Both operating modes begin by validating dataset-specific paths:
+
+```text
+raw_dataset_dir = <raw_root>/<dataset_id>/
+audit_output_dir = <audit_root>/<dataset_id>/long-observations/
+```
+
+The raw directory must exist. Its final path component is the expected local
+dataset ID, and `audit_output_dir.parent.name` must equal that ID.
+
+Candidate manifests are then discovered from:
+
+```text
+<raw_dataset_dir>/run_id=*/_manifest.json
+```
+
+Every candidate manifest must have a valid run identity and a recognized
+status. Valid `RUNNING` and `FAILED` runs are silently skipped. A `SUCCESS`
+manifest is eligible only after its source dataset and artifact metadata have
+also been validated.
+
+### 3.2 Incremental flow
+
+```text
+validate the raw and audit dataset paths
+discover and validate successful manifests, oldest first
+read distinct processed run IDs from existing audit Parquet
+pick the oldest successful run absent from the processed IDs
+
+if no run is found:
+    log the caught-up outcome
+    return None
+
+discover that manifest's recorded chunk files
+build the shared long-observation query for that run
+stage exactly one run_id partition
+reject an existing target partition
+move the staged partition into the audit dataset
+return the audit output path
+```
+
+No separate processed-run index is maintained. The presence of `run_id` in
+the long audit means that the run has been processed.
+
+### 3.3 Rebuild flow
+
+```text
+validate the raw and audit dataset paths
+discover and validate every successful manifest
+
+if no successful manifest exists:
+    fail without replacing the audit
+
+discover only chunks recorded by the successful manifests
+build the shared long-observation query for all selected runs
+stage the complete run-partitioned result
+move any existing audit to a temporary backup
+move the staged result into the final audit path
+
+if final replacement fails before the new output exists:
+    restore the backup when possible
+    re-raise the failure
+
+return the audit output path
+```
+
+### 3.4 Entrypoint flow
+
+```text
+parse CLI arguments before the logging wrapper
+run main logic inside the shared logging wrapper
+load configuration inside the wrapped callback
+read dataset ID, raw base, audit base, and audit output name
+apply optional CLI overrides to the two base directories
+compose dataset-specific raw and audit paths
+
+if --rebuild is set:
+    call rebuild_successful_runs(...)
+else:
+    call increment_successful_run(...)
+
+allow source failures to propagate to the logging wrapper
+```
+
+The entrypoint resolves `Path` values but does not create raw or audit
+directories. Raw-directory validation and audit materialization remain source
+responsibilities.
+
+### 3.5 Long-observation query flow
+
+The query is composed from fixed, module-local CTE names:
+
+```text
+successful_runs
+    -> successful_chunks
+        -> observation_rows
+            -> observation_values
+        -> parameter_definitions
+
+observation_values
+    INNER JOIN parameter_definitions
+        -> actual_observations
+
+successful_runs
+    LEFT JOIN actual_observations
+        -> final long audit
+```
+
+At the chunk-reading boundary, declare nested SQL types explicitly rather
+than inferring them independently from each selected run:
+
+```text
+data: JSON[][]
+parameters: STRUCT(name VARCHAR, type VARCHAR, units VARCHAR, fill DOUBLE)[]
+```
+
+`data` is a list of observation lists containing JSON scalar values, so
+`row_array` supports list-length checks, slicing, and unnesting even for
+Time-only or empty chunks. Parameter definitions remain structs; an absent
+or null `fill` becomes a nullable field, allowing direct `parameter.fill`
+access without casting the parameter back to JSON. This prevents a Time-only
+run from depending on numerical definitions in other chunks to supply its
+inferred struct schema. Missing/null fill yields null `source_fill_value`;
+non-null fill values that cannot be converted to DOUBLE still fail.
+SQL mapping braces inside Python f-strings must be escaped as `{{` and `}}`
+to generate literal `{` and `}` in the query.
+
+- `successful_chunks` validates the complete `parameters` list: it must be
+  non-null, non-empty, and its first definition's name must equal `Time`.
+- Missing or null first names also fail.
+- The validated list is retained intact;
+  only the downstream observation-value and parameter-definition branches use
+  `[2:]`.
+- Observation-array length validation remains in `observation_rows`.
+  These are SQL expressions, not procedural steps; integration tests must
+  confirm validation is not bypassed for chunks with `data=[]`.
+
+`CROSS JOIN UNNEST` expands each nested list while retaining the parent chunk
+or observation row. It is correlated to the current parent row; it is not a
+Cartesian product between every chunk and every nested item.
+
+`WITH ORDINALITY` preserves one-based positions. The same position maps a
+value from an observation array to its definition in the chunk's `parameters`
+array.
+
+DuckDB list indexing is one-based:
+
+```text
+parameters[1] -> Time metadata
+row_array[1]  -> observation timestamp
+
+parameters[2:] -> non-time parameter definitions
+row_array[2:]  -> non-time observation values
+```
+
+This is why `[2:]` excludes `Time`. Values and definitions are joined using:
+
+```text
+dataset_id + run_id + filename + parameter_index
+```
+
+The filename is required because each chunk repeats its own parameter
+definitions and ordinality restarts within each chunk.
+
+## 4. Expected Behavior
+
+The feature should:
+
+- Validate raw and audit path alignment before either orchestrator selects or
+  writes a run.
+- Use manifest status, not marker files, to identify successful runs.
+- Validate common run identity for every discovered manifest.
+- Skip valid `RUNNING` and `FAILED` manifests without requiring their
+  `source` or `artifacts` sections.
+- Require a `SUCCESS` manifest's dataset ID to match the raw directory name.
+- Return successful manifests in ascending `run_id` order.
+- Select only chunk files explicitly recorded by each successful manifest.
+- Ignore unrelated JSON files that are not recorded in the manifest.
+- Require every recorded chunk filename to be safe, unique, and present on
+  disk before DuckDB reads it.
+- Build one long row for each non-time value in each valid source observation
+  array.
+- Preserve raw fill placeholders rather than converting them to null.
+- Record whether each raw value equals its source fill value.
+- Preserve exactly one sentinel row for a successful run with no non-time
+  observation values.
+- Append at most one run partition per incremental invocation.
+- Return `None` when incremental preprocessing is already caught up.
+- Refuse to overwrite an existing partition during incremental processing.
+- Stage query output before changing the final audit dataset.
+- Replace the complete audit only during rebuild mode.
+- Attempt to restore the prior audit when rebuild replacement fails under the
+  conditions described in Section 7.
+- Log lifecycle-level starts, selections, input counts, staging, commits,
+  caught-up outcomes, and completions.
+- Propagate validation, DuckDB, and filesystem failures to the caller.
+- Parse CLI arguments before initializing the logging wrapper.
+- Default to incremental mode unless `--rebuild` is present.
+- Read stable dataset and path components from configuration.
+- Apply CLI overrides only to raw and audit base directories.
+- Compose dataset-specific paths before calling either source orchestrator.
+- Run preprocessing through the shared logging wrapper using `logs/`.
+
+The feature should not:
+
+- Modify raw manifests or chunk payloads.
+- Treat `_SUCCESS` alone as proof that a run is eligible.
+- Read arbitrary chunk files by globbing every JSON file under the raw tree.
+- Read chunks belonging to failed or running runs.
+- Replace fill placeholders in the audit layer.
+- Create one sentinel per empty chunk or timestamp row.
+- Overwrite an existing run partition during incremental processing.
+- Continue with later runs or chunks after a failure.
+- Catch failures merely to duplicate fatal stack traces in source logs.
+- Accept dataset ID or audit output name as per-run CLI arguments.
+- Create directories merely while resolving entrypoint paths.
+
+## 5. Invariants
+
+- One preprocessing invocation handles one dataset-specific raw directory and
+  one corresponding audit directory.
+- The configured dataset ID is the only dataset identity used for entrypoint
+  path composition.
+- CLI path overrides replace base directories only; they do not replace the
+  dataset ID or `long-observations` output name.
+- CLI parsing completes before the logging wrapper is called.
+- The raw directory name is the expected local dataset ID.
+- `audit_output_dir.parent.name` equals the raw directory name.
+- Every selected successful manifest has
+  `source.dataset_id == Path(raw_dataset_dir).name`.
+- Manifest `run.run_id`, `run.created_at_utc`, and the `run_id=<run_id>`
+  directory agree.
+- Recognized manifest statuses are exactly `RUNNING`, `SUCCESS`, and `FAILED`.
+- Only `SUCCESS` manifests contribute audit rows.
+- Every chunk read by DuckDB is named by a successful manifest and still
+  exists on disk.
+- `parameters` is non-empty and its first element names `Time`.
+- Every observation array has the same number of elements as its chunk's
+  `parameters` array.
+- `Time` is an observation index, not a long-observation parameter.
+- Each ordinary audit row represents one non-time value and its positional
+  parameter definition within one run and chunk.
+- A successful run with no non-time values contributes **exactly one** sentinel.
+- A sentinel has populated `dataset_id` and `run_id`; every observation and
+  parameter field is null.
+- Source fill placeholders remain unchanged in `raw_value`.
+- Audit output is Parquet partitioned by `run_id`.
+- Incremental mode stages and commits exactly one new run partition.
+- Rebuild and incremental modes use the same long-observation query contract.
+- Absence of a separate run-audit table or processed index must not make an
+  empty successful run appear unprocessed; the sentinel supplies that record.
+
+The checks that `parameters` is non-null and non-empty and that
+`parameters[1].name == "Time"` are implemented in `successful_chunks`.
+
+## 6. Edge Cases
+
+| Edge case                                                                    | Expected handling                                                                           |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| The audit directory does not exist or contains no Parquet files              | Treat the processed-run set as empty.                                                       |
+| All successful runs are already represented                                  | Incremental mode logs a caught-up result and returns`None`.                               |
+| No successful manifests exist                                                | Incremental mode returns`None`; rebuild mode raises `OmniPreprocessSpecError`.          |
+| A valid`RUNNING` or `FAILED` manifest omits `source` and `artifacts` | Validate its common identity, then skip it silently.                                        |
+| An unrelated JSON file exists in a successful run directory                  | Ignore it unless the manifest records it as a chunk.                                        |
+| A successful chunk has`data=[]`                                            | Produce no actual observations and preserve the run with exactly one sentinel.              |
+| A chunk contains only`Time` and timestamp rows                             | Produce no actual observations and preserve the run with exactly one sentinel.              |
+| The request omitted`Time`, but CDAWeb returned `Time` first              | Parse the returned payload normally; preprocessing does not insert`Time`.                 |
+| A valid source value equals its parameter fill value                         | Preserve both values and set`is_source_fill` to true.                                     |
+| One run contains multiple chunks                                             | Restart row and parameter ordinality per chunk and use the filename in the positional join. |
+| Incremental output already contains the selected`run_id` partition         | Raise`OmniPreprocessSpecError`; never replace the partition.                              |
+| Rebuild output does not yet exist                                            | Move the staged rebuild directly into the final path.                                       |
+| `--rebuild` is omitted                                                     | Run one incremental preprocessing attempt.                                                  |
+| Raw or audit base CLI override is supplied                                   | Replace only that configured base before composing the dataset-specific path.               |
+| Incremental mode is already caught up                                        | Return successfully with`None`; the logging wrapper finalizes a success log.              |
+
+## 7. Failure Modes
+
+| Boundary            | Failure                                                                                                                         | Required handling                                                                                            |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Dataset paths       | Raw dataset directory does not exist                                                                                            | Raise`FileNotFoundError` before run discovery or writing.                                                  |
+| Dataset paths       | Raw directory name and audit parent name disagree                                                                               | Raise`OmniPreprocessSpecError` before run discovery or writing.                                            |
+| CLI parsing         | Required config path is absent or an argument is invalid                                                                        | Let`argparse` raise `SystemExit` before the logging wrapper is initialized.                              |
+| Configuration       | A required OMNI preprocessing key is missing                                                                                    | Let`KeyError` propagate inside wrapped main logic so the logging wrapper finalizes an error log.           |
+| Configuration       | A required path component is not a non-empty string, or the audit output name is not`long-observations`                       | Raise`ValueError` inside wrapped main logic so the logging wrapper finalizes an error log.                 |
+| Manifest parsing    | JSON is malformed or its top level is not an object                                                                             | Raise`OmniPreprocessSpecError`.                                                                            |
+| Manifest identity   | Missing run object, empty run ID/status, unknown status, timestamp disagreement, or run-directory disagreement                  | Raise`OmniPreprocessSpecError`; eligibility cannot be established safely.                                  |
+| Successful manifest | Missing`source.dataset_id`, missing artifact object, or dataset mismatch                                                      | Raise`OmniPreprocessSpecError`.                                                                            |
+| Manifest discovery  | Two validated candidates resolve to the same run ID                                                                             | Raise`OmniPreprocessSpecError`.                                                                            |
+| Chunk discovery     | Successful manifest has no non-empty chunk-record list                                                                          | Raise`OmniPreprocessSpecError`. A successful empty response must still have a recorded chunk payload.      |
+| Chunk record        | Record is not an object, filename is unsafe, filename does not match`chunk_*.json`, filename is repeated, or file is absent   | Raise`OmniPreprocessSpecError` before DuckDB reads it.                                                     |
+| Query inputs        | Manifest paths or chunk paths are empty                                                                                         | Raise`ValueError`.                                                                                         |
+| HAPI shape          | `parameters` is null/empty, its first name is missing/null/not `Time`, or an observation length differs from `parameters` | Abort query execution and propagate the DuckDB error; do not commit staged output.                           |
+| HAPI values         | Timestamp, observation value, fill value, or parameter metadata cannot be interpreted by the query                              | Let the DuckDB exception propagate.                                                                          |
+| Write arguments     | Mode is not`append` or `overwrite`, or SQL is blank                                                                         | Raise`ValueError` before staging or writing.                                                               |
+| Staging             | Query/COPY fails or produces no run partitions                                                                                  | Propagate the dependency error, or raise`OmniPreprocessSpecError` for no partitions; do not commit output. |
+| Increment staging   | Staged output contains zero or more than one run partition                                                                      | Raise`OmniPreprocessSpecError` before append.                                                              |
+| Increment commit    | Target run partition already exists                                                                                             | Raise`OmniPreprocessSpecError`; preserve the existing partition.                                           |
+| Increment commit    | Filesystem move fails                                                                                                           | Propagate; do not report success.                                                                            |
+| Rebuild replacement | Moving the staged result fails after the old output was backed up and the final path is absent                                  | Restore the backup when possible, then re-raise the original replacement failure.                            |
+| Rebuild restoration | Restoring the backup also fails                                                                                                 | Propagate the restoration failure; filesystem replacement is staged but not transactionally atomic.          |
+
+Malformed chunk JSON is allowed to fail when DuckDB reads the manifest-selected
+file. Preprocessing does not repair raw artifacts. Source HTTP/HAPI response
+validation belongs to ingestion and is not repeated here.
+
+## 8. Data Contracts
+
+### 8.1 Raw directory contract
+
+```text
+<raw_root>/
+    <dataset_id>/
+        run_id=<run_id>/
+            _manifest.json
+            chunk_<start>__<end>.json
+            ...
+```
+
+`raw_dataset_dir` points to `<raw_root>/<dataset_id>/`. The directory must
+exist before either public orchestrator proceeds.
+
+### 8.2 Manifest contract used by preprocessing
+
+Every discovered manifest requires:
+
+```text
+run.run_id: non-empty string
+run.created_at_utc: exactly equal to run.run_id
+run.status: RUNNING | SUCCESS | FAILED
+parent directory: run_id=<run.run_id>
+```
+
+Only a `SUCCESS` manifest additionally requires:
+
+```text
+source.dataset_id: non-empty string equal to raw_dataset_dir.name
+artifacts: object
+artifacts.chunks: non-empty list of chunk records
+artifacts.chunks[*].file: unique safe basename matching chunk_*.json
+```
+
+Each recorded file must exist under the manifest's run directory. Preprocessing
+does not require success-only fields from valid non-success manifests.
+
+### 8.3 Raw chunk contract
+
+Each selected chunk is a complete accepted CDAWeb HAPI `/data?format=json`
+payload written by the ingestion contract in `spec-05`.
+
+Fields used by preprocessing:
+
+```text
+parameters: ordered list of parameter definitions
+parameters[1].name: Time
+parameters[2:]: non-time parameter definitions
+data: list of positional observation arrays
+data[*][1]: timestamp corresponding to Time
+data[*][2:]: values corresponding to parameters[2:]
+```
+
+Each parameter definition used in the long audit supplies:
+
+```text
+name
+fill
+units
+type
+```
+
+> NOTE: Parameter definitions may omit `fill`, including Time-only chunks. An absent or null fill produces a null `source_fill_value`. Reading a chunk **must not** depend on another chunk supplying that field.
+
+Each observation array must have the same length as `parameters`.
+
+`parameters=[]` is invalid. A Time-only response, `parameters=[Time]`, is
+valid: timestamps are indexes rather than long-observation values, so that
+run contributes exactly one sentinel if no chunk contains non-time values.
+
+[HAPI 2.0 parameter subsetting](https://github.com/hapi-server/data-specification/blob/master/hapi-2.0.0/HAPI-data-access-spec-2.0.0.md)
+requires the primary time parameter first and includes it even when not
+requested. Requesting only `BX_GSE` therefore returns Time plus BX_GSE;
+requesting only Time returns only the time column. Omitting the `parameters`
+request argument returns all parameters, not a Time-only response. HAPI does
+not universally require the primary time parameter to be named `Time`; that
+name is this project's selected OMNI contract.
+
+### 8.4 Long-observation schema
+
+| Column                   | Logical type             | Ordinary row                                       | Sentinel row |
+| ------------------------ | ------------------------ | -------------------------------------------------- | ------------ |
+| `dataset_id`           | string                   | Source dataset ID                                  | Populated    |
+| `run_id`               | string                   | Ingestion run ID                                   | Populated    |
+| `chunk_file`           | string                   | Chunk basename                                     | Null         |
+| `source_row_number`    | integer                  | One-based row position within the chunk            | Null         |
+| `observation_time_utc` | UTC-normalized timestamp | Value from the first source-array element          | Null         |
+| `parameter_name`       | string                   | Non-time HAPI parameter name                       | Null         |
+| `raw_value`            | double                   | Source observation value, including fills          | Null         |
+| `source_fill_value`    | double or null           | Fill value from the parameter definition           | Null         |
+| `units`                | string or null           | Units from the parameter definition                | Null         |
+| `parameter_type`       | string                   | Type from the parameter definition                 | Null         |
+| `is_source_fill`       | boolean                  | True only when a non-null fill equals`raw_value` | Null         |
+
+The construction grain for an ordinary row is one successful run, chunk,
+source row, and non-time parameter position. `parameter_index` is retained
+inside the query for positional matching but is not persisted in the final
+schema.
+
+The ordinary-row count for one structurally valid chunk is:
+
+```text
+number of source observation arrays * number of non-time parameters
+```
+
+### 8.5 Physical output contract
+
+```text
+<audit_root>/
+    <dataset_id>/
+        long-observations/
+            run_id=<run_id>/
+                *.parquet
+```
+
+The Parquet filename inside a partition is a DuckDB serialization detail and
+is not part of the contract. Partition identity is `run_id`.
+
+Existing audit rows are not re-read to verify `dataset_id` in the current
+implementation. The dedicated directory layout, path-alignment check, and
+successful-manifest dataset check establish the current one-dataset boundary.
+
+## 9. Interface Design
+
+### 9.1 Public interfaces
+
+```python
+class OmniPreprocessSpecError(RuntimeError):
+    """Raised when raw OMNI artifacts violate preprocessing contracts."""
+
+
+def build_long_observation_select_sql(
+    manifest_paths: list[str],
+    chunk_paths: list[str],
+) -> str:
+    """Build the complete long-observation audit query."""
+
+
+def pick_oldest_unprocessed_successful_run(
+    raw_dataset_dir: str | Path,
+    audit_output_dir: str | Path,
+) -> str | None:
+    """Return the oldest successful run absent from the long audit."""
+
+
+def write_audit_table(
+    long_observation_sql: str,
+    output_dir: str | Path,
+    *,
+    mode: str,
+) -> Path:
+    """Append one run or overwrite the run-partitioned long audit."""
+
+
+def increment_successful_run(
+    raw_dataset_dir: str | Path,
+    audit_output_dir: str | Path,
+) -> Path | None:
+    """Append the oldest unprocessed successful run to the long audit."""
+
+
+def rebuild_successful_runs(
+    raw_dataset_dir: str | Path,
+    audit_output_dir: str | Path,
+) -> Path:
+    """Rebuild the long audit from every successful raw run."""
+
+
+# entrypoint/preproc_omni.py
+def parse_args() -> argparse.Namespace:
+    """Parse OMNI preprocessing CLI arguments."""
+
+
+def main() -> None:
+    """Resolve paths and run incremental or rebuild preprocessing."""
+```
+
+`write_audit_table()` accepts only `mode="append"` or `mode="overwrite"`.
+The two public orchestrators supply those modes; callers should not infer a
+third partial or merge mode.
+
+### 9.2 Contract-bearing private helpers worth unit testing
+
+```python
+def _read_manifest_json(path: Path) -> dict: ...
+
+def _validate_dataset_paths(
+    raw_dataset_dir: str | Path,
+    audit_output_dir: str | Path,
+) -> None: ...
+
+def _validate_manifest_for_preprocessing(
+    payload: dict,
+    path: Path,
+    expected_dataset_id: str,
+) -> tuple[str, str]: ...
+
+def _discover_successful_manifests(
+    raw_dataset_dir: str | Path,
+) -> list[Path]: ...
+
+def _read_processed_run_ids(
+    audit_output_dir: str | Path,
+) -> set[str]: ...
+
+def _discover_chunk_paths(manifest_path: Path) -> list[Path]: ...
+```
+
+These private helpers encode raw-artifact eligibility and incremental
+selection contracts. The remaining private SQL-fragment and quoting helpers
+are implementation details and should not be tested through exact SQL text.
+
+### 9.3 CLI and configuration
+
+The user-facing module is:
+
+```text
+entrypoint/preproc_omni.py
+```
+
+Run it from the project root:
+
+```powershell
+# Incremental mode
+python -m entrypoint.preproc_omni --config_path config/local.yaml
+
+# Rebuild mode
+python -m entrypoint.preproc_omni `
+    --config_path config/local.yaml `
+    --rebuild
+```
+
+Configuration contract:
+
+```yaml
+omni:
+  hapi:
+    dataset_id: "OMNI_HRO2_1MIN"
+    raw_output_dir: "data/01-raw/omni"
+  preprocessing:
+    audit_base_dir: "data/02-preprocessed/omni"
+    audit_output_name: "long-observations"
+```
+
+The entrypoint uses these required values:
+
+| Key                                      | Meaning                                                    |
+| ---------------------------------------- | ---------------------------------------------------------- |
+| `omni.hapi.dataset_id`                 | Stable dataset identity shared with ingestion.             |
+| `omni.hapi.raw_output_dir`             | Default raw base containing dataset directories.           |
+| `omni.preprocessing.audit_base_dir`    | Default preprocessed base containing dataset directories.  |
+| `omni.preprocessing.audit_output_name` | Stable audit dataset leaf, currently`long-observations`. |
+
+Each value must be a non-empty string. The current audit output name is
+`long-observations`; changing that physical contract requires a future spec
+change. Missing keys propagate as `KeyError`. The entrypoint raises
+`ValueError` when a required value is not a non-empty string or when the audit
+output name differs from `long-observations`.
+
+CLI contract:
+
+| Argument             | Required | Behavior                                                          |
+| -------------------- | -------- | ----------------------------------------------------------------- |
+| `--config_path`    | Yes      | YAML configuration path.                                          |
+| `--rebuild`        | No       | Rebuild all successful runs; otherwise process one increment.     |
+| `--raw_base_dir`   | No       | Replace`omni.hapi.raw_output_dir` for this invocation.          |
+| `--audit_base_dir` | No       | Replace`omni.preprocessing.audit_base_dir` for this invocation. |
+| `--log_dir`        | No       | Log directory for this invocation; defaults to `logs`; forwarded unchanged to the wrapper. |
+
+The CLI does not accept `dataset_id` or `audit_output_name` overrides.
+
+After applying optional base-directory overrides, the entrypoint composes:
+
+```python
+raw_dataset_dir = Path(raw_base_dir) / dataset_id
+audit_output_dir = (
+    Path(audit_base_dir)
+    / dataset_id
+    / audit_output_name
+)
+```
+
+With the example configuration, this resolves to:
+
+```text
+data/01-raw/omni/OMNI_HRO2_1MIN/
+data/02-preprocessed/omni/OMNI_HRO2_1MIN/long-observations/
+```
+
+`parse_args()` runs before `run_entrypoint_with_logging()`. The wrapper is
+called with:
+
+```python
+entrypoint_name="preproc_omni"
+log_dir=args.log_dir
+```
+
+The parser owns the `"logs"` default. An override such as `--log_dir temp/logs`
+changes only the logging destination, not raw or audit path composition.
+
+Configuration loading, value validation, path composition, and source
+orchestrator invocation occur inside the wrapped callback. The callback calls
+exactly one source orchestrator:
+
+- `increment_successful_run()` when `--rebuild` is absent;
+- `rebuild_successful_runs()` when `--rebuild` is present.
+
+The callback does not catch source failures. They propagate to the shared
+logging wrapper, which owns fatal logging and terminal `.error.log` status.
+
+## 10. Test Blueprint
+
+Tests should prove this specification rather than incidental source behavior.
+
+Testing framework:
+
+- Use built-in `unittest`.
+- Use named dictionaries for table-driven cases with several fields.
+- Use `subTest()` only for related variants under one contract.
+- Follow `AGENTS.md` and `tests/README.md` for comments and test-specific
+  mechanism explanations.
+
+Test files:
+
+- `tests/omni_audit/test_raw_validation.py`
+- `tests/omni_audit/test_discovery.py`
+- `tests/omni_audit/test_incremental_selection.py`
+- `tests/omni_audit/test_audit_operations.py`
+- `tests/omni_audit/test_orchestration.py`
+- `tests/omni_audit/test_entrypoint.py`
+- `tests/omni_audit/support.py` for fresh deterministic builders shared across
+  modules
+
+Chosen boundary:
+
+- Include pure-helper, temporary-filesystem unit, and mocked-orchestrator unit
+  tests only.
+- Small manifest and chunk files may be created inside
+  `tempfile.TemporaryDirectory()` because parsing and path validation are the
+  unit under test.
+- Entrypoint tests use mocked CLI, config, logging-wrapper, and source
+  boundaries; they do not create runtime directories.
+- Do not execute generated SQL against DuckDB or exercise real Parquet writes
+  in this matrix. Those are deferred integration boundaries.
+
+Suggested deterministic fixtures:
+
+- Dataset ID `OMNI_HRO2_1MIN` and three ordered UTC run IDs.
+- Dataset-specific raw and audit paths owned by one temporary directory.
+- Fresh valid `SUCCESS`, minimal `RUNNING`, and minimal `FAILED` manifest
+  builders.
+- Fresh valid chunk-record builders and empty placeholder chunk files.
+- Sentinel SQL strings used only as mocked collaborator return values in
+  orchestrator tests.
+- A complete OMNI config mapping plus incremental and rebuild
+  `argparse.Namespace` fixtures for entrypoint tests.
+
+Mocks and exact patch targets:
+
+- Patch objects where `src.preprocess.omni_preproc` uses them.
+- Selection tests may patch:
+  - `src.preprocess.omni_preproc._discover_successful_manifests`
+  - `src.preprocess.omni_preproc._read_processed_run_ids`
+  - `src.preprocess.omni_preproc._read_manifest_json`
+- Orchestrator tests may patch:
+  - `src.preprocess.omni_preproc._validate_dataset_paths`
+  - `src.preprocess.omni_preproc.pick_oldest_unprocessed_successful_run`
+  - `src.preprocess.omni_preproc._discover_successful_manifests`
+  - `src.preprocess.omni_preproc._discover_chunk_paths`
+  - `src.preprocess.omni_preproc.build_long_observation_select_sql`
+  - `src.preprocess.omni_preproc.write_audit_table`
+- Early write-validation tests may patch
+  `src.preprocess.omni_preproc.duckdb.connect` to prove no DuckDB work begins.
+- Entrypoint tests patch objects where `entrypoint.preproc_omni` imports them:
+  - `entrypoint.preproc_omni.parse_args`
+  - `entrypoint.preproc_omni.load_config`
+  - `entrypoint.preproc_omni.increment_successful_run`
+  - `entrypoint.preproc_omni.rebuild_successful_runs`
+  - `entrypoint.preproc_omni.run_entrypoint_with_logging`
+
+### Unit test matrix
+
+| Test group                                 | Test name                                                                               | Test description                                                            | Boundary                  | Scenario / fixture                                                                                                       | Expected result                               | Mocks / patches                                                             | Minimum assertions                                                                                                                                                           |
+| ------------------------------------------ | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TestValidateDatasetPaths`               | `test_validate_dataset_paths_matching_paths_returns_none`                             | Accept aligned dataset-specific paths without creating output.              | Temporary-filesystem unit | Existing raw`<dataset_id>` directory and audit parent with the same ID                                                 | Validation succeeds                           | None                                                                        | Return is`None`; no audit directory is created                                                                                                                             |
+|                                            | `test_validate_dataset_paths_missing_raw_directory_raises_file_not_found`             | Reject preprocessing when its raw dataset directory is absent.              | Temporary-filesystem unit | Raw path does not exist                                                                                                  | Reject before other work                      | None                                                                        | Raises`FileNotFoundError`; audit path remains absent                                                                                                                       |
+|                                            | `test_validate_dataset_paths_mismatched_audit_parent_raises_spec_error`               | Prevent raw and audit paths from identifying different datasets.            | Temporary-filesystem unit | Existing raw directory and different audit parent ID                                                                     | Reject dataset mixing                         | None                                                                        | Raises`OmniPreprocessSpecError`; audit path remains absent                                                                                                                 |
+| `TestReadManifestJson`                   | `test_read_manifest_json_valid_object_returns_payload`                                | Decode a manifest whose top level is a JSON object.                         | Temporary-filesystem unit | Small valid JSON object                                                                                                  | Return decoded object                         | None                                                                        | Returned dictionary equals fixture                                                                                                                                           |
+|                                            | `test_read_manifest_json_invalid_content_raises_spec_error`                           | Reject malformed JSON and valid JSON with the wrong top-level shape.        | Temporary-filesystem unit | Malformed JSON and valid non-object JSON as named subtests                                                               | Reject both forms                             | None                                                                        | Each case raises`OmniPreprocessSpecError`                                                                                                                                  |
+| `TestValidateManifestForPreprocessing`   | `test_validate_manifest_for_preprocessing_non_success_statuses_require_only_identity` | Allow valid non-success runs without inspecting success-only metadata.      | Pure helper               | Minimal valid`RUNNING` and `FAILED` manifests without `source` or `artifacts`                                    | Return identity and status                    | None                                                                        | Returned run ID and status match each case; no success-only metadata is required                                                                                             |
+|                                            | `test_validate_manifest_for_preprocessing_success_requires_matching_metadata`         | Accept a successful manifest with complete matching metadata.               | Pure helper               | Valid successful manifest in matching run directory                                                                      | Accept eligible run                           | None                                                                        | Returns exact run ID and`SUCCESS`                                                                                                                                          |
+|                                            | `test_validate_manifest_for_preprocessing_invalid_identity_or_status_raises`          | Reject manifests whose run identity or lifecycle status is unreliable.      | Pure helper               | Missing/non-object run, empty ID/status, unknown status, timestamp mismatch, and directory mismatch                      | Reject uncertain eligibility                  | None                                                                        | Every named case raises`OmniPreprocessSpecError`                                                                                                                           |
+|                                            | `test_validate_manifest_for_preprocessing_invalid_success_metadata_raises`            | Reject successful manifests without valid dataset and artifact metadata.    | Pure helper               | Missing/non-object source, missing dataset ID, missing/non-object artifacts, and dataset mismatch                        | Reject ineligible success                     | None                                                                        | Every named case raises`OmniPreprocessSpecError`                                                                                                                           |
+| `TestDiscoverSuccessfulManifests`        | `test_discover_successful_manifests_skips_non_success_and_orders_successes`           | Select only successful manifests in deterministic oldest-first order.       | Temporary-filesystem unit | Two successful runs created out of order plus minimal running and failed runs                                            | Return only successes oldest first            | None                                                                        | Exact successful paths returned in run-ID order; non-success paths absent                                                                                                    |
+|                                            | `test_discover_successful_manifests_invalid_candidate_raises`                         | Fail discovery when any candidate's eligibility cannot be established.      | Temporary-filesystem unit | Candidate manifest with malformed or invalid common identity                                                             | Do not silently skip unknown eligibility      | None                                                                        | Raises`OmniPreprocessSpecError` rather than returning remaining successes                                                                                                  |
+|                                            | `test_discover_successful_manifests_duplicate_validated_run_ids_raise`                | Prevent two candidate manifests from representing the same run.             | Pure coordination unit    | Two candidate paths whose validator reports the same run ID                                                              | Reject duplicate identity                     | Patch`_read_manifest_json` and `_validate_manifest_for_preprocessing`   | Raises`OmniPreprocessSpecError`; both candidates were considered only until duplicate detection                                                                            |
+| `TestDiscoverChunkPaths`                 | `test_discover_chunk_paths_returns_only_sorted_recorded_files`                        | Resolve recorded chunks deterministically while ignoring unrelated files.   | Temporary-filesystem unit | Successful manifest records two existing chunks out of order; unrelated JSON also exists                                 | Return only recorded chunks in filename order | None                                                                        | Exact sorted paths returned; unrelated JSON absent                                                                                                                           |
+|                                            | `test_discover_chunk_paths_non_success_manifest_raises`                               | Prevent direct chunk discovery from an ineligible run.                      | Temporary-filesystem unit | Valid minimal running or failed manifest                                                                                 | Reject direct non-success chunk discovery     | None                                                                        | Each status raises`OmniPreprocessSpecError`                                                                                                                                |
+|                                            | `test_discover_chunk_paths_invalid_records_raise`                                     | Reject unusable or unsafe manifest-recorded chunk references.               | Temporary-filesystem unit | Missing/empty/non-list chunks, non-object record, unsafe path, wrong prefix/suffix, duplicate filename, and missing file | Reject before DuckDB reads                    | None                                                                        | Every named case raises`OmniPreprocessSpecError`                                                                                                                           |
+| `TestReadProcessedRunIds`                | `test_read_processed_run_ids_absent_audit_returns_empty_set`                          | Treat an absent or empty audit dataset as having no processed runs.         | Temporary-filesystem unit | Missing audit directory and existing directory with no Parquet files                                                     | No runs are processed yet                     | Patch`src.preprocess.omni_preproc.duckdb.connect`                         | Both cases return an empty set; DuckDB is not opened                                                                                                                         |
+| `TestPickOldestUnprocessedSuccessfulRun` | `test_pick_oldest_unprocessed_successful_run_returns_oldest_missing_run`              | Select the first successful run not represented in the audit.               | Orchestrator unit         | Ordered successful paths with the first run processed                                                                    | Select next oldest run                        | Patch discovery, processed-ID reader, and manifest reader                   | Exact next run ID returned; collaborators called with supplied paths                                                                                                         |
+|                                            | `test_pick_oldest_unprocessed_successful_run_all_processed_returns_none`              | Report that preprocessing is caught up when every success is represented.   | Orchestrator unit         | Every successful run ID is in processed set                                                                              | Report caught-up state                        | Patch discovery, processed-ID reader, and manifest reader                   | Returns`None`; no unrelated I/O occurs                                                                                                                                     |
+|                                            | `test_pick_oldest_unprocessed_successful_run_multiple_missing_returns_first`          | Select the oldest pending run when several successful runs are unprocessed. | Orchestrator unit         | Three ordered successes: oldest processed, middle and newest unprocessed                                                 | Select middle run                             | Patch discovery, processed-ID reader, and manifest reader                   | Exact middle run ID returned; collaborators called with supplied paths                                                                                                       |
+| `TestBuildLongObservationSelectSql`      | `test_build_long_observation_select_sql_empty_path_lists_raise`                       | Reject query construction without both manifest and chunk inputs.           | Pure helper               | Empty manifest list and empty chunk list as named subtests                                                               | Reject unusable query inputs                  | None                                                                        | Each case raises`ValueError`; no assertion depends on SQL formatting                                                                                                       |
+| `TestWriteAuditTableValidation`          | `test_write_audit_table_invalid_arguments_raise_before_duckdb`                        | Reject unsupported write requests before staging or opening DuckDB.         | Pure coordination unit    | Unsupported mode and blank SQL as named subtests                                                                         | Reject before staging                         | Patch`src.preprocess.omni_preproc.duckdb.connect`                         | Each case raises`ValueError`; DuckDB is not opened; output is not created                                                                                                  |
+| `TestIncrementSuccessfulRun`             | `test_increment_successful_run_validates_paths_before_selection`                      | Enforce the dataset boundary before incremental run selection.              | Orchestrator unit         | Dataset-path validator raises fixed exception                                                                            | Stop before selection                         | Patch validator and all later collaborators                                 | Same exception propagates; picker, query builder, and writer are not called                                                                                                  |
+|                                            | `test_increment_successful_run_caught_up_returns_none`                                | Complete increment as a no-op when no run needs processing.                 | Orchestrator unit         | Picker returns`None`                                                                                                   | Complete as no-op                             | Patch validator, picker, chunk discovery, query builder, and writer         | Returns`None`; chunk discovery, query builder, and writer are not called                                                                                                   |
+|                                            | `test_increment_successful_run_coordinates_one_run_append`                            | Coordinate query construction and append for exactly one selected run.      | Orchestrator unit         | Picker returns one run with two recorded chunks                                                                          | Build and append one run                      | Patch validator, picker, chunk discovery, query builder, and writer         | Exact manifest/chunk path lists reach builder; writer receives`mode="append"`; exact writer path is returned                                                               |
+|                                            | `test_increment_successful_run_failure_propagates_and_stops_later_work`               | Propagate incremental discovery failure without querying or writing.        | Orchestrator unit         | Chunk discovery raises fixed exception                                                                                   | Fail without query/write                      | Patch validator, picker, chunk discovery, query builder, and writer         | Same exception propagates; builder and writer are not called                                                                                                                 |
+| `TestRebuildSuccessfulRuns`              | `test_rebuild_successful_runs_validates_paths_before_discovery`                       | Enforce the dataset boundary before rebuild discovery.                      | Orchestrator unit         | Dataset-path validator raises fixed exception                                                                            | Stop before discovery                         | Patch validator and all later collaborators                                 | Same exception propagates; discovery, builder, and writer are not called                                                                                                     |
+|                                            | `test_rebuild_successful_runs_no_successful_manifests_raises`                         | Refuse to replace the audit when no successful runs exist.                  | Orchestrator unit         | Discovery returns an empty list                                                                                          | Reject empty rebuild                          | Patch validator, successful-manifest discovery, query builder, and writer   | Raises`OmniPreprocessSpecError`; builder and writer are not called                                                                                                         |
+|                                            | `test_rebuild_successful_runs_coordinates_all_runs_overwrite`                         | Coordinate one complete overwrite from every eligible run and chunk.        | Orchestrator unit         | Two successful manifests with deterministic chunk lists                                                                  | Build and replace complete audit              | Patch validator, manifest/chunk discovery, query builder, and writer        | Every manifest and chunk reaches builder in order; writer receives`mode="overwrite"`; exact writer path is returned                                                        |
+|                                            | `test_rebuild_successful_runs_chunk_discovery_failure_stops_rebuild`                  | Propagate chunk discovery failure before rebuilding or replacing output.    | Orchestrator unit         | A successful manifest's chunk discovery raises fixed exception                                                           | Fail before query/write                       | Patch validator, manifest/chunk discovery, query builder, and writer        | Same exception propagates; query builder and writer are not called                                                                                                           |
+| `TestParseArgs`                          | `test_parse_args_minimal_values_default_to_incremental`                               | Parse the required config path while retaining incremental defaults.        | CLI unit                  | `sys.argv` contains only `--config_path`                                                                             | Incremental arguments                         | Patch`sys.argv`                                                           | Config path preserved;`rebuild` is false; both base overrides are `None`; `log_dir` defaults to `logs`                                                                                                 |
+|                                            | `test_parse_args_rebuild_and_path_overrides`                                          | Parse rebuild mode and base-directory and log-directory overrides.               | CLI unit                  | `sys.argv` contains config path, `--rebuild`, both base overrides, and `--log_dir`                                            | Rebuild arguments                             | Patch`sys.argv`                                                           | Rebuild is true; raw, audit, and log override strings are preserved                                                                                                                |
+| `TestMain`                               | `test_main_incremental_composes_config_paths_and_forwards_arguments`                  | Compose default dataset paths and invoke incremental preprocessing.         | CLI/logging lifecycle     | Incremental namespace and complete config mapping                                                                        | Run one increment inside wrapper              | Patch entrypoint-local parser, config loader, source functions, and wrapper | Config and source calls wait for callback execution; wrapper receives`preproc_omni` and the parsed `log_dir`; increment receives exact composed `Path` values; rebuild is not called |
+|                                            | `test_main_rebuild_uses_base_overrides_and_forwards_arguments`                        | Compose dataset paths from CLI base overrides and invoke rebuild.           | CLI/logging lifecycle     | Rebuild namespace with raw/audit base overrides and `log_dir` override                                                                      | Run one rebuild inside wrapper                | Patch entrypoint-local parser, config loader, source functions, and wrapper | Rebuild receives exact override-based`Path` values; wrapper receives parsed log override; increment is not called                                                                                                |
+|                                            | `test_main_invalid_required_config_values_raise_before_source_call`                   | Reject missing, empty, or unsupported preprocessing path configuration.     | CLI/logging lifecycle     | Named cases for a missing key, empty required value, and changed audit output name                                       | Fail inside wrapped callback                  | Patch entrypoint-local parser, config loader, source functions, and wrapper | Missing key raises`KeyError`; other cases raise `ValueError`; neither source orchestrator is called                                                                      |
+|                                            | `test_main_parse_failure_occurs_before_logging_wrapper`                               | Keep argument parsing failures outside the logging lifecycle.               | CLI/logging lifecycle     | Parser raises a fixed`SystemExit`                                                                                      | Propagate parse failure                       | Patch entrypoint-local parser, config loader, source functions, and wrapper | Same`SystemExit` propagates; wrapper, config loader, and source functions are not called                                                                                   |
+
+Things not to over-test:
+
+- Exact SQL whitespace, indentation, or private CTE-builder call order.
+- Exact log wording.
+- DuckDB's implementation of `UNNEST`, Parquet serialization, or partition
+  filenames in unit tests.
+- Incidental positional mock-call style where argument values are what the
+  contract requires.
+- Marker files, because they are not read by this preprocessing feature.
+
+### Integration verification
+
+The following matrix is separate from the unit-test matrix. Its four modules
+and shared `tests/omni_audit/integration_support.py` are implemented. The user
+reports all audit tests passed; project-wide tests remain a separate check.
+
+- `tests/omni_audit/test_integration_incremental_new_audit.py`
+- `tests/omni_audit/test_integration_incremental_existing_audit.py`
+- `tests/omni_audit/test_integration_rebuild.py`
+- `tests/omni_audit/test_integration_malformed_contracts.py`
+
+- Use real DuckDB, JSON, Parquet, and filesystem operations
+  inside test-owned `TemporaryDirectory` instances.
+- No live CDAWeb calls or
+  ignored runtime-directory access is permitted; preprocessing needs no network
+  mocks.
+- Reuse fresh manifest builders from `tests/omni_audit/support.py` and
+  write miniature chunk payloads programmatically during Arrange.
+
+Use four runs in oldest-first order, all under one dataset directory:
+
+| Run | Status  | Recorded chunk contents                                   | Expected audit                          |
+| --- | ------- | --------------------------------------------------------- | --------------------------------------- |
+| A   | SUCCESS | Two chunks, each with Time, F, BX_GSE and one observation | Four ordinary rows                      |
+| B   | FAILED  | No recorded chunks; one unrelated malformed file          | Excluded; malformed chunk is never read |
+| C   | SUCCESS | Time-only definitions and two timestamp rows              | One sentinel                            |
+| D   | SUCCESS | Time, F, BX_GSE definitions and`data=[]`                | One sentinel                            |
+
+#### Temporary directory layout
+
+Create these real files programmatically during Arrange. A-D are labels for
+the concrete run IDs below, not directory names.
+
+```text
+<temporary directory>/
+    raw/OMNI_HRO2_1MIN/
+        run_id=20260801T021300Z/                         # A
+            _manifest.json
+            chunk_20260101T000000Z__20260101T000100Z.json
+            chunk_20260101T000100Z__20260101T000200Z.json
+        run_id=20260802T021300Z/                         # B
+            _manifest.json
+            chunk_unrelated.json
+        run_id=20260803T021300Z/                         # C
+            _manifest.json
+            chunk_20260101T000000Z__20260101T000200Z.json
+        run_id=20260804T021300Z/                         # D
+            _manifest.json
+            chunk_20260101T000000Z__20260101T000200Z.json
+```
+
+The audit target is
+`<temporary directory>/audit/OMNI_HRO2_1MIN/long-observations/`.
+It is initially absent. Existing-audit cases create it through real
+preprocessing during Arrange rather than hand-writing Parquet.
+
+#### Exact manifest fixtures
+
+For each successful run, construct this minimal preprocessing manifest,
+substituting its concrete run ID and recorded chunk filenames:
+
+```json
+{
+  "run": {
+    "run_id": "<run ID>",
+    "created_at_utc": "<same run ID>",
+    "status": "SUCCESS"
+  },
+  "source": {"dataset_id": "OMNI_HRO2_1MIN"},
+  "artifacts": {"chunks": [{"file": "<recorded chunk filename>"}]}
+}
+```
+
+- A records both chunk files shown in its directory, in chronological order.
+- C and D each record their single chunk file.
+- These fixtures exercise the preprocessing contract, not every field of a
+  complete ingestion manifest. Reuse `valid_manifest_payload()` with explicit
+  run IDs and chunk filenames.
+
+B's complete manifest is deliberately identity-only:
+
+```json
+{
+  "run": {
+    "run_id": "20260802T021300Z",
+    "created_at_utc": "20260802T021300Z",
+    "status": "FAILED"
+  }
+}
+```
+
+B's unreferenced `chunk_unrelated.json` contains the exact invalid JSON text
+`{`. It must never be read; valid non-success runs are skipped before chunk
+discovery.
+
+#### Exact chunk fixtures
+
+Define the shared ordered parameter metadata once:
+
+```json
+[
+  {"name": "Time", "type": "isotime", "units": "UTC"},
+  {"name": "F", "type": "double", "units": "nT", "fill": 9999.99},
+  {"name": "BX_GSE", "type": "double", "units": "nT", "fill": 9999.99}
+]
+```
+
+Call this list `ALL_PARAMETERS` in fixture construction; `TIME_PARAMETERS`
+contains only its first definition. These are notation for fresh JSON lists,
+not strings or references stored in the files. Each chunk is a complete JSON
+object with `HAPI`, `status`, `format`, `parameters`, and `data`:
+
+```json
+{
+  "HAPI": "2.0",
+  "status": {"code": 1200, "message": "OK"},
+  "format": "json",
+  "parameters": [],
+  "data": []
+}
+```
+
+The empty lists above are substitution slots, not a valid ordinary fixture.
+Replace them using the exact values in this table; D also replaces `status`.
+
+| Run / chunk | parameters      | data                                                             | status                                                       |
+| ----------- | --------------- | ---------------------------------------------------------------- | ------------------------------------------------------------ |
+| A / first   | ALL_PARAMETERS  | `[["2026-01-01T00:00:00.000Z", 9.85, -1.39]]`                  | `{"code": 1200, "message": "OK"}`                          |
+| A / second  | ALL_PARAMETERS  | `[["2026-01-01T00:01:00.000Z", 9.77, 9999.99]]`                | `{"code": 1200, "message": "OK"}`                          |
+| C / only    | TIME_PARAMETERS | `[["2026-01-01T00:00:00.000Z"], ["2026-01-01T00:01:00.000Z"]]` | `{"code": 1200, "message": "OK"}`                          |
+| D / only    | ALL_PARAMETERS  | `[]`                                                           | `{"code": 1201, "message": "OK - no data for time range"}` |
+
+D is synthetic valid empty JSON; it does not reproduce the malformed
+1201-like server response observed during ingestion prototyping.
+
+#### Expected audit rows
+
+F and BX_GSE are `double`, units `nT`, fill `9999.99`. Both A chunks
+contain the complete ordered definitions. A produces these four rows:
+
+| Time (UTC)          | Parameter | raw_value | source_fill_value | is_source_fill |
+| ------------------- | --------- | --------- | ----------------- | -------------- |
+| 2026-01-01 00:00:00 | F         | 9.85      | 9999.99           | False          |
+| 2026-01-01 00:00:00 | BX_GSE    | -1.39     | 9999.99           | False          |
+| 2026-01-01 00:01:00 | F         | 9.77      | 9999.99           | False          |
+| 2026-01-01 00:01:00 | BX_GSE    | 9999.99   | 9999.99           | True           |
+
+All four ordinary rows have `dataset_id="OMNI_HRO2_1MIN"`,
+`run_id="20260801T021300Z"`, `source_row_number=1`, `units="nT"`, and
+`parameter_type="double"`. Their `chunk_file` is A's first filename for
+00:00 and second filename for 00:01.
+
+| Sentinel | dataset_id     | run_id           | All remaining output columns |
+| -------- | -------------- | ---------------- | ---------------------------- |
+| C        | OMNI_HRO2_1MIN | 20260803T021300Z | null                         |
+| D        | OMNI_HRO2_1MIN | 20260804T021300Z | null                         |
+
+B contributes no row. The complete rebuilt audit has six rows and partitions
+for A, C, and D. Compare rows by named fields without depending on Parquet
+read order.
+
+#### Integration test matrix
+
+Malformed-contract cases use separate variants of a successful fixture,
+not modifications to the shared valid A-D scenario. Change only the relevant
+parameter metadata or observation shape and preserve valid manifest identity.
+
+| Test description                             | Arrange / execution                                                                                            | Minimum assertions                                                                                                                                                                                       |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Incremental lifecycle without an audit       | Arrange raw data for A-D; call increment four times                                                           | First three calls return the audit output path and add A, C, D respectively; fourth returns`None`; each append preserves previous rows; final audit has three run partitions and six rows; B is absent |
+| Incremental lifecycle with an existing audit | Materialize A through real increment during Arrange; continue incrementing                                     | C then D are appended; next call returns`None`; A is unchanged and not duplicated                                                                                                                      |
+| Rebuild and sentinel behavior                | Materialize A alone during Arrange; rebuild using A-D                                                          | Replacement contains all six expected rows and three partitions; C and D each have exactly one sentinel; B is absent                                                                                     |
+| Malformed positional contracts               | Named cases: empty parameters with`data=[]`, non-Time first name, and observation/definition length mismatch; both orchestrators with absent/existing audit | DuckDB failure propagates with the case-specific contract diagnostic below; no malformed run partition is committed; existing rows and partitions remain unchanged |
+
+The malformed cases require these stable error-message fragments as diagnostic
+contracts, not merely log wording:
+
+| Violated rule | Required error fragment |
+| --- | --- |
+| Empty parameter list, including when `data=[]` | `OMNI chunk has no parameter definitions` |
+| First definition name is not `Time` | `OMNI first parameter must be Time` |
+| Observation/definition lengths differ | `OMNI observation length does not match parameters` |
+
+Assert the corresponding fragment within the propagated `duckdb.Error` for
+all 12 shape/state/orchestrator combinations. Do not assert the full DuckDB
+exception sentence, prefix, or temporary paths. An unrelated binding error
+must not satisfy a contract-rejection test.
+
+Additional coverage remains deferred: real append collisions, rebuild
+restoration after filesystem failure, and timestamp/source-row variants.
+Retain the notebook as a manual real-payload smoke test rather than replacing
+it with synthetic fixtures.
+
+## 11. Notebook Implementation Notes
+
+`notebooks/07_omni_preproc_exploration.ipynb` established the relational
+decomposition and allowed each intermediate CTE result to be inspected before
+the query was modularized into `src/preprocess/omni_preproc.py`.
+
+`notebooks/08_omni_audit_table_smoke_test.ipynb` provided non-normative smoke
+evidence for:
+
+- Oldest-first incremental appends.
+- Multiple run partitions remaining readable as one audit dataset.
+- Rebuild replacement and repeated-rebuild equivalence.
+- Preserving and flagging source fill placeholders.
+- A Time-only run producing exactly one sentinel.
+- CDAWeb returning `Time` first when only a numerical parameter was requested.
+
+The notebooks remain exploratory and smoke-test artifacts. They do not replace
+the contract or automated tests.
+
+## 12. Acceptance Criteria
+
+The audit preprocessing feature satisfies this specification when:
+
+- Both operating modes enforce the one-dataset path and successful-manifest
+  contracts.
+- Only manifest-recorded chunks from eligible successful runs are queried.
+- The generated relation has the exact long-observation schema in Section 8.
+- Source fill values remain raw and are classified by `is_source_fill`.
+- Successful runs with no non-time values produce exactly one sentinel.
+- Observation arrays and parameter definitions are structurally aligned, and
+  `Time` is explicitly validated as the first returned parameter.
+- Increment appends exactly one new run partition or returns `None` when
+  caught up.
+- Rebuild stages a complete replacement and preserves the prior audit when a
+  pre-commit query failure occurs.
+- The entrypoint composes dataset-specific paths from config defaults or CLI
+  base overrides without creating runtime directories itself.
+- Incremental mode is the CLI default and `--rebuild` selects rebuild mode.
+- The entrypoint runs source orchestration through the shared logging wrapper
+  with `entrypoint_name="preproc_omni"` and the parsed `log_dir` (default `logs`).
+- Source exceptions continue to propagate to the logging wrapper.
+- Every unit-test row in Section 10 is implemented and passes.
+- Deferred integration coverage is specified before it is generated.
+
+Non-empty, Time-first parameter validation is implemented. Its actual DuckDB
+execution, including empty-data rejection, is covered by the implemented
+integration suite, which the user reports passed. Deferred coverage remains
+listed separately in Section 10.
+
+## 13. Open Questions
+
+Questions intentionally deferred:
+
+- How should the canonical OMNI table replace source fills, deduplicate
+  `(observation_time_utc, parameter_name)`, and record disagreements?
+- Should parameter metadata disagreements across runs become canonical-table
+  diagnostics or hard failures?
+- Should future hardening re-read existing audit rows to validate dataset ID,
+  or is the dedicated directory boundary sufficient?
+- Should raw chunk integrity later include checksums in addition to existence
+  and JSON readability?
+- What recovery tooling, if any, is needed for a failed rebuild restoration?
+
+Decisions already settled for this version:
+
+- Do not add a separate run-audit table.
+- Do not add a separate processed-run index.
+- Do not partition one physical audit dataset by both dataset ID and run ID.
+- Do not replace source fill placeholders in the audit layer.
+- Do not add partial-success preprocessing semantics.
+- Use `entrypoint/preproc_omni.py` with incremental mode by default and a
+  `--rebuild` flag for complete replacement.
+- Keep dataset ID and audit output name in config; expose raw/audit base
+  overrides and a log-directory override through the CLI.
