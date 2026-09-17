@@ -14,7 +14,6 @@ Specifically, this project covers the ingestion and preprocessing of historical 
 - `data/`: folders for raw -> preprocessed -> features
 - `models/`: saved model artifacts (e.g. `.pkl` files)
 - `specs/`: determines the behavior (the "what") of a feature
-- `notebooks/`: prototyping features to inform `src/`,
 - `tests/`: scripts for testing (e.g. unit tests)
 - `docs/adr`: ADR entries that document rationales of decisions (the "why" of a feature or a decision)
 - `scripts/`: batch `.cmd` scripts to execute Python modules on the command line. Currently only incorporates some modules.
