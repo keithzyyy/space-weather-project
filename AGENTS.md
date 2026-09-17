@@ -3,11 +3,13 @@
 This file is the compact operational "current truth" for future agents working on this repository. It summarizes durable decisions from the Notion ADR-like database for the Space Weather K-index prediction project.
 
 ## Gitignore
-Do not access anything in `.gitignore` except the `.agent/` directory, or unless otherwise explicitly specified. 
+
+Do not access anything in `.gitignore` except the `.agent/` directory, or unless otherwise explicitly specified.
 
 ## Project Workflow
 
 Typical workflow to create a new feature
+
 1. Create branch.
 2. Create rough spec first.
 3. Use notebook only as a spike/scratchpad.
@@ -20,6 +22,7 @@ Typical workflow to create a new feature
 10. Promote only cross-cutting stable rules into `AGENTS.md`.
 
 Notes
+
 - Use ADRs to capture why a decision was made and what alternatives were considered.
 - Use `spec-*.md` files to define what should be built and how it should behave.
 - Treat accepted ADRs as immutable history. If a decision changes, create a new ADR that supersedes the old one instead of silently editing the accepted ADR.
@@ -34,7 +37,6 @@ Notes
 - Keep `entrypoint/` as the user-facing CLI layer that reads config and CLI args.
 - Keep core implementation in `src/` path-explicit and free of hidden user-interface defaults where practical.
 
-
 ## Secrets
 
 - Never store the BoM Space Weather API key in source code, notebooks, committed config, specs, tests, or documentation.
@@ -42,8 +44,8 @@ Notes
 - Load the actual secret from the environment or an ignored `.env` file.
 - Keep `env/`, `.env`, and other secret-bearing files ignored by git.
 
-
 ## Ingestion
+
 - [BoM Space Weather API documentation](https://sws-data.sws.bom.gov.au/)
 - BoM ingestion datetime strings must follow the strict UTC format configured for the API, currently `YYYY-MM-DD HH:mm:ss`.
 - Treat parsed ingestion datetimes as UTC-naive by contract.
@@ -53,7 +55,6 @@ Notes
 - Prefer a single run-oriented ingestion routine that writes to disk and delegates responsibilities to small helpers such as chunk generation, chunk writing, manifest writing, and success/failure marking.
 - Run CLI entrypoints as modules with `python -m ...` from the project root.
 
-
 ## Data Contracts
 
 - Treat `data/01-raw` as append-only, immutable raw lake storage.
@@ -61,7 +62,6 @@ Notes
 - Each run directory should include raw JSONL chunks, `_manifest.json`, and a success or failure marker.
 - Do not mutate raw ingested records to deduplicate or clean them. Perform cleanup in later preprocessing stages.
 - Respect the repository's ignored data and model directories. Do not inspect or modify ignored data/model artifacts unless the user explicitly asks for the exact action.
-
 
 ## Preprocessing
 
@@ -79,12 +79,14 @@ Notes
   - Join K-index observations to station metadata through an explicit api_location -> canonical_station_name lookup, not inferred string matching. Known special cases include Narrabri -> Culgoora and Cocos Island -> Cocos Islands.
   - Appending station metadata to T2 must not remove, duplicate, or modify existing T2 observations; unmatched metadata should remain null with diagnostics.
 
-
 ## Testing Automation Guardrails
+
 **Test library**
+
 - Use built-in `unittest` for new tests unless a future ADR explicitly changes the test framework. Do not introduce `pytest` style fixtures, `pytest.raises`, or `conftest.py` patterns by default.
 
 **Test disciplines/best practices**
+
 - Tests should be contract driven. Always review the spec's test matrix before writing test code. Each generated test should trace back to expected behavior, an invariant, a schema contract, an edge case, or a failure mode.
 - Avoid relying on incidental row ordering, brittle string formatting, or broad snapshot-style assertions unless the ordering or formatting is itself part of the contract.
 - For table-driven tests with more than two input or expected values, prefer dictionaries or named records over positional tuples. Name requested and expected fields explicitly. Use comments for contract intent that field names cannot communicate.
@@ -92,13 +94,15 @@ Notes
 - When testing orchestrators, mock lower-level I/O/network helpers and assert observable coordination contracts: calls made, statuses written, exceptions re-raised, and output paths returned.
 - Although test matrix should have been crystal clear on what to test, it is reminded to not over-test implementation details. Private helpers may be tested when they encode important contracts, but tests should primarily protect public behavior and project data contracts.
 - Add or update tests when changing ingestion, preprocessing, config parsing, or CLI behavior.
+- Whenever possible, construct the tests in **more than one pass**, so that the agent does not construct redundant tests. This remains a generic guide for now, as there is a possibility of turning this into a skill.
 
 **Test comments etiquette**
+
 - Assume the reviewer understands ordinary Python plus Arrange, Act, and Assert. At the first use of every testing-specific mechanism, add a concise inline comment explaining what it does and why this test needs it. When uncertain whether a mechanism is obvious, comment it.
 - If a testing mechanism needs more than two or three concise comment lines to explain, first consider simplifying the test, splitting the behavior, or extracting a clearly named helper. **In such case, ask permission from the reviewer to make such changes since it deviates from the test matrix.**
 
-
 **Test files and code structure**
+
 - Name test files after the behavior/module under test, following the existing `tests/test_*.py` pattern.
 - Name test classes as `Test<ComponentOrFunctionName>` and test methods as `test_<unit>_<scenario>_<expected_behavior>`, for example `test_transform_t1_missing_exits_cleanly`.
 - Keep test function docstrings short and contract-focused. Prefer one or two sentences explaining the boundary being tested; avoid long tutorial-style docstrings unless the setup is genuinely complex.
@@ -109,6 +113,7 @@ Notes
 - Avoid `print()` statements, emojis, and noisy success messages in new tests. Let `unittest -v` provide test progress; assertion messages should explain failures.
 
 **Test boundary selection**
+
 - For pure helpers, test direct inputs and outputs with small explicit cases.
 - For orchestrators, mock lower-level collaborators and assert coordination contracts rather than real I/O.
 - For filesystem, parquet, DuckDB, or logging lifecycle behavior, use real operations inside `tempfile.TemporaryDirectory()` when disk side effects are the contract.
@@ -117,28 +122,31 @@ Notes
 - For progress bars or sleeps, patch them out so tests stay deterministic and quiet.
 
 **Spec test matrix completeness**
+
 - Each test matrix row should identify the function/entrypoint under test, test level (`pure`, `orchestrator`, `filesystem integration`, `parser`, or `CLI/logging lifecycle`), fixtures needed, mocks/patch targets, and minimum assertions.
 - If the exact patch target matters, write the import path explicitly in the spec, for example `src.ingest.space_weather_k_index.post_k_index`.
 - If a test uses real temporary disk writes, DuckDB, parquet, pandas, or BeautifulSoup, say so explicitly in the test matrix instead of leaving the agent to infer it.
 
-
 ## Entrypoints
+
 All future entrypoints should use the shared logging wrapper pattern: create .running.log, rename to .success.log or .error.log, log fatal stack traces only in the wrapper, and re-raise exceptions. Source code in src/ should generally just raise, not duplicate fatal logging.
 
 ## Source code conventions
+
 Helper functions vs functions that implement a behavior or contract in the spec
+
 - No leading underscore:
+
   - functions/classes that appear in the spec's Interface Design section
   - entrypoint-called orchestration functions
   - reusable utilities intended to be imported by other modules
   - functions whose behavior is a durable project contract
-
 - Leading underscore:
+
   - implementation details used **only inside one module**
   - discovery/parsing/formatting helpers not meant to be called externally
   - clock/token/path helpers that support a public function
   - nested or module-local mechanics that specs should not need to cross-check directly
-
 
 ## ADR Supersession Semantics
 
@@ -147,6 +155,7 @@ If an ADR has `status: Accepted` and a non-empty `supersedes` list, treat it as 
 When supersession is partial, clarify the affected scope in the ADR body, usually under `# Context (short)` or `# Consequences (tradeoffs)`. Do not add extra YAML fields such as `partially_supersedes` unless a future ADR changes this convention.
 
 ## Dependencies
+
 - It is acceptable to develop locally in a Conda environment, but install Python packages with `pip` so requirements files remain compatible with Docker.
 - Do not assume Conda is installed inside Docker. Prefer plain Python Docker images with `pip install -r requirements-prod.txt`.
 - Treat requirements files as the source-of-truth shopping list.
@@ -154,8 +163,8 @@ When supersession is partial, clarify the affected scope in the ADR body, usuall
 - Avoid using a broad `pip freeze` dump as the source of truth because it can make Docker builds brittle.
 - Optionally run `pip check` after dependency changes to validate installed package compatibility.
 
-
 ## Project Structure
+
 - Preserve separation of concerns across the repository.
 - Use `config/` for system configuration.
 - Use `entrypoint/` for CLI entrypoints.
@@ -164,4 +173,7 @@ When supersession is partial, clarify the affected scope in the ADR body, usuall
 - Use `docs/adr/` later as the long-form home for migrated ADRs.
 - Keep this root `AGENTS.md` as a concise operating manual, not a full ADR archive.
 
+## Codebase Quizzes
 
+- For repository-grounded quiz sessions, follow `quiz/QUIZ.md` for question structure, grading, repository evidence, and attempt logging.
+- Treat specifications as intended contracts and report disagreements with source or tests explicitly.

@@ -22,6 +22,7 @@ supersedes: []
 Build a CLI-driven ingestion routine for retrieving raw solar-wind observations from the configured OMNI dataset through the CDAWeb HAPI service. The first configured dataset is `OMNI_HRO2_1MIN`.
 
 The feature produces one auditable, append-only raw run directory containing:
+
 - the `/info` metadata used to validate the request;
 - one JSON file per bounded `/data` request;
 - a run manifest describing the request, artifacts, row counts, warnings, and terminal status; and
@@ -32,6 +33,7 @@ The source module is consumed by `entrypoint/ingest_omni.py`. Later preprocessin
 Sections 1-10 and 12-13 define the normative contract. Section 11 preserves historical notebook and design notes and may describe superseded alternatives; it is not the source of truth when it conflicts with the normative sections.
 
 Out of scope:
+
 - replacing HAPI fill-value placeholders with nulls;
 - converting raw array observations into row dictionaries or tabular files;
 - joining OMNI observations to K-index observations;
@@ -44,6 +46,7 @@ Out of scope:
 ## 2. Context Check
 
 Relevant decisions and conventions:
+
 - [ADR 003](../docs/adr/adr-003-config-vs-cli-boundary.md) places stable service settings in YAML and per-run choices in CLI arguments.
 - [ADR 006](../docs/adr/adr-006-fail-fast-ingestion.md) requires ingestion to stop on a failed request; this spec does not introduce `PARTIAL` runs.
 - [ADR 009](../docs/adr/adr-009-raw-data-lake-manifest.md) requires immutable raw run directories with chunks, a manifest, and success/failure markers.
@@ -54,6 +57,7 @@ Relevant decisions and conventions:
 - [Spec 03](spec-03-entrypoint-with-logging.md) defines the logging lifecycle used by the OMNI entrypoint.
 
 Relevant implementation surfaces:
+
 - `src/ingest/omni.py`
 - `entrypoint/ingest_omni.py`
 - `src/io/atomic.py`
@@ -61,12 +65,14 @@ Relevant implementation surfaces:
 - planned tests in `tests/test_ingest_omni.py` and `tests/test_entrypoint_ingest_omni.py`
 
 Resolved design tensions:
+
 - The configured `dataset_id` is included in the raw path, but it is not trusted until `/info` succeeds. Therefore, preflight completes before run-directory creation.
 - Both a manifest and marker files are retained to follow ADR 009. The manifest status is authoritative; markers are supplementary lifecycle evidence.
 - The CDAWeb JSON no-data response has been observed to be malformed in some cases. The ingestion does not repair, regex-parse, or reinterpret malformed JSON, even when response text appears to contain HAPI status `1201`.
 - The complete `/data?format=json` payload is stored for each chunk. Repeated `parameters` and `status` metadata are accepted in exchange for preserving the source response at the ingestion boundary.
 
 Current implementation debt:
+
 - `entrypoint/ingest_omni.py` writes logs to `temp/` for development smoke testing. The durable entrypoint contract is to use `logs/`.
 - `CLI_UTC_FMT` and `HAPI_UTC_FMT` also appear as YAML keys, but `src/ingest/omni.py` currently defines and uses module constants. The YAML copies are not part of this feature's public configuration contract.
 - Marker and terminal-manifest writes are separate filesystem operations and are not transactional.
@@ -126,6 +132,7 @@ The manifest is maintained as one in-memory nested dictionary. Helper functions 
 ### 4.2 Local validation
 
 `ingest_omni_run()` validates before making a network request:
+
 - `start` and `end` must be strings in exact `YYYY-MM-DD HH:MM:SS` form.
 - Parsed values are UTC-naive `datetime` objects with whole-second precision.
 - `start` must be earlier than `end`.
@@ -150,6 +157,7 @@ Flexible ISO strings, `T` separators, a trailing `Z`, offsets, fractional second
 - Return an immutable `OmniIngestionPlan` containing requested bounds, effective bounds, overlap status, warnings, and requested parameters.
 
 Overlap status meanings:
+
 - `full`: the effective interval equals the complete dataset interval. This includes an exact full-dataset request and a wider request clipped at both ends.
 - `subset`: the requested interval is retained unchanged and is not classified as the complete dataset interval.
 - `partial`: at least one requested boundary is clipped, but the effective interval is not the complete dataset interval.
@@ -192,12 +200,14 @@ If the initial manifest write itself fails, no valid run has been initialized. A
 ### 4.6 Terminal outcomes
 
 Successful run:
+
 1. All planned chunks have been fetched and written.
 2. Write `_SUCCESS`.
 3. Set manifest status to `SUCCESS`, set `completed_at_utc`, clear `error`, and atomically write the final manifest.
 4. Return the run directory.
 
 Failed initialized run:
+
 1. Stop immediately on the first exception; do not request later chunks.
 2. Write `_FAILED` with a diagnostic representation of the exception.
 3. Set manifest status to `FAILED`, set `completed_at_utc`, and record the exception type and message.
@@ -226,39 +236,39 @@ There is no `PARTIAL` terminal status. Files written before a failure remain as 
 
 ## 6. Edge Cases
 
-| Edge case | Required handling |
-|---|---|
-| Requested range is fully before or after the dataset range | Raise `ValueError` during preflight; create no intentional run artifacts. |
-| Requested range overlaps only the beginning or end of the dataset | Clip the out-of-range boundary, set status `partial`, add a preflight warning, and ingest the overlap. |
-| Effective range equals the complete dataset range | Set status `full`; add a warning only when clipping occurred. |
-| Requested range is retained unchanged inside the dataset range | Set status `subset` and do not add a clipping warning. |
-| Final interval is shorter than `chunk_days` | Request the remaining interval only and use its actual boundaries in the filename and manifest. |
-| `sleep_s` is zero | Continue without delay; do not reject the configuration. |
-| Valid JSON response has HAPI status `1201` | Accept it as a successful empty chunk and increment `empty_chunk_count`. |
-| Valid `1200` payload has an absent or empty `data` list | Preserve the payload, record zero rows, and increment `empty_chunk_count`. |
-| Observations contain HAPI fill placeholders | Preserve the values exactly for later preprocessing. |
-| Response text resembles a no-data `1201` response but cannot be decoded as JSON | Fail the initialized run; do not infer or manufacture a valid `1201` payload. |
-| A chunk has no observations even though its interval lies inside `/info` bounds | Handle only a valid JSON response as empty; clipping does not guarantee observations exist at every internal timestamp. |
-| CLI parsing fails | Let `argparse` raise `SystemExit` before logging-wrapper setup; no run is created. |
-| Two runs receive the same second-precision run ID | Collision behavior is not guaranteed in v1; hardening the identifier is deferred. |
+| Edge case                                                                        | Required handling                                                                                                       |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Requested range is fully before or after the dataset range                       | Raise`ValueError` during preflight; create no intentional run artifacts.                                              |
+| Requested range overlaps only the beginning or end of the dataset                | Clip the out-of-range boundary, set status`partial`, add a preflight warning, and ingest the overlap.                 |
+| Effective range equals the complete dataset range                                | Set status`full`; add a warning only when clipping occurred.                                                          |
+| Requested range is retained unchanged inside the dataset range                   | Set status`subset` and do not add a clipping warning.                                                                 |
+| Final interval is shorter than`chunk_days`                                     | Request the remaining interval only and use its actual boundaries in the filename and manifest.                         |
+| `sleep_s` is zero                                                              | Continue without delay; do not reject the configuration.                                                                |
+| Valid JSON response has HAPI status`1201`                                      | Accept it as a successful empty chunk and increment`empty_chunk_count`.                                               |
+| Valid`1200` payload has an absent or empty `data` list                       | Preserve the payload, record zero rows, and increment`empty_chunk_count`.                                             |
+| Observations contain HAPI fill placeholders                                      | Preserve the values exactly for later preprocessing.                                                                    |
+| Response text resembles a no-data`1201` response but cannot be decoded as JSON | Fail the initialized run; do not infer or manufacture a valid`1201` payload.                                          |
+| A chunk has no observations even though its interval lies inside`/info` bounds | Handle only a valid JSON response as empty; clipping does not guarantee observations exist at every internal timestamp. |
+| CLI parsing fails                                                                | Let`argparse` raise `SystemExit` before logging-wrapper setup; no run is created.                                   |
+| Two runs receive the same second-precision run ID                                | Collision behavior is not guaranteed in v1; hardening the identifier is deferred.                                       |
 
 ## 7. Failure Modes
 
-| Phase | Failure | Required outcome |
-|---|---|---|
-| CLI parsing | Missing required argument or invalid CLI syntax | `argparse` exits before wrapper setup; no lifecycle log or raw run is guaranteed. |
-| Local validation | Malformed datetime, `start >= end`, empty parameter list, or invalid ingestion setting | Raise `TypeError` or `ValueError`; wrapper creates `.error.log`; no intentional raw run artifacts. |
-| `/info` network | Connection, DNS, timeout, or other request failure | Propagate a request exception or contextual runtime exception; no raw run artifacts. |
-| `/info` decoding/status | Non-JSON body, HTTP failure, or HAPI code other than `1200` | Fail fast before run initialization. |
-| `/info` contract | Unsupported HAPI version, missing requested parameter, disjoint range, or unusable required metadata | Raise before run initialization. Exact exception normalization for structurally malformed metadata is not required in v1, but the response must not proceed to ingestion. |
-| Initial manifest | Directory creation or `_manifest.json` write fails | Propagate the filesystem exception. No run is considered initialized without a readable RUNNING manifest. |
-| Metadata artifact | `hapi_info.json` cannot be written | Attempt `_FAILED` and a FAILED manifest, then re-raise. |
-| `/data` network | Request raises `requests.RequestException` | Raise contextual `RuntimeError`, finalize the initialized run as failed, and stop later chunks. |
-| `/data` decoding | Body is malformed or non-JSON | Raise contextual `RuntimeError` even if raw text contains `1201`. |
-| `/data` status | HTTP failure or HAPI status other than `1200`/`1201` | Raise `RuntimeError`, finalize as failed, and stop later chunks. |
-| Chunk write | JSON serialization, permission, disk, or rename failure | Attempt failed finalization and re-raise. Previously written artifacts remain diagnostic only. |
-| Success finalization | `_SUCCESS` is written but the SUCCESS manifest write fails | Enter failure handling. Both markers or a nonterminal manifest may remain; consumers must follow manifest/marker diagnostics rather than infer success from `_SUCCESS`. |
-| Failure finalization | `_FAILED` or FAILED manifest write itself fails | Propagate the finalization error. The manifest may remain RUNNING; recovery tooling is deferred. |
+| Phase                     | Failure                                                                                              | Required outcome                                                                                                                                                          |
+| ------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CLI parsing               | Missing required argument or invalid CLI syntax                                                      | `argparse` exits before wrapper setup; no lifecycle log or raw run is guaranteed.                                                                                       |
+| Local validation          | Malformed datetime,`start >= end`, empty parameter list, or invalid ingestion setting              | Raise`TypeError` or `ValueError`; wrapper creates `.error.log`; no intentional raw run artifacts.                                                                   |
+| `/info` network         | Connection, DNS, timeout, or other request failure                                                   | Propagate a request exception or contextual runtime exception; no raw run artifacts.                                                                                      |
+| `/info` decoding/status | Non-JSON body, HTTP failure, or HAPI code other than`1200`                                         | Fail fast before run initialization.                                                                                                                                      |
+| `/info` contract        | Unsupported HAPI version, missing requested parameter, disjoint range, or unusable required metadata | Raise before run initialization. Exact exception normalization for structurally malformed metadata is not required in v1, but the response must not proceed to ingestion. |
+| Initial manifest          | Directory creation or`_manifest.json` write fails                                                  | Propagate the filesystem exception. No run is considered initialized without a readable RUNNING manifest.                                                                 |
+| Metadata artifact         | `hapi_info.json` cannot be written                                                                 | Attempt`_FAILED` and a FAILED manifest, then re-raise.                                                                                                                  |
+| `/data` network         | Request raises`requests.RequestException`                                                          | Raise contextual`RuntimeError`, finalize the initialized run as failed, and stop later chunks.                                                                          |
+| `/data` decoding        | Body is malformed or non-JSON                                                                        | Raise contextual`RuntimeError` even if raw text contains `1201`.                                                                                                      |
+| `/data` status          | HTTP failure or HAPI status other than`1200`/`1201`                                              | Raise`RuntimeError`, finalize as failed, and stop later chunks.                                                                                                         |
+| Chunk write               | JSON serialization, permission, disk, or rename failure                                              | Attempt failed finalization and re-raise. Previously written artifacts remain diagnostic only.                                                                            |
+| Success finalization      | `_SUCCESS` is written but the SUCCESS manifest write fails                                         | Enter failure handling. Both markers or a nonterminal manifest may remain; consumers must follow manifest/marker diagnostics rather than infer success from`_SUCCESS`.  |
+| Failure finalization      | `_FAILED` or FAILED manifest write itself fails                                                    | Propagate the finalization error. The manifest may remain RUNNING; recovery tooling is deferred.                                                                          |
 
 The wrapper owns fatal stack-trace logging. `src/ingest/omni.py` may log ordinary warnings or context but must not swallow failures that should produce `.error.log`.
 
@@ -268,27 +278,27 @@ The wrapper owns fatal stack-trace logging. `src/ingest/omni.py` may log ordinar
 
 Configuration is read from the `omni.hapi` mapping:
 
-| Key | Type | Contract |
-|---|---|---|
-| `base_url` | `str` | CDAWeb HAPI service root used to construct `/info` and `/data` URLs. |
-| `dataset_id` | `str` | Stable dataset selection, currently `OMNI_HRO2_1MIN`. Included in `/info`, `/data`, the manifest, and the raw path. |
-| `supported_version` | `str` | Exact HAPI version accepted from `/info`, currently `2.0`. |
-| `chunk_days` | `int` | Positive maximum request interval in days. |
-| `timeout_s` | `int` | Positive timeout passed to each HTTP request. |
-| `sleep_s` | `int` or `float` | Non-negative delay between chunk requests. |
-| `raw_output_dir` | path-like string | Default raw root, before the dataset-ID and run-ID directories are appended. |
+| Key                   | Type                 | Contract                                                                                                                 |
+| --------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `base_url`          | `str`              | CDAWeb HAPI service root used to construct`/info` and `/data` URLs.                                                  |
+| `dataset_id`        | `str`              | Stable dataset selection, currently`OMNI_HRO2_1MIN`. Included in `/info`, `/data`, the manifest, and the raw path. |
+| `supported_version` | `str`              | Exact HAPI version accepted from`/info`, currently `2.0`.                                                            |
+| `chunk_days`        | `int`              | Positive maximum request interval in days.                                                                               |
+| `timeout_s`         | `int`              | Positive timeout passed to each HTTP request.                                                                            |
+| `sleep_s`           | `int` or `float` | Non-negative delay between chunk requests.                                                                               |
+| `raw_output_dir`    | path-like string     | Default raw root, before the dataset-ID and run-ID directories are appended.                                             |
 
 The datetime formats are protocol contracts defined by `src/ingest/omni.py`, not user-selectable runtime behavior. Existing `CLI_UTC_FMT` and `HAPI_UTC_FMT` YAML keys are unused implementation debt.
 
 ### 8.2 CLI inputs
 
-| Argument | Required | Contract |
-|---|---|---|
-| `--config_path` | Yes | Path passed to `load_config()`. |
-| `--start_utc` | Yes | Exact UTC string `YYYY-MM-DD HH:MM:SS`. |
-| `--end_utc` | Yes | Exact UTC string `YYYY-MM-DD HH:MM:SS`; must be later than start. |
-| `--parameters` | Yes | Comma-separated exact dataset parameter names, for example `Time,BX_GSE,BY_GSE,BZ_GSE`. |
-| `--raw_base_dir` | No | Per-run output-root override; config is used when omitted. |
+| Argument           | Required | Contract                                                                                 |
+| ------------------ | -------- | ---------------------------------------------------------------------------------------- |
+| `--config_path`  | Yes      | Path passed to`load_config()`.                                                         |
+| `--start_utc`    | Yes      | Exact UTC string`YYYY-MM-DD HH:MM:SS`.                                                 |
+| `--end_utc`      | Yes      | Exact UTC string`YYYY-MM-DD HH:MM:SS`; must be later than start.                       |
+| `--parameters`   | Yes      | Comma-separated exact dataset parameter names, for example`Time,BX_GSE,BY_GSE,BZ_GSE`. |
+| `--raw_base_dir` | No       | Per-run output-root override; config is used when omitted.                               |
 
 ### 8.3 In-memory contracts
 
@@ -315,6 +325,7 @@ All datetimes in these objects are UTC-naive and have whole-second precision. `O
 ### 8.4 HAPI response contracts
 
 Minimum `/info` fields consumed by this feature:
+
 - `HAPI`: observed protocol version;
 - `status.code` and `status.message`;
 - `parameters[*].name`; and
@@ -414,6 +425,7 @@ Raw chunk files and `hapi_info.json` are immutable after a run. `_manifest.json`
 ```
 
 Terminal mutations:
+
 - `SUCCESS`: set `run.status`, set `run.completed_at_utc`, and keep `error = null`.
 - `FAILED`: set `run.status`, set `run.completed_at_utc`, and set `error` to `{"type": <exception class>, "message": <exception text>}`.
 
@@ -421,16 +433,16 @@ Terminal mutations:
 
 ### 8.7 Manifest and marker precedence
 
-| Manifest state | Marker state | Interpretation |
-|---|---|---|
-| `RUNNING` | None | Initialized but not finalized; do not consume. |
-| `RUNNING` | `_SUCCESS` | Success marker was reached but terminal manifest finalization did not complete; do not consume. |
-| `RUNNING` | `_FAILED` | Failure finalization began but the terminal manifest did not complete; do not consume. |
-| `SUCCESS` | `_SUCCESS` | Normal successful run. |
-| `SUCCESS` | Missing marker | Manifest remains authoritative, but record a diagnostic inconsistency. |
-| `FAILED` | `_FAILED` | Normal failed run; do not consume. |
-| `FAILED` | Missing marker | Manifest remains authoritative, but record a diagnostic inconsistency. |
-| Any | Both markers | Inconsistent finalization evidence; flag for investigation and do not auto-consume. |
+| Manifest state | Marker state   | Interpretation                                                                                  |
+| -------------- | -------------- | ----------------------------------------------------------------------------------------------- |
+| `RUNNING`    | None           | Initialized but not finalized; do not consume.                                                  |
+| `RUNNING`    | `_SUCCESS`   | Success marker was reached but terminal manifest finalization did not complete; do not consume. |
+| `RUNNING`    | `_FAILED`    | Failure finalization began but the terminal manifest did not complete; do not consume.          |
+| `SUCCESS`    | `_SUCCESS`   | Normal successful run.                                                                          |
+| `SUCCESS`    | Missing marker | Manifest remains authoritative, but record a diagnostic inconsistency.                          |
+| `FAILED`     | `_FAILED`    | Normal failed run; do not consume.                                                              |
+| `FAILED`     | Missing marker | Manifest remains authoritative, but record a diagnostic inconsistency.                          |
+| Any            | Both markers   | Inconsistent finalization evidence; flag for investigation and do not auto-consume.             |
 
 Downstream processing must require `run.status == "SUCCESS"`. `_SUCCESS` alone cannot promote a RUNNING or FAILED manifest to success.
 
@@ -522,9 +534,6 @@ def ingest_omni_run(
 
 `ingest_omni_run()` accepts CLI-facing `start` and `end` objects but requires strings under the current contract. It parses them once, passes datetimes to validation and chunking, and returns the created run directory only on success.
 
-
-
-
 ### 9.2 Internal helpers worth direct contract tests
 
 ```python
@@ -562,25 +571,29 @@ run_entrypoint_with_logging(
 )
 ```
 
-The current `log_dir="temp"` value is smoke-test scaffolding and must be changed before the feature meets this spec's acceptance criteria.
+The entrypoint uses the contractual `log_dir="logs"`; the earlier `temp` value was smoke-test scaffolding.
+
 ## 10. Test Blueprint
 
 Testing framework:
+
 - Use built-in `unittest`.
 - Use `unittest.mock.patch` and patch collaborators where they are used.
 - Never call live CDAWeb endpoints.
 - Never write to real `data/`, `logs/`, or other ignored runtime directories.
 
 Test files:
-- `tests/omni/support.py`: deterministic fixtures and builders shared by OMNI test modules.
-- `tests/omni/test_datetime.py`: strict datetime parsing, formatting, and chunk filename contracts.
-- `tests/omni/test_hapi.py`: HTTP boundaries and HAPI metadata validation.
-- `tests/omni/test_chunks.py`: chunk iteration and raw chunk writing.
-- `tests/omni/test_manifest.py`: manifest construction, mutation, and snapshot writing.
-- `tests/omni/test_ingest_run.py`: orchestrator coordination and temporary-filesystem integration.
-- `tests/omni/test_entrypoint.py`: CLI parsing, config selection, source-call wiring, and logging-wrapper coordination.
+
+- `tests/omni_ingestion/support.py`: deterministic fixtures and builders shared by OMNI test modules.
+- `tests/omni_ingestion/test_datetime.py`: strict datetime parsing, formatting, and chunk filename contracts.
+- `tests/omni_ingestion/test_hapi.py`: HTTP boundaries and HAPI metadata validation.
+- `tests/omni_ingestion/test_chunks.py`: chunk iteration and raw chunk writing.
+- `tests/omni_ingestion/test_manifest.py`: manifest construction, mutation, and snapshot writing.
+- `tests/omni_ingestion/test_ingest_run.py`: orchestrator coordination and temporary-filesystem integration.
+- `tests/omni_ingestion/test_entrypoint.py`: CLI parsing, config selection, source-call wiring, and logging-wrapper coordination.
 
 Chosen boundaries:
+
 - Pure tests for strict datetime conversion, validation plans, filename generation, and manifest transformations.
 - HTTP-boundary tests with response-like fixtures and mocked `requests.get`.
 - Orchestrator tests with lower-level network/filesystem collaborators patched.
@@ -588,6 +601,7 @@ Chosen boundaries:
 - CLI/logging coordination tests with the source call and wrapper patched; the shared wrapper's own lifecycle remains covered by `tests/test_entrypoint_logging.py`.
 
 Fixtures:
+
 - `FakeResponse`: configurable HTTP status, decoded payload, JSON decode failure, and `raise_for_status()` behavior.
 - `valid_info_payload()`: HAPI `2.0`, status `1200`, parameter metadata, and deterministic dataset boundaries.
 - `valid_data_payload()`: complete HAPI JSON response with parameter metadata and array rows.
@@ -598,6 +612,7 @@ Fixtures:
 - fixed UTC-naive datetimes, run IDs, and completion IDs.
 
 Mocks and exact patch targets:
+
 - `src.ingest.omni.requests.get` for `/info` and `/data` request tests.
 - `src.ingest.omni.fetch_hapi_data` and `src.ingest.omni.time.sleep` for chunk-iteration tests.
 - `src.ingest.omni.fetch_hapi_info`, `validate_hapi_info`, `iter_omni_chunks`, `write_chunk_json`, `write_manifest`, `_atomic_write_json`, `write_success`, `write_failed`, and `_run_id_utc` for orchestrator coordination tests as appropriate.
@@ -605,47 +620,48 @@ Mocks and exact patch targets:
 
 Test matrix:
 
-| Test group | Test name | Boundary | Scenario and fixture | Mocks / patches | Minimum assertions |
-|---|---|---|---|---|---|
-| Datetime | `test_parse_cli_utc_datetime_exact_value_returns_utc_naive_datetime` | Pure | Exact CLI string | None | Exact datetime returned; `tzinfo is None`. |
-| Datetime | `test_parse_cli_utc_datetime_invalid_variants_raise` | Pure | Non-string, `T`, `Z`, offset, fractional seconds, non-padded or invalid date via `subTest` | None | Non-string raises `TypeError`; every malformed string raises `ValueError`. |
-| Datetime | `test_parse_hapi_utc_datetime_exact_value_returns_utc_naive_datetime` | Pure | Exact HAPI string | None | Exact datetime returned; `tzinfo is None`. |
-| Datetime | `test_parse_hapi_utc_datetime_invalid_variants_raise` | Pure | Missing `T`/`Z`, offset, fraction, and non-string | None | Non-string raises `TypeError`; every malformed string raises `ValueError`. |
-| Datetime | `test_format_hapi_utc_datetime_contract` | Pure | Valid UTC-naive datetime plus non-datetime, aware, and microsecond variants | None | Valid value formats exactly; invalid variants raise the documented exception. |
-| Filename | `test_omni_chunk_filename_uses_exact_boundaries` | Pure | Fixed start and end | None | Exact `chunk_<start>__<end>.json` name. |
-| Info fetch | `test_fetch_hapi_info_success_calls_expected_endpoint` | HTTP boundary | Valid `1200` info payload | Patch `src.ingest.omni.requests.get` | Exact URL, `id`, timeout, and returned object asserted. |
-| Info fetch | `test_fetch_hapi_info_non_json_success_response_raises_runtime_error` | HTTP boundary | HTTP 200 response whose JSON decoder raises | Patch `src.ingest.omni.requests.get` | `RuntimeError` is raised; no payload is returned. |
-| Info fetch | `test_fetch_hapi_info_http_or_hapi_failure_raises` | HTTP boundary | HTTP failure and non-1200 HAPI payload via `subTest` | Patch `src.ingest.omni.requests.get` | Each response fails; message includes available dataset/status context. |
-| Info fetch | `test_fetch_hapi_info_network_failure_propagates` | HTTP boundary | `requests.RequestException` | Patch `src.ingest.omni.requests.get` | Request failure is not swallowed. |
-| Info validation | `test_validate_hapi_info_subset_returns_unchanged_plan` | Pure | Supported version, known parameters, contained interval | None | Requested/effective bounds equal; status `subset`; no warning; parameter order retained. |
-| Info validation | `test_validate_hapi_info_partial_overlap_clips_boundary` | Pure | Left and right partial overlap via `subTest` | None | Correct effective bound, status `partial`, and one warning. |
-| Info validation | `test_validate_hapi_info_full_dataset_status` | Pure | Exact dataset request and wider request clipped at both ends | None | Both plans have effective dataset bounds and status `full`; only clipped case warns. |
-| Info validation | `test_validate_hapi_info_disjoint_interval_raises` | Pure | Fully before and fully after via `subTest` | None | Both raise `ValueError`. |
-| Info validation | `test_validate_hapi_info_unsupported_parameter_raises` | Pure | One unknown requested name | None | `ValueError` identifies unsupported name. |
-| Info validation | `test_validate_hapi_info_version_mismatch_raises` | Pure | Observed version differs from config | None | `RuntimeError` includes supported and observed versions. |
-| Data fetch | `test_fetch_hapi_data_success_sends_exact_query_and_returns_full_payload` | HTTP boundary | Valid `1200` payload with metadata and rows | Patch `src.ingest.omni.requests.get` | URL, ID, comma-joined parameters, formatted bounds, `format=json`, timeout, and returned payload asserted. |
-| Data fetch | `test_fetch_hapi_data_valid_1201_returns_empty_payload` | HTTP boundary | Valid JSON HAPI `1201` | Patch `src.ingest.omni.requests.get` | Payload is returned without exception. |
-| Data fetch | `test_fetch_hapi_data_preserves_fill_values` | HTTP boundary | `1200` data rows containing source fill placeholders | Patch `src.ingest.omni.requests.get` | Returned rows exactly equal fixture values. |
-| Data fetch | `test_fetch_hapi_data_malformed_1201_like_text_raises` | HTTP boundary | JSON decode failure whose text contains `1201` | Patch `src.ingest.omni.requests.get` | Contextual `RuntimeError`; no proxy payload is manufactured. |
-| Data fetch | `test_fetch_hapi_data_network_http_or_hapi_failure_raises` | HTTP boundary | Network exception, HTTP failure, and unsupported HAPI code | Patch `src.ingest.omni.requests.get` | Each fails; network error retains its cause; no payload returned. |
-| Chunking | `test_iter_omni_chunks_yields_adjacent_bounded_intervals` | Pure coordination | Multi-chunk range with a short final interval | Patch `src.ingest.omni.fetch_hapi_data`, `src.ingest.omni.time.sleep` | Exact fetch boundaries, no gaps/overlaps, payloads bundled with matching `OmniChunk` bounds. |
-| Chunking | `test_iter_omni_chunks_sleeps_only_between_requests` | Pure coordination | Three chunks and configured delay | Patch `src.ingest.omni.fetch_hapi_data`, `src.ingest.omni.time.sleep` | Three fetches and exactly two sleeps with configured value. |
-| Filesystem | `test_write_chunk_json_writes_complete_payload_atomically` | Filesystem integration | Temporary run directory and full payload | None | Exact filename exists; decoded file equals payload; returned path matches; no `.tmp` remains. |
-| Manifest | `test_build_running_manifest_matches_schema` | Pure | Fixed settings, info, plan, and run ID | None | Exact top-level/nested keys, RUNNING fields, requested/effective bounds, source versions, empty artifacts/summary, and warnings. |
-| Manifest | `test_build_and_record_chunk_updates_artifacts_and_summary` | Pure | Non-empty `1200`, empty `1200`, and empty `1201` records | None | Files/statuses/rows recorded; total rows accumulated; empty count increments once per empty chunk. |
-| Manifest | `test_manifest_terminal_mutators_set_success_and_failed_contracts` | Pure | Running manifests plus fixed completion IDs and exception | None | SUCCESS clears error; FAILED records type/message; both set completion and exact status. |
-| Manifest | `test_write_manifest_replaces_complete_snapshot_atomically` | Filesystem integration | Write RUNNING then SUCCESS in temporary directory | None | Same path returned; second decoded file is complete SUCCESS snapshot; no `.tmp` remains. |
-| Orchestrator | `test_ingest_omni_run_local_validation_fails_before_info_fetch` | Orchestrator | Invalid dates, empty parameters, and invalid settings via `subTest` | Patch `src.ingest.omni.fetch_hapi_info`, `src.ingest.omni._run_id_utc`, and `src.ingest.omni.write_manifest` | Expected exception; no network, run ID, or manifest call. |
-| Orchestrator | `test_ingest_omni_run_preflight_failure_creates_no_run` | Orchestrator/filesystem | Temporary raw root; `/info` fetch or validation failure | Patch `src.ingest.omni.fetch_hapi_info` or `src.ingest.omni.validate_hapi_info`, plus `src.ingest.omni._run_id_utc` | Exception re-raised; run ID not generated; temporary raw root has no run directory. |
-| Orchestrator | `test_ingest_omni_run_success_coordinates_artifacts_and_manifest` | Orchestrator | Fixed info, plan, two chunks, paths, and IDs | Patch lower-level collaborators listed above | Initial RUNNING write precedes info/chunks; effective bounds are used; every chunk is written/recorded; `_SUCCESS` called; final status SUCCESS; returned dataset/run path exact; `_FAILED` absent. |
-| Orchestrator | `test_ingest_omni_run_post_initialization_failure_marks_failed_and_reraises` | Orchestrator | Chunk fetch/write raises after RUNNING manifest | Patch collaborators and force exception | Preflight succeeds and the initial RUNNING manifest establishes the run. The first raw chunk write then raises `RuntimeError`. The first chunk write is attempted once; later chunks are not written; `_SUCCESS` is absent; `_FAILED` is requested; manifest snapshots are `RUNNING` then `FAILED` with exact error diagnostics; the original exception is re-raised. |
-| Orchestrator | `test_ingest_omni_run_raw_base_override_controls_dataset_path` | Orchestrator | Config root plus distinct override | Patch network/chunk collaborators and `src.ingest.omni._run_id_utc` | Returned and written path uses override, dataset ID, and run ID; config root unused. |
-| Orchestrator | `test_ingest_omni_run_writes_expected_filesystem_artifacts` | Filesystem integration | Temporary root, mocked `/info` and `/data`, fixed clock | Patch network and `src.ingest.omni._run_id_utc`; use real writers/markers | `hapi_info.json`, chunks, `_manifest.json`, and `_SUCCESS` exist; no `_FAILED`/`.tmp`; manifest schema, totals, filenames, and payloads match. |
-| CLI | `test_parse_args_valid_values_parses_parameter_list_and_override` | CLI parser | Patched `sys.argv` with all arguments | Patch `sys.argv` | Exact namespace values; parameters become ordered list; override retained. |
-| CLI | `test_main_loads_omni_config_and_forwards_run_arguments` | CLI/logging coordination | Fixed namespace and config | Patch `entrypoint.ingest_omni.parse_args`, `entrypoint.ingest_omni.load_config`, `entrypoint.ingest_omni.ingest_omni_run`, and `entrypoint.ingest_omni.run_entrypoint_with_logging` | Wrapper receives `ingest_omni` and `logs`; invoking captured `main_logic` loads config and calls source once with `config["omni"]` and exact CLI values. |
-| CLI | `test_main_parse_failure_occurs_before_logging_wrapper` | CLI/logging coordination | `parse_args` raises `SystemExit` | Patch `entrypoint.ingest_omni.parse_args` and `entrypoint.ingest_omni.run_entrypoint_with_logging` | `SystemExit` propagates; wrapper is not called. |
+| Test group      | Test name                                                                      | Boundary                 | Scenario and fixture                                                                            | Mocks / patches                                                                                                                                                                            | Minimum assertions                                                                                                                                                                                                                                                                                                                                                             |
+| --------------- | ------------------------------------------------------------------------------ | ------------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Datetime        | `test_parse_cli_utc_datetime_exact_value_returns_utc_naive_datetime`         | Pure                     | Exact CLI string                                                                                | None                                                                                                                                                                                       | Exact datetime returned;`tzinfo is None`.                                                                                                                                                                                                                                                                                                                                    |
+| Datetime        | `test_parse_cli_utc_datetime_invalid_variants_raise`                         | Pure                     | Non-string,`T`, `Z`, offset, fractional seconds, non-padded or invalid date via `subTest` | None                                                                                                                                                                                       | Non-string raises`TypeError`; every malformed string raises `ValueError`.                                                                                                                                                                                                                                                                                                  |
+| Datetime        | `test_parse_hapi_utc_datetime_exact_value_returns_utc_naive_datetime`        | Pure                     | Exact HAPI string                                                                               | None                                                                                                                                                                                       | Exact datetime returned;`tzinfo is None`.                                                                                                                                                                                                                                                                                                                                    |
+| Datetime        | `test_parse_hapi_utc_datetime_invalid_variants_raise`                        | Pure                     | Missing`T`/`Z`, offset, fraction, and non-string                                            | None                                                                                                                                                                                       | Non-string raises`TypeError`; every malformed string raises `ValueError`.                                                                                                                                                                                                                                                                                                  |
+| Datetime        | `test_format_hapi_utc_datetime_contract`                                     | Pure                     | Valid UTC-naive datetime plus non-datetime, aware, and microsecond variants                     | None                                                                                                                                                                                       | Valid value formats exactly; invalid variants raise the documented exception.                                                                                                                                                                                                                                                                                                  |
+| Filename        | `test_omni_chunk_filename_uses_exact_boundaries`                             | Pure                     | Fixed start and end                                                                             | None                                                                                                                                                                                       | Exact`chunk_<start>__<end>.json` name.                                                                                                                                                                                                                                                                                                                                       |
+| Info fetch      | `test_fetch_hapi_info_success_calls_expected_endpoint`                       | HTTP boundary            | Valid`1200` info payload                                                                      | Patch`src.ingest.omni.requests.get`                                                                                                                                                      | Exact URL,`id`, timeout, and returned object asserted.                                                                                                                                                                                                                                                                                                                       |
+| Info fetch      | `test_fetch_hapi_info_non_json_success_response_raises_runtime_error`        | HTTP boundary            | HTTP 200 response whose JSON decoder raises                                                     | Patch`src.ingest.omni.requests.get`                                                                                                                                                      | `RuntimeError` is raised; no payload is returned.                                                                                                                                                                                                                                                                                                                            |
+| Info fetch      | `test_fetch_hapi_info_http_or_hapi_failure_raises`                           | HTTP boundary            | HTTP failure and non-1200 HAPI payload via`subTest`                                           | Patch`src.ingest.omni.requests.get`                                                                                                                                                      | Each response fails; message includes available dataset/status context.                                                                                                                                                                                                                                                                                                        |
+| Info fetch      | `test_fetch_hapi_info_network_failure_propagates`                            | HTTP boundary            | `requests.RequestException`                                                                   | Patch`src.ingest.omni.requests.get`                                                                                                                                                      | Request failure is not swallowed.                                                                                                                                                                                                                                                                                                                                              |
+| Info validation | `test_validate_hapi_info_subset_returns_unchanged_plan`                      | Pure                     | Supported version, known parameters, contained interval                                         | None                                                                                                                                                                                       | Requested/effective bounds equal; status`subset`; no warning; parameter order retained.                                                                                                                                                                                                                                                                                      |
+| Info validation | `test_validate_hapi_info_partial_overlap_clips_boundary`                     | Pure                     | Left and right partial overlap via`subTest`                                                   | None                                                                                                                                                                                       | Correct effective bound, status`partial`, and one warning.                                                                                                                                                                                                                                                                                                                   |
+| Info validation | `test_validate_hapi_info_full_dataset_status`                                | Pure                     | Exact dataset request and wider request clipped at both ends                                    | None                                                                                                                                                                                       | Both plans have effective dataset bounds and status`full`; only clipped case warns.                                                                                                                                                                                                                                                                                          |
+| Info validation | `test_validate_hapi_info_disjoint_interval_raises`                           | Pure                     | Fully before and fully after via`subTest`                                                     | None                                                                                                                                                                                       | Both raise`ValueError`.                                                                                                                                                                                                                                                                                                                                                      |
+| Info validation | `test_validate_hapi_info_unsupported_parameter_raises`                       | Pure                     | One unknown requested name                                                                      | None                                                                                                                                                                                       | `ValueError` identifies unsupported name.                                                                                                                                                                                                                                                                                                                                    |
+| Info validation | `test_validate_hapi_info_version_mismatch_raises`                            | Pure                     | Observed version differs from config                                                            | None                                                                                                                                                                                       | `RuntimeError` includes supported and observed versions.                                                                                                                                                                                                                                                                                                                     |
+| Data fetch      | `test_fetch_hapi_data_success_sends_exact_query_and_returns_full_payload`    | HTTP boundary            | Valid`1200` payload with metadata and rows                                                    | Patch`src.ingest.omni.requests.get`                                                                                                                                                      | URL, ID, comma-joined parameters, formatted bounds,`format=json`, timeout, and returned payload asserted.                                                                                                                                                                                                                                                                    |
+| Data fetch      | `test_fetch_hapi_data_valid_1201_returns_empty_payload`                      | HTTP boundary            | Valid JSON HAPI`1201`                                                                         | Patch`src.ingest.omni.requests.get`                                                                                                                                                      | Payload is returned without exception.                                                                                                                                                                                                                                                                                                                                         |
+| Data fetch      | `test_fetch_hapi_data_preserves_fill_values`                                 | HTTP boundary            | `1200` data rows containing source fill placeholders                                          | Patch`src.ingest.omni.requests.get`                                                                                                                                                      | Returned rows exactly equal fixture values.                                                                                                                                                                                                                                                                                                                                    |
+| Data fetch      | `test_fetch_hapi_data_malformed_1201_like_text_raises`                       | HTTP boundary            | JSON decode failure whose text contains`1201`                                                 | Patch`src.ingest.omni.requests.get`                                                                                                                                                      | Contextual`RuntimeError`; no proxy payload is manufactured.                                                                                                                                                                                                                                                                                                                  |
+| Data fetch      | `test_fetch_hapi_data_network_http_or_hapi_failure_raises`                   | HTTP boundary            | Network exception, HTTP failure, and unsupported HAPI code                                      | Patch`src.ingest.omni.requests.get`                                                                                                                                                      | Each fails; network error retains its cause; no payload returned.                                                                                                                                                                                                                                                                                                              |
+| Chunking        | `test_iter_omni_chunks_yields_adjacent_bounded_intervals`                    | Pure coordination        | Multi-chunk range with a short final interval                                                   | Patch`src.ingest.omni.fetch_hapi_data`, `src.ingest.omni.time.sleep`                                                                                                                   | Exact fetch boundaries, no gaps/overlaps, payloads bundled with matching`OmniChunk` bounds.                                                                                                                                                                                                                                                                                  |
+| Chunking        | `test_iter_omni_chunks_sleeps_only_between_requests`                         | Pure coordination        | Three chunks and configured delay                                                               | Patch`src.ingest.omni.fetch_hapi_data`, `src.ingest.omni.time.sleep`                                                                                                                   | Three fetches and exactly two sleeps with configured value.                                                                                                                                                                                                                                                                                                                    |
+| Filesystem      | `test_write_chunk_json_writes_complete_payload_atomically`                   | Filesystem integration   | Temporary run directory and full payload                                                        | None                                                                                                                                                                                       | Exact filename exists; decoded file equals payload; returned path matches; no`.tmp` remains.                                                                                                                                                                                                                                                                                 |
+| Manifest        | `test_build_running_manifest_matches_schema`                                 | Pure                     | Fixed settings, info, plan, and run ID                                                          | None                                                                                                                                                                                       | Exact top-level/nested keys, RUNNING fields, requested/effective bounds, source versions, empty artifacts/summary, and warnings.                                                                                                                                                                                                                                               |
+| Manifest        | `test_build_and_record_chunk_updates_artifacts_and_summary`                  | Pure                     | Non-empty`1200`, empty `1200`, and empty `1201` records                                   | None                                                                                                                                                                                       | Files/statuses/rows recorded; total rows accumulated; empty count increments once per empty chunk.                                                                                                                                                                                                                                                                             |
+| Manifest        | `test_manifest_terminal_mutators_set_success_and_failed_contracts`           | Pure                     | Running manifests plus fixed completion IDs and exception                                       | None                                                                                                                                                                                       | SUCCESS clears error; FAILED records type/message; both set completion and exact status.                                                                                                                                                                                                                                                                                       |
+| Manifest        | `test_write_manifest_replaces_complete_snapshot_atomically`                  | Filesystem integration   | Write RUNNING then SUCCESS in temporary directory                                               | None                                                                                                                                                                                       | Same path returned; second decoded file is complete SUCCESS snapshot; no`.tmp` remains.                                                                                                                                                                                                                                                                                      |
+| Orchestrator    | `test_ingest_omni_run_local_validation_fails_before_info_fetch`              | Orchestrator             | Invalid dates, empty parameters, and invalid settings via`subTest`                            | Patch`src.ingest.omni.fetch_hapi_info`, `src.ingest.omni._run_id_utc`, and `src.ingest.omni.write_manifest`                                                                          | Expected exception; no network, run ID, or manifest call.                                                                                                                                                                                                                                                                                                                      |
+| Orchestrator    | `test_ingest_omni_run_preflight_failure_creates_no_run`                      | Orchestrator/filesystem  | Temporary raw root;`/info` fetch or validation failure                                        | Patch`src.ingest.omni.fetch_hapi_info` or `src.ingest.omni.validate_hapi_info`, plus `src.ingest.omni._run_id_utc`                                                                   | Exception re-raised; run ID not generated; temporary raw root has no run directory.                                                                                                                                                                                                                                                                                            |
+| Orchestrator    | `test_ingest_omni_run_success_coordinates_artifacts_and_manifest`            | Orchestrator             | Fixed info, plan, two chunks, paths, and IDs                                                    | Patch lower-level collaborators listed above                                                                                                                                               | Initial RUNNING write precedes info/chunks; effective bounds are used; every chunk is written/recorded;`_SUCCESS` called; final status SUCCESS; returned dataset/run path exact; `_FAILED` absent.                                                                                                                                                                         |
+| Orchestrator    | `test_ingest_omni_run_post_initialization_failure_marks_failed_and_reraises` | Orchestrator             | Chunk fetch/write raises after RUNNING manifest                                                 | Patch collaborators and force exception                                                                                                                                                    | Preflight succeeds and the initial RUNNING manifest establishes the run. The first raw chunk write then raises`RuntimeError`. The first chunk write is attempted once; later chunks are not written; `_SUCCESS` is absent; `_FAILED` is requested; manifest snapshots are `RUNNING` then `FAILED` with exact error diagnostics; the original exception is re-raised. |
+| Orchestrator    | `test_ingest_omni_run_raw_base_override_controls_dataset_path`               | Orchestrator             | Config root plus distinct override                                                              | Patch network/chunk collaborators and`src.ingest.omni._run_id_utc`                                                                                                                       | Returned and written path uses override, dataset ID, and run ID; config root unused.                                                                                                                                                                                                                                                                                           |
+| Orchestrator    | `test_ingest_omni_run_writes_expected_filesystem_artifacts`                  | Filesystem integration   | Temporary root, mocked`/info` and `/data`, fixed clock                                      | Patch network and`src.ingest.omni._run_id_utc`; use real writers/markers                                                                                                                 | `hapi_info.json`, chunks, `_manifest.json`, and `_SUCCESS` exist; no `_FAILED`/`.tmp`; manifest schema, totals, filenames, and payloads match.                                                                                                                                                                                                                       |
+| CLI             | `test_parse_args_valid_values_parses_parameter_list_and_override`            | CLI parser               | Patched`sys.argv` with all arguments                                                          | Patch`sys.argv`                                                                                                                                                                          | Exact namespace values; parameters become ordered list; override retained.                                                                                                                                                                                                                                                                                                     |
+| CLI             | `test_main_loads_omni_config_and_forwards_run_arguments`                     | CLI/logging coordination | Fixed namespace and config                                                                      | Patch`entrypoint.ingest_omni.parse_args`, `entrypoint.ingest_omni.load_config`, `entrypoint.ingest_omni.ingest_omni_run`, and `entrypoint.ingest_omni.run_entrypoint_with_logging` | Wrapper receives`ingest_omni` and `logs`; invoking captured `main_logic` loads config and calls source once with `config["omni"]` and exact CLI values.                                                                                                                                                                                                                |
+| CLI             | `test_main_parse_failure_occurs_before_logging_wrapper`                      | CLI/logging coordination | `parse_args` raises `SystemExit`                                                            | Patch`entrypoint.ingest_omni.parse_args` and `entrypoint.ingest_omni.run_entrypoint_with_logging`                                                                                      | `SystemExit` propagates; wrapper is not called.                                                                                                                                                                                                                                                                                                                              |
 
 Things not to over-test:
+
 - CDAWeb's live availability, data values, or server implementation.
 - Exact dictionary key order or JSON indentation.
 - Dataclass-generated methods.
@@ -653,37 +669,38 @@ Things not to over-test:
 - Atomic library internals beyond final file contents and absence of temporary files.
 - The shared logging wrapper lifecycle already covered by `tests/test_entrypoint_logging.py`.
 
-
-
 ## 11. Notebook Implementation Notes
+
 Use this section for practical notes discovered while spiking or working in notebooks.
 
 Notebook/spike notes:
 
 0. Potential config structure below:
-    ```yaml
-    omni:
-        base_url: "https://cdaweb.gsfc.nasa.gov/hapi"
+   ```yaml
+   omni:
+       base_url: "https://cdaweb.gsfc.nasa.gov/hapi"
 
-        variables: "F, BX_GSE, BY_GSM,BZ_GSM,flow_speed,proton_density,Pressure"
+       variables: "F, BX_GSE, BY_GSM,BZ_GSM,flow_speed,proton_density,Pressure"
 
-        ingestion: 
-            output_dir: "data/01-raw/omni/omni_hro2_1min"
-    ```
+       ingestion: 
+           output_dir: "data/01-raw/omni/omni_hro2_1min"
+   ```
 1. Consider reusing code from `src/atomic.py` to write ingested files atomically.
 2. From the [HAPI 2.0.0 github documentation](https://github.com/hapi-server/data-specification/blob/master/hapi-2.0.0/HAPI-data-access-spec-2.0.0.pdf), they described how the `info` and `data` endpoints interact:
-    > There is an interaction between the info endpoint and the data endpoint, because the header from the info endpoint describes the record structure of data emitted by the data endpoint. **Thus after a single call to the info endpoint, a client could make multiple calls to the data endpoint (for multiple time ranges, for example) with the expectation that each data response would contain records described by the single call to the info endpoint**. The data endpoint can optionally prefix the data stream with header information, potentially obviating the need for the info endpoint. But the info endpoint is useful in that it allows clients to learn about a dataset without having to make a data request.
-    - 🤔 So probably `/info` and `/data` should be coupled? So based on the requested params in our config (let's say a list of strings),
-      - First, hit the CDAWeb HAPI's `/info` endpoint to first validate variable param names from CLI arg (?) to dataset metadata from `/info`.
-          - We can also validate the HAPI version -- put the HAPI version as a config key, so that when the HAPI version (`"HAPI"` key in the `/info` response body) is different (outdated or upgraded, `!= '2.0.0'`), our ingestion program can fail fast. 
-            - ✔️ <u>The ingestion implementation targets CDAWeb HAPI 2.0. Each run must fetch /info before /data and verify that the returned top-level HAPI value equals the configured supported version, currently "2.0". If CDAWeb returns a different HAPI version, ingestion must fail fast before requesting data, because endpoint semantics, request parameters, or response structure may no longer match the implementation contract.</u>
-      - Second, when everything is good, then and only then we hit the `/data` endpoint.
-      - QUESTION: we have hit the `/info` endpoint, sure, but do we **replace missing values with their placeholders in ingestion or preprocessing? If the latter we need to save it somewhere. Or treat it as a metadata in a run directory similar to how manifest is a run's metadata? But then with multiple `/data` calls we risk duplicating the data dictionary.**
-        - ✔️ <u>Keep raw ingestion RAW, as [this ADR](/docs/adr/adr-009-raw-data-lake-manifest.md) mentions that ingested data should not be changed; so any cleaning belongs later (so missing placeholders like `999.99` should be left as is to reflect the actual data source)</u>
-        - ✔️ <u>One solution for now is to **save `/info` response per run**, so that each run directory has the following files: `run_id=20260702T..., _manifest.json, hapi_info.json, chunk_20211121T000000Z__20211122T000000Z.csv, _SUCCESS` </u>
+   > There is an interaction between the info endpoint and the data endpoint, because the header from the info endpoint describes the record structure of data emitted by the data endpoint. **Thus after a single call to the info endpoint, a client could make multiple calls to the data endpoint (for multiple time ranges, for example) with the expectation that each data response would contain records described by the single call to the info endpoint**. The data endpoint can optionally prefix the data stream with header information, potentially obviating the need for the info endpoint. But the info endpoint is useful in that it allows clients to learn about a dataset without having to make a data request.
+   >
+
+   - 🤔 So probably `/info` and `/data` should be coupled? So based on the requested params in our config (let's say a list of strings),
+     - First, hit the CDAWeb HAPI's `/info` endpoint to first validate variable param names from CLI arg (?) to dataset metadata from `/info`.
+       - We can also validate the HAPI version -- put the HAPI version as a config key, so that when the HAPI version (`"HAPI"` key in the `/info` response body) is different (outdated or upgraded, `!= '2.0.0'`), our ingestion program can fail fast.
+         - ✔️ <u>The ingestion implementation targets CDAWeb HAPI 2.0. Each run must fetch /info before /data and verify that the returned top-level HAPI value equals the configured supported version, currently "2.0". If CDAWeb returns a different HAPI version, ingestion must fail fast before requesting data, because endpoint semantics, request parameters, or response structure may no longer match the implementation contract.</u>
+     - Second, when everything is good, then and only then we hit the `/data` endpoint.
+     - QUESTION: we have hit the `/info` endpoint, sure, but do we **replace missing values with their placeholders in ingestion or preprocessing? If the latter we need to save it somewhere. Or treat it as a metadata in a run directory similar to how manifest is a run's metadata? But then with multiple `/data` calls we risk duplicating the data dictionary.**
+       - ✔️ <u>Keep raw ingestion RAW, as  mentions that ingested data should not be changed; so any cleaning belongs later (so missing placeholders like  should be left as is to reflect the actual data source)</u>
+       - ✔️ <u>One solution for now is to , so that each run directory has the following files:  </u>
 3. Where should it be saved to? `data/01-raw/omni`? `data/01-raw/omni/OMNI_HRO2_1MIN`?
-   - Maybe lets do the former, because then we can tweak the dataset source as a config key (if we are interested in obtaining different variants of omni datasets e.g. at a lower resolution), provided that CDAWeb HAPI specification is already standardized (i.e. just specify a dataset id, parameters of interest and a bounded time frame). Parameter names (e.g. `"F, BX_GSE, BY_GSM,BZ_GSM"`) should have been naturally validated with the result from `/info`. 
-   - ✔️ <u>For now, make the output path containing the dataset id e.g. `data/01-raw/omni/OMNI_HRO2_1MIN/run_id=<run_id>` because it keeps room for other OMNI datasets later without mixing incompatible schemas. The dataset id is stable system identity, so config can own it.</u>
+   - Maybe lets do the former, because then we can tweak the dataset source as a config key (if we are interested in obtaining different variants of omni datasets e.g. at a lower resolution), provided that CDAWeb HAPI specification is already standardized (i.e. just specify a dataset id, parameters of interest and a bounded time frame). Parameter names (e.g. `"F, BX_GSE, BY_GSM,BZ_GSM"`) should have been naturally validated with the result from `/info`.
+   - ✔️ <u>For now, make the output path containing the dataset id e.g.  because it keeps room for other OMNI datasets later without mixing incompatible schemas. The dataset id is stable system identity, so config can own it.</u>
 4. What should be included in a run manifest (`_manifest.json`)? This is what we had for kindex:
    ```python
     {
@@ -709,15 +726,15 @@ Notebook/spike notes:
     "total_rows": 720
     }
    ```
-   Proposed fields:
-   - solar wind variables (the `parameters` key in the request body)
+
+   Proposed fields:- solar wind variables (the `parameters` key in the request body)
    - `time.min, time.max` keys in the request body: create 2 pairs similar to kindex (utc and melb time counterparts)
    - runid
    - HAPI version (in this case is 2.0.0) -- read from `/info` or config?
 5. We don't know whether a request will be truncated or not if `time.max - time.min` is long enough (remember SW API truncates response at 10k rows). But even if not, we should keep in mind that the `OMNI_HRO2_1MIN` dataset retrieves solar wind **at 1-minute time intervals** i.e. 1 day = `24*60=1440` rows, a bounded request for a month long time frame produces `30*1440=43200` rows. So there is no clear reason for chunking requests (i.e. break a request into multiple requests).
-    - ✔️<u>Keep chunking for now and set a reasonable default (e.g. 7 or 30 days) because chunking can help with debuggability, retries later, bounded files, and partial failure clarity </u>
+   - ✔️<u>Keep chunking for now and set a reasonable default (e.g. 7 or 30 days) because chunking can help with debuggability, retries later, bounded files, and partial failure clarity </u>
 6. Seems that `time.min, time.max` request parameters has to take a strict format like `"2021-11-21T00:00:00Z"`. But CLI arg can take time inputs like `YYYY-MM-DD HH:MM:ss` and parse it using python's `datetime`.
-7. ❓ Organizing `write_manifest` keys: function arguments with `extra: Dict[str, Any]` argument? custom class? 
+7. ❓ Organizing `write_manifest` keys: function arguments with `extra: Dict[str, Any]` argument? custom class?
    - First of all, what do we need to log?
      - Before ingestion (CLI args must have already been validated with CDAWeb HAPI `/info` response) [note ⭐ = present in config]
        1. ✔️`status='RUNNING'`
@@ -726,17 +743,18 @@ Notebook/spike notes:
        4. ❓`data_format`: maybe having a dynamic `data_format` *could* work, but `rows = len(chunk.payload.get("data", []))` implies that it is coupled to `/data` returning `format='json'`. **Maybe hardcode format to `json` for now but record it at the manifest regardless?**
        5. ✔️⭐ `supported_hapi_version`: record from config
        6. ✔️ `observed_hapi_version`: read from `/info.HAPI` (or record from config)
-       7. ✔️ `requested/effective start/end`: read from `OmniIngestionPlan` returned from `fetch_hapi_info` 
+       7. ✔️ `requested/effective start/end`: read from `OmniIngestionPlan` returned from `fetch_hapi_info`
        8. ✔️ `parameters`: read from CLI arg `parameters`
        9. ✔️⭐ `timeout_s`: read from config
        10. ✔️ `warnings`: any warnings from GET request to `/info`.
      - After ingestion: success (all requests succeed with hapi status code 1200)
-         1.  ✔️ a list of `chunk_days, sleep_s, chunk_files, chunk_statuses, total_rows`
-         2.  ✔️`status='SUCCESS'` 
+       1. ✔️ a list of `chunk_days, sleep_s, chunk_files, chunk_statuses, total_rows`
+       2. ✔️`status='SUCCESS'`
      - After ingestion: failure (at least one request fail with __)
-        1. ✔️`status='FAILURE'` 
-        2. include the error message: extend the json manifest with `{'error': repr(Exception)}`
+       1. ✔️`status='FAILURE'`
+       2. include the error message: extend the json manifest with `{'error': repr(Exception)}`
 8. Just realized: notebook shows that HAPI `/data` request **did not return a valid JSON payload when status is `1201`**
+
 ```json
 {
   "HAPI": "2.0",
@@ -748,13 +766,16 @@ Notebook/spike notes:
   "status": {"code": 1201, "message": "OK - no data for time range"}
 }
 ```
+
 That is invalid JSON:
+
 - The data array begins but contains a comma without a preceding value.
 - The second status field appears where an array element should be.
 - The array is not properly closed.
-So that even the request succeeded
+  So that even the request succeeded
 
 Modularization plan:
+
 - Move `notebook logic` into `src/ingest/omni.py`
 - Keep `orchestration/interface logic` in `entrypoint/module.py`
 - Keep `test-only helper` in `tests/helper.py` only if genuinely reused
@@ -762,6 +783,7 @@ Modularization plan:
 ## 12. Acceptance Criteria
 
 This feature is complete when:
+
 - The entrypoint runs as `python -m entrypoint.ingest_omni` and uses the shared wrapper with `log_dir="logs"`.
 - Required CLI values and stable YAML settings follow the boundary defined in this spec.
 - Strict CLI datetimes are parsed once and all HAPI request boundaries are UTC-naive, whole-second datetimes formatted as `YYYY-MM-DDTHH:MM:SSZ`.
@@ -781,6 +803,7 @@ This feature is complete when:
 - Any new durable decision has been captured in an ADR or explicitly deferred.
 
 This specification rewrite itself is complete when:
+
 - all template placeholders outside Section 11 have been removed;
 - Sections 1-10 and 12-13 agree with the current public interfaces and the agreed target behavior;
 - implementation mismatches are identified rather than silently documented as desired behavior; and
@@ -791,12 +814,13 @@ This specification rewrite itself is complete when:
 No unresolved design question blocks the first implementation and smoke test described by this spec.
 
 Known implementation debt:
-- Change `entrypoint/ingest_omni.py` from `log_dir="temp"` to `log_dir="logs"` after development smoke testing.
+
 - Decide whether the unused `CLI_UTC_FMT` and `HAPI_UTC_FMT` YAML keys should be removed or deliberately wired into a future configurable-format contract. They are not used by this spec.
 - Marker and manifest finalization are separate operations. A failure between writes can leave inconsistent evidence, and a failure while writing failure diagnostics can mask the original exception.
 - Second-precision run IDs can collide when two runs for the same dataset begin within one second.
 
 Deferred design questions:
+
 - Should a future ingestion version add bounded retries, exponential backoff, or resumable chunks?
 - Should a future ADR introduce `PARTIAL` runs, or should fail-fast remain permanent?
 - Should interactive dataset inspection be a separate entrypoint or an explicit `--describe` mode?
