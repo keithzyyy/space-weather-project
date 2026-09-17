@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import src.ingest.omni as omni
-from tests.omni.support import (
+from tests.omni_ingestion.support import (
     CHUNK_END_DATETIME,
     CHUNK_START_DATETIME,
     COMPLETED_AT_UTC,

@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 import entrypoint.ingest_omni as entrypoint
-from tests.omni.support import VALID_CLI_UTC_STR, base_omni_config
+from tests.omni_ingestion.support import VALID_CLI_UTC_STR, base_omni_config
 
 
 class TestParseArgs(unittest.TestCase):
