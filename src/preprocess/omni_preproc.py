@@ -380,22 +380,51 @@ def _build_successful_runs_select_sql(manifest_paths: list[str]) -> str:
 
 
 def _build_successful_chunks_select_sql(chunk_paths: list[str]) -> str:
-    """Build chunks belonging to the successful-runs relation."""
+    """Build successful chunks with validated Time-first parameter metadata."""
     # Convert manifest-selected chunk paths into a DuckDB list literal.
     chunk_paths_sql = _as_duckdb_path_list(
         chunk_paths,
         "chunk_paths",
     )
 
+    # Validate the complete parameter list before downstream [2:] slicing.
+
+    # declare nested types for fetched data in advance
+    # Fix nested types across ordinary, `Time`-only, and empty chunks.
+    # Keep observation rows as lists and absent parameter fill fields as NULL.
+    #
+    # this is because in _build_parameter_definitions_select_sql(), parameter.fill
+    # may throw a binding error even if parameters[2:] is empty.
+    #
+    # Note the double curly braces {{}} to escape {} in python's f-strings.
+    # so that they are treated as literal braces rather than python variables/expressions
     return f"""
         SELECT
             successful_runs.dataset_id,
             chunks.run_id,
             chunks.filename,
             chunks.data,
-            chunks.parameters
+            CASE
+                WHEN chunks.parameters IS NULL
+                    OR array_length(chunks.parameters) = 0
+                THEN error(
+                    'OMNI chunk has no parameter definitions'
+                    || ' | file=' || chunks.filename
+                )
+                WHEN chunks.parameters[1].name IS DISTINCT FROM 'Time'
+                THEN error(
+                    'OMNI first parameter must be Time'
+                    || ' | file=' || chunks.filename
+                )
+                ELSE chunks.parameters
+            END AS parameters
         FROM read_json(
             {chunk_paths_sql},
+            columns = {{
+                'data': 'JSON[][]',
+                'parameters':
+                    'STRUCT(name VARCHAR, type VARCHAR, units VARCHAR, fill DOUBLE)[]'
+            }},
             filename = true,
             hive_partitioning = true
         ) AS chunks
@@ -461,7 +490,9 @@ def _build_observation_values_select_sql() -> str:
 
 def _build_parameter_definitions_select_sql() -> str:
     """Build positional metadata for each non-time parameter."""
+
     # Preserve array position for joining metadata to observation values.
+
     return """
         SELECT
             dataset_id,

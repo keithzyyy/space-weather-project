@@ -48,7 +48,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--log_dir",
-        help="Optional directory to write log files to. Defaults to logs/.",
+        default="logs",
+        help="Directory to write log files to. Defaults to logs/.",
     )
     return parser.parse_args()
 
@@ -133,7 +134,7 @@ def main() -> None:
     run_entrypoint_with_logging(
         entrypoint_name="preproc_omni",
         main_logic=_main_logic,
-        log_dir=args.log_dir if args.log_dir else "logs/",
+        log_dir=args.log_dir,
     )
 
 

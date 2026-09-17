@@ -15,6 +15,7 @@ RAW_BASE_DIR = "data/01-raw/omni"
 AUDIT_BASE_DIR = "data/02-preprocessed/omni"
 RAW_BASE_OVERRIDE = "temp/raw/omni"
 AUDIT_BASE_OVERRIDE = "temp/audit/omni"
+LOG_DIR_OVERRIDE = "temp/logs"
 
 
 def _valid_config() -> dict:
@@ -52,9 +53,10 @@ class TestParseArgs(unittest.TestCase):
         self.assertFalse(args.rebuild)
         self.assertIsNone(args.raw_base_dir)
         self.assertIsNone(args.audit_base_dir)
+        self.assertEqual(args.log_dir, "logs")
 
     def test_parse_args_rebuild_and_path_overrides(self):
-        """Parse rebuild mode and both base-directory overrides."""
+        """Parse rebuild mode, base-directory overrides, and a log override."""
         command_line = [
             "preproc_omni",
             "--config_path",
@@ -64,6 +66,8 @@ class TestParseArgs(unittest.TestCase):
             RAW_BASE_OVERRIDE,
             "--audit_base_dir",
             AUDIT_BASE_OVERRIDE,
+            "--log_dir",
+            LOG_DIR_OVERRIDE,
         ]
 
         with patch("sys.argv", command_line):
@@ -73,6 +77,7 @@ class TestParseArgs(unittest.TestCase):
         self.assertTrue(args.rebuild)
         self.assertEqual(args.raw_base_dir, RAW_BASE_OVERRIDE)
         self.assertEqual(args.audit_base_dir, AUDIT_BASE_OVERRIDE)
+        self.assertEqual(args.log_dir, LOG_DIR_OVERRIDE)
 
 
 class TestMain(unittest.TestCase):
@@ -85,12 +90,14 @@ class TestMain(unittest.TestCase):
             rebuild=False,
             raw_base_dir=None,
             audit_base_dir=None,
+            log_dir="logs",
         )
         self.rebuild_args = argparse.Namespace(
             config_path=CONFIG_PATH,
             rebuild=True,
             raw_base_dir=RAW_BASE_OVERRIDE,
             audit_base_dir=AUDIT_BASE_OVERRIDE,
+            log_dir=LOG_DIR_OVERRIDE,
         )
 
     def test_main_incremental_composes_config_paths_and_forwards_arguments(
@@ -138,7 +145,10 @@ class TestMain(unittest.TestCase):
                 wrapper_arguments["entrypoint_name"],
                 "preproc_omni",
             )
-            self.assertEqual(wrapper_arguments["log_dir"], "logs")
+            # Main forwards the parsed directory; the parser owns its default.
+            self.assertEqual(
+                wrapper_arguments["log_dir"], self.incremental_args.log_dir
+            )
             self.assertTrue(callable(main_logic))
 
             # A logger Mock supplies the callback argument without real logging.
@@ -179,6 +189,12 @@ class TestMain(unittest.TestCase):
             mock_load_config.return_value = self.config
 
             entrypoint.main()
+
+            # The logging override is forwarded independently of audit paths.
+            self.assertEqual(
+                mock_wrapper.call_args.kwargs["log_dir"],
+                self.rebuild_args.log_dir,
+            )
 
             # Read the callback captured by the wrapper and model its execution.
             main_logic = mock_wrapper.call_args.kwargs["main_logic"]

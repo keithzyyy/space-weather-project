@@ -571,7 +571,7 @@ run_entrypoint_with_logging(
 )
 ```
 
-The current `log_dir="temp"` value is smoke-test scaffolding and must be changed before the feature meets this spec's acceptance criteria.
+The entrypoint uses the contractual `log_dir="logs"`; the earlier `temp` value was smoke-test scaffolding.
 
 ## 10. Test Blueprint
 
@@ -584,13 +584,13 @@ Testing framework:
 
 Test files:
 
-- `tests/omni/support.py`: deterministic fixtures and builders shared by OMNI test modules.
-- `tests/omni/test_datetime.py`: strict datetime parsing, formatting, and chunk filename contracts.
-- `tests/omni/test_hapi.py`: HTTP boundaries and HAPI metadata validation.
-- `tests/omni/test_chunks.py`: chunk iteration and raw chunk writing.
-- `tests/omni/test_manifest.py`: manifest construction, mutation, and snapshot writing.
-- `tests/omni/test_ingest_run.py`: orchestrator coordination and temporary-filesystem integration.
-- `tests/omni/test_entrypoint.py`: CLI parsing, config selection, source-call wiring, and logging-wrapper coordination.
+- `tests/omni_ingestion/support.py`: deterministic fixtures and builders shared by OMNI test modules.
+- `tests/omni_ingestion/test_datetime.py`: strict datetime parsing, formatting, and chunk filename contracts.
+- `tests/omni_ingestion/test_hapi.py`: HTTP boundaries and HAPI metadata validation.
+- `tests/omni_ingestion/test_chunks.py`: chunk iteration and raw chunk writing.
+- `tests/omni_ingestion/test_manifest.py`: manifest construction, mutation, and snapshot writing.
+- `tests/omni_ingestion/test_ingest_run.py`: orchestrator coordination and temporary-filesystem integration.
+- `tests/omni_ingestion/test_entrypoint.py`: CLI parsing, config selection, source-call wiring, and logging-wrapper coordination.
 
 Chosen boundaries:
 
@@ -815,7 +815,6 @@ No unresolved design question blocks the first implementation and smoke test des
 
 Known implementation debt:
 
-- Change `entrypoint/ingest_omni.py` from `log_dir="temp"` to `log_dir="logs"` after development smoke testing.
 - Decide whether the unused `CLI_UTC_FMT` and `HAPI_UTC_FMT` YAML keys should be removed or deliberately wired into a future configurable-format contract. They are not used by this spec.
 - Marker and manifest finalization are separate operations. A failure between writes can leave inconsistent evidence, and a failure while writing failure diagnostics can mask the original exception.
 - Second-precision run IDs can collide when two runs for the same dataset begin within one second.
