@@ -1,0 +1,60 @@
+<mxfile host="65bd71144e">
+    <diagram id="aqx-SpSqu41R9-gU8SRK" name="Worked example (audit long -&gt; canonical long)">
+        <mxGraphModel dx="1102" dy="997" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="1470" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="2" value="&lt;b&gt;Long audit input&lt;/b&gt; (selected columns only)&lt;div&gt;dataset_id = OMNI_HRO2_1MIN; ordinary rows are at 2026-01-01 00:00:00 UTC&lt;/div&gt;&lt;pre style=&quot;margin:8px 0 0;font-family:monospace;font-size:13px;line-height:1.5&quot;&gt;parameter | run | raw_value | is_source_fill&lt;br&gt;BX_GSE    | A   |     -1.39 | false&lt;br&gt;BX_GSE    | B   |   9999.99 | true&lt;br&gt;F         | A   |      9.85 | false&lt;br&gt;F         | B   |      9.85 | false&lt;br&gt;V         | A   |    400.00 | false&lt;br&gt;V         | B   |    420.00 | false&lt;br&gt;N         | A   |   9999.99 | true&lt;br&gt;N         | B   |  99999.90 | true&lt;br&gt;(null time, null parameter) | C | null | null&lt;/pre&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="221" y="15" width="498" height="290" as="geometry"/>
+                </mxCell>
+                <mxCell id="15" value="&lt;b&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;Diagram notes (not audit columns)&lt;/font&gt;&lt;/b&gt;&lt;div&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;- A &amp;lt; B &amp;lt; C by sortable run ID.&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;- C is a successful Time-only or empty run.&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;&lt;b&gt;&lt;br&gt;&lt;/b&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;&lt;b&gt;BX_GSE:&lt;/b&gt; latest run has a source fill; selected value becomes null.&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;&lt;b&gt;F:&lt;/b&gt; identical values.&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;&lt;b&gt;V:&lt;/b&gt; valid values disagree.&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;&lt;b&gt;N:&lt;/b&gt; different placeholders both mean missing.&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font style=&quot;font-size: 16px;&quot;&gt;Each ordinary row also has the dataset ID and timestamp shown at left.&lt;/font&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E8F5F2;strokeColor=#4A9188;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="764" y="10" width="554" height="250" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="2" target="4">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="5" value="1. Exclude sentinel; replace source fills with null" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="3">
+                    <mxGeometry x="-0.2" y="-6" relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="&lt;b&gt;normalized_observations&lt;/b&gt;&lt;div&gt;Same dataset ID and timestamp; exact duplicates collapse with DISTINCT.&lt;/div&gt;&lt;pre style=&quot;margin:8px 0 0;font-family:monospace;font-size:13px;line-height:1.5&quot;&gt;parameter | run | value | is_source_fill&lt;br&gt;BX_GSE    | A   | -1.39 | false&lt;br&gt;BX_GSE    | B   |  null | true&lt;br&gt;F         | A   |  9.85 | false&lt;br&gt;F         | B   |  9.85 | false&lt;br&gt;V         | A   | 400.0 | false&lt;br&gt;V         | B   | 420.0 | false&lt;br&gt;N         | A   |  null | true&lt;br&gt;N         | B   |  null | true&lt;br&gt;&lt;br&gt;&lt;/pre&gt;&lt;div&gt;C&#39;s sentinel has no parameter/time key and is excluded.&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="234" y="353" width="497" height="300" as="geometry"/>
+                </mxCell>
+                <mxCell id="6" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="4" target="8">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="2. Group by dataset,&lt;div&gt;time, parameter&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="6">
+                    <mxGeometry x="-0.25" relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="8" value="&lt;b&gt;observation_history&lt;/b&gt;&lt;div&gt;valid# = COUNT(DISTINCT non-null value); missing/valid = BOOL_OR.&lt;/div&gt;&lt;pre style=&quot;margin:8px 0 0;font-family:monospace;font-size:13px;line-height:1.6&quot;&gt;parameter | latest | valid# | missing | valid | conflict&lt;br&gt;BX_GSE    | B      |      1 | true    | true  | true&lt;br&gt;F         | B      |      1 | false   | true  | false&lt;br&gt;V         | B      |      2 | false   | true  | true&lt;br&gt;N         | B      |      0 | true    | false | false&lt;br&gt;&lt;br&gt;&lt;/pre&gt;&lt;div&gt;conflict = valid# &amp;gt; 1 OR (missing AND valid).&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="844" y="318" width="458" height="300" as="geometry"/>
+                </mxCell>
+                <mxCell id="9" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="8" target="11">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="10" value="3. Join normalized rows to history on key + latest run" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="9">
+                    <mxGeometry x="-0.3" y="4" relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="&lt;b&gt;canonical_candidates&lt;/b&gt;&lt;div&gt;All ordinary rows share the input timestamp and dataset ID.&lt;/div&gt;&lt;pre style=&quot;margin:8px 0 0;font-family:monospace;font-size:13px;line-height:1.6&quot;&gt;parameter | selected_run | value | is_source_fill | conflict&lt;br&gt;BX_GSE    | B            |  null | true           | true&lt;br&gt;F         | B            |  9.85 | false          | false&lt;br&gt;V         | B            | 420.0 | false          | true&lt;br&gt;N         | B            |  null | true           | false&lt;br&gt;&lt;br&gt;&lt;/pre&gt;&lt;div&gt;Latest run wins per parameter/time, including a fill.&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="835" y="675" width="460" height="225" as="geometry"/>
+                </mxCell>
+                <mxCell id="12" style="edgeStyle=orthogonalEdgeStyle;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="11" target="14">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="13" value="4. Count candidates&lt;div&gt;per canonical key&lt;/div&gt;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="12">
+                    <mxGeometry x="-0.25" y="-7" relative="1" as="geometry">
+                        <mxPoint x="-18" y="1" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="14" value="&lt;b&gt;counted_candidates -&amp;gt; canonical long output&lt;/b&gt;&lt;div&gt;COUNT(*) OVER (PARTITION BY dataset_id, time, parameter)&lt;/div&gt;&lt;pre style=&quot;margin:8px 0 0;font-family:monospace;font-size:13px;line-height:1.6&quot;&gt;parameter | selected_run | value | fill? | conflict | count&lt;br&gt;BX_GSE    | B            |  null | true  | true     | 1&lt;br&gt;F         | B            |  9.85 | false | false    | 1&lt;br&gt;V         | B            | 420.0 | false | true     | 1&lt;br&gt;N         | B            |  null | true  | false    | 1&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;/pre&gt;&lt;div&gt;All counts are 1: emit these four canonical rows.&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="206" y="677.5" width="491" height="243" as="geometry"/>
+                </mxCell>
+                <mxCell id="16" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#B85450;" edge="1" parent="1" source="11" target="17">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="17" value="&lt;b&gt;Separate failure fixture - not part of the four-row result&lt;/b&gt;&lt;div&gt;At 00:01, run B contains BX_GSE = -1.39 and BX_GSE = -1.50.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;DISTINCT retains both different values; both match latest run B.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;candidate_count = 2 for one dataset/time/parameter -&amp;gt; error.&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;The canonical build fails; it does not emit an arbitrary fifth row.&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F8CECC;strokeColor=#B85450;align=left;verticalAlign=top;spacingLeft=12;spacingTop=10;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="514" y="940" width="519" height="164" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

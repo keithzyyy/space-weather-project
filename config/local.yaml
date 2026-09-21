@@ -71,6 +71,8 @@ omni:
   preprocessing:
     audit_base_dir: "data/02-preprocessed/omni"
     audit_output_name: "long-observations"
+    canonical_base_dir: "data/02-preprocessed/omni"
+    canonical_output_name: "canonical-long-table"
 
 data:
   processed_dir: "data/02-preprocessed"
