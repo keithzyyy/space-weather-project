@@ -3,8 +3,8 @@ setlocal enableextensions
 
 :: Edit these values before running an ingestion.
 set "CONFIG_PATH=config/local.yaml"
-set "START_UTC="
-set "END_UTC="
+set "START_UTC=2025-31-01 00:00:00"
+set "END_UTC=2026-01-01 01:00:00"
 set "PARAMETERS=Time,BX_GSE,BY_GSE,BZ_GSE"
 set "RAW_BASE_DIR="
 

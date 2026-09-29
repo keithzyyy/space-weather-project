@@ -2,7 +2,7 @@
 setlocal enableextensions
 
 set "CONFIG_PATH=config/local.yaml"
-set "MODE=incremental"
+set "MODE=rebuild"
 
 if /I not "%MODE%"=="incremental" if /I not "%MODE%"=="rebuild" (
     echo MODE must be incremental or rebuild.
