@@ -77,6 +77,9 @@ omni:
 data:
   processed_dir: "data/02-preprocessed"
   features_dir: "data/03-features"
+  dataset_assessment_output_dir: "data/dataset-assessments"
+
+
 model:
   type: "RandomForest"
   parameters:
