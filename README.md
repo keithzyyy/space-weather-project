@@ -50,17 +50,19 @@ architecture, K-index lineage, OMNI lineage, one dataset assessment, and source
 attribution. It reads committed, frozen demonstration artifacts; it does not
 run ingestion or preprocessing, write artifacts, or make external requests.
 
-Until a hosted dashboard is available, the frozen demonstration can be
-launched locally using the commands below without API credentials. Its data-use
-limitations and source attribution are documented below.
+**[Open the live data-readiness dashboard](https://space-weather-project-data-overview.streamlit.app/)**
+
+The hosted dashboard and its frozen demonstration require no API credentials.
+The same application can also be launched locally using the commands below.
+Its data-use limitations and source attribution are documented below.
 
 ## Current status
 
-- [x] K-index ingestion, audit, and canonical reconciliation
-- [x] OMNI ingestion, audit, and canonical reconciliation
-- [x] Native-cadence coverage and dataset-request eligibility
-- [x] Contract tests and user-facing pipeline entrypoints
-- [x] Read-only data-lineage and assessment dashboard
+- [X] K-index ingestion, audit, and canonical reconciliation
+- [X] OMNI ingestion, audit, and canonical reconciliation
+- [X] Native-cadence coverage and dataset-request eligibility
+- [X] Contract tests and user-facing pipeline entrypoints
+- [X] Read-only data-lineage and assessment dashboard
 - [ ] Wide model-ready dataset construction
 - [ ] Feature engineering
 - [ ] Model development and evaluation
