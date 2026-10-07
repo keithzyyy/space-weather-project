@@ -52,8 +52,8 @@ operational use.
   not be described as untouched ingestion runs.
 - `specs/presentation.drawio` is the editable architecture source and
   `specs/presentation.svg` is its rendered public asset.
-- `README_v2.md` is the current public README draft. It is not yet a replacement
-  for `README.md`.
+- `README.md` is the canonical public entry point for the architecture,
+  dashboard, current project status, and source attribution.
 - The dashboard is implemented as repository-local Streamlit modules rather
   than reusable application services. The user-visible presentation behavior
   is the primary contract.
@@ -227,7 +227,7 @@ requests.
 
 ### 4.6 README integration
 
-The public README draft must:
+The public README must:
 
 - embed or link `specs/presentation.svg`;
 - summarize raw provenance, auditability, canonical reconciliation, and
@@ -328,7 +328,7 @@ examples/dashboard/
         omni/canonical/OMNI_HRO2_1MIN/canonical-long-table/
     assessment/
         assessment_id=<assessment-id>/
-README_v2.md
+README.md
 ```
 
 ### 8.2 Fixed demonstration identities
@@ -535,7 +535,5 @@ Questions deferred beyond this specification pass:
 4. Should Streamlit remain in `requirements-dev.txt` or move to a dedicated
    dashboard requirements file, and what minimum version should be supported?
 5. Should the read-only application be deployed to Streamlit Community Cloud?
-6. When should `README_v2.md` replace `README.md`, and when should
-   `docs/project-vision.md` be aligned with it?
-7. Should later dashboard versions expose additional display-only filtering or
+6. Should later dashboard versions expose additional display-only filtering or
    summaries without duplicating pipeline policy?
