@@ -121,6 +121,13 @@ Notes
 - For time-dependent behavior, patch clocks/run IDs/retrieval timestamps to deterministic values and assert the resulting observable fields or paths.
 - For progress bars or sleeps, patch them out so tests stay deterministic and quiet.
 
+**Integration tests**
+
+- In the specification, describe fixture schemas, representative rows, and scenario meaning clearly enough to derive the expected outputs.
+- Exercise real in-process collaborators and temporary filesystem, Parquet, pandas, and DuckDB behavior; mock only external or nondeterministic boundaries.
+- Use the smallest explicit deterministic fixtures that express the contract. Extract shared fixture support only when multiple test modules reuse it, while keeping scenario expectations in each test module.
+- Assert public schemas, invariants, failure behavior, and that source fixtures remain unchanged.
+
 **Spec test matrix completeness**
 
 - Each test matrix row should identify the function/entrypoint under test, test level (`pure`, `orchestrator`, `filesystem integration`, `parser`, or `CLI/logging lifecycle`), fixtures needed, mocks/patch targets, and minimum assertions.

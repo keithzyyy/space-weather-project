@@ -1,0 +1,23 @@
+{
+  "base_url": null,
+  "chunk_days": 1,
+  "chunk_files": [
+    "chunk_20250101T000000Z__20250101T030000Z.jsonl"
+  ],
+  "created_at_utc": "20261003T080000Z",
+  "dataset": "k_index",
+  "end_melb_str": "2025-01-01 14:00:00 AEDT",
+  "end_utc_str": "2025-01-01 03:00:00",
+  "endpoint": "synthetic-conflict-fixture",
+  "location": "Australian region",
+  "run_id": "20261003T080000Z",
+  "sleep_seconds": 0,
+  "source": "synthetic_presentation_fixture",
+  "start_melb_str": "2025-01-01 11:00:00 AEDT",
+  "start_utc_str": "2025-01-01 00:00:00",
+  "status": "SUCCESS",
+  "total_rows": 1,
+  "synthetic_fixture": true,
+  "derived_from_run_id": "20260307T050056Z",
+  "purpose": "Demonstrate canonical reconciliation when successful runs report different K-index values for the same location and valid time."
+}
