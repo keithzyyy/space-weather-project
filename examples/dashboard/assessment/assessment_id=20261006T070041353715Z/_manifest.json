@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "assessment_id": "20261006T070041353715Z",
+  "created_at_utc": "2026-10-06T07:00:41.353715Z",
+  "execution_status": "SUCCESS",
+  "eligibility_status": "READY",
+  "request": {
+    "kindex_path": "examples/dashboard/derived/kindex/canonical",
+    "omni_path": "examples/dashboard/derived/omni/canonical/OMNI_HRO2_1MIN/canonical-long-table",
+    "location": "Australian region",
+    "start_utc": "2025-01-02T00:00:00Z",
+    "end_utc": "2025-01-02T21:00:00Z",
+    "omni_parameters": [
+      "BX_GSE",
+      "BZ_GSE"
+    ],
+    "omni_lookback_minutes": 180,
+    "kindex_lag_count": 1
+  },
+  "derived": {
+    "kindex_coverage_start_utc": "2025-01-01T21:00:00Z",
+    "sample_count": 7
+  },
+  "result": {
+    "is_ready": true,
+    "issue_count": 0
+  },
+  "inputs": {
+    "kindex": {
+      "resolved_path": "[ROOT]/examples/dashboard/derived/kindex/canonical",
+      "files": [
+        {
+          "relative_path": "T2.parquet",
+          "size_bytes": 6250,
+          "modified_time_ns": 1791270023667152700
+        }
+      ]
+    },
+    "omni": {
+      "resolved_path": "[ROOT]/examples/dashboard/derived/omni/canonical/OMNI_HRO2_1MIN/canonical-long-table",
+      "files": [
+        {
+          "relative_path": "canonical.parquet",
+          "size_bytes": 4308732,
+          "modified_time_ns": 1791270023683079100
+        }
+      ]
+    }
+  },
+  "artifacts": {
+    "sample_plan": {
+      "path": "sample_plan.parquet",
+      "rows": 7
+    },
+    "kindex_summary": {
+      "path": "kindex/summary.parquet",
+      "rows": 1
+    },
+    "kindex_covered_intervals": {
+      "path": "kindex/covered_intervals.parquet",
+      "rows": 1
+    },
+    "kindex_gap_intervals": {
+      "path": "kindex/gap_intervals.parquet",
+      "rows": 0
+    },
+    "kindex_conflict_intervals": {
+      "path": "kindex/conflict_intervals.parquet",
+      "rows": 0
+    },
+    "omni_summary": {
+      "path": "omni/summary.parquet",
+      "rows": 14
+    },
+    "issues": {
+      "path": "issues.json",
+      "rows": 0
+    }
+  }
+}

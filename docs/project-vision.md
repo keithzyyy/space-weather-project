@@ -1,131 +1,163 @@
 # Project Vision
 
-This project is a production-style K-index/Kp disturbance prediction service. The MVP should tell one coherent story: ingest historical space-weather data, preprocess it into model-ready features, train an offline model, track the experiment, save a model artifact, and serve predictions through a local containerized API.
+## The Goal
 
-The goal is not to build a state-of-the-art geomagnetic forecasting system. The goal is to practice a realistic machine-learning system shape: reproducible data flow, explicit artifacts, experiment tracking, tested contracts, and a small prediction service.
+This project is building the data foundation for short-horizon prediction of
+the Australian-region K-index, a measure of local geomagnetic disturbance. The
+eventual modelling system will combine historical K-index observations with
+candidate predictors from NASA's OMNI dataset, including solar-wind and
+interplanetary magnetic-field measurements.
 
-## MVP Definition Of Done
+The immediate challenge is not choosing an algorithm. It is establishing
+whether the observations required for a modelling request exist, agree, and
+can be traced back to their source. The project therefore begins with a
+trustworthy data-readiness system before progressing to feature engineering,
+model training, or prediction serving.
 
-The MVP is done when:
+The eventual modelling objective remains deliberately broad: predict K-index
+over a short future interval. Exploratory analysis will determine whether the
+first useful formulation should be regression, classification, or another
+well-defined objective.
 
-- A historical dataset can be ingested and preprocessed into model-ready features.
-- A training command can train from a fixed historical dataset.
-- The training run creates a saved model artifact and enough metadata to serve it safely.
-- The training run logs a lightweight experiment record to Weights & Biases.
-- A serving API can load the saved artifact and return a prediction.
-- Docker can run the serving API locally without relying on the local Conda environment.
-- Tests cover the main contracts for data, features, training, experiment tracking, artifact loading, and API prediction behavior.
-- This document and the README explain what the system does, what "production-style" means here, and what is intentionally out of scope.
+## Current Data-Readiness MVP
 
-## What Production-Style Means Here
+The current minimum viable product answers a concrete question:
 
-Production-style means the project is built like a small deployable ML service:
+> For a requested modelling period, do we have the K-index targets, historical
+> K-index lags, and OMNI lookback observations needed to construct the dataset?
 
-- Runtime behavior is config-driven, with per-run choices passed through CLI arguments where appropriate.
-- Secrets are not committed.
-- Data contracts are explicit and tested.
-- Raw data is preserved, and downstream stages create new artifacts instead of mutating raw records.
-- Model artifacts and feature metadata are saved explicitly.
-- Training and serving use compatible feature logic.
-- The serving API can run in a clean Docker environment.
+The MVP is complete when the system can:
 
-Production-style does not mean cloud-scale production for the MVP. The MVP does not require high availability, authentication, rate limiting, automated retraining, online learning, cloud deployment, or enterprise monitoring.
+- preserve each K-index and OMNI ingestion run as immutable raw evidence;
+- consolidate source responses into audit-friendly tables without erasing run
+  history, duplicate reports, empty responses, or source fill values;
+- reconcile repeated reports into canonical K-index and OMNI tables with one
+  downstream observation per canonical key;
+- report missing, null, and conflicting observations at each source's native
+  cadence;
+- assess a modelling-dataset request and explain whether identified coverage
+  issues block construction;
+- persist the request, reports, issues, input fingerprints, and manifest as an
+  assessment artifact; and
+- demonstrate the completed flow through a credential-free, read-only public
+  dashboard using frozen example artifacts.
 
-## Training Versus Serving Stance
+This is **production-style data engineering**, not yet a production forecasting
+service. Here, production-style means explicit contracts, immutable inputs,
+traceable transformations, configuration and CLI boundaries, deterministic
+artifacts, and contract-focused tests. It does not imply operational
+forecasting, cloud-scale availability, or a deployed prediction API.
 
-The primary MVP objective is serving predictions through an API. Training is still required, but it exists to produce a model artifact that the serving API can load.
+## System Flow and Trust Model
 
-Training responsibilities:
+K-index targets and OMNI predictors begin in separate pipelines because their
+sources, schemas, and native cadences differ. K-index observations describe
+three-hour intervals for a requested location. OMNI provides minute-level,
+parameter-oriented measurements. Each source passes through the same broad
+trust-building stages before the pipelines meet at dataset assessment.
 
-- Build features from historical data.
-- Train and evaluate one model objective.
-- Save the model artifact and feature metadata.
-- Log a lightweight experiment record to Weights & Biases.
+The complete architecture is shown in the
+[data-readiness architecture diagram](../specs/presentation.svg).
 
-Serving responsibilities:
+The stages have distinct responsibilities:
 
-- Load an existing model artifact.
-- Accept prediction input through an API request.
-- Build or validate the required feature shape.
-- Return a prediction response.
-- Run without requiring Weights & Biases to be available at prediction time.
+- **Raw** preserves what an ingestion run returned, along with its request and
+  run metadata. It is evidence and is not cleaned in place.
+- **Audit** consolidates successful runs while retaining provenance and
+  source-reported absences, fills, duplicates, and disagreements.
+- **Canonical** reconciles audit history into one downstream record per key
+  while retaining quality and conflict information.
+- **Coverage** compares a request's expected time grid with canonical records
+  and identifies missing, null, or conflicting requirements.
+- **Eligibility** applies explicit policy to those findings and returns either
+  readiness or contextual issues. It does not silently repair or re-ingest
+  data.
 
-## MVP Flow
+### Forecast-origin contract
 
-```text
-historical data
-  -> preprocessing
-  -> features
-  -> offline training
-  -> tracked experiment
-  -> saved artifact
-  -> prediction API
-  -> Dockerized local serving
-```
+A modelling request is expressed as a sequence of forecast origins rather than
+as one universal timestamp shared by both datasets. For each origin `t`:
 
-Every must-have requirement should support this flow. If a proposed feature does not help this flow, it should usually be `Should have`, `Could have`, or out of scope for the MVP.
+- the target is the half-open K-index interval `[t, t + 3 hours)`;
+- requested K-index lags occupy consecutive three-hour slots before `t`; and
+- OMNI predictors come from the half-open lookback window
+  `[t - lookback, t)`.
 
-## MoSCoW Matrix
+This contract preserves the meaning and cadence of each source. It also makes
+the information boundary explicit: predictor windows end at the forecast
+origin, while the target describes the interval beginning there. The current
+coverage system verifies whether these source requirements are represented;
+constructing and aggregating the final modelling features is the next stage.
 
-| Stage | Requirement | Status | Definition of done |
-|---|---|---|---|
-| Must have | Historical ingestion and preprocessing for K-index/Kp target data | Partially adopted | Historical observations can be ingested, raw data is preserved, and preprocessing produces clean target data for modelling. |
-| Must have | Feature engineering for one fixed modelling objective | Not started | A reproducible feature table can be generated for training and reused or validated by serving. |
-| Must have | One modelling objective | Adopted as scope | The project targets short-term K-index/Kp disturbance prediction, initially as direct regression or threshold classification. |
-| Must have | Offline train/evaluate/save pipeline | Not started | A command trains from fixed historical data, evaluates the model, and writes a model artifact plus metadata. |
-| Must have | Simple Weights & Biases experiment tracking | Not started | Training logs config, metrics, feature schema or feature list, objective details, artifact reference, run ID, and timestamp. |
-| Must have | Saved model artifact with serving metadata | Not started | Serving can load the artifact without retraining and can verify the expected feature shape. |
-| Must have | FastAPI prediction endpoint | Not started | A local API endpoint loads the saved model and returns prediction output for valid input. |
-| Must have | Dockerized local serving API | Not started | Docker can run the API in a clean Python runtime without relying on local Conda. |
-| Must have | Contract-focused tests | In progress | Tests cover data contracts, feature shape, training artifact creation, W&B logging boundary, and API prediction response. |
-| Should have | Docker Compose local demo | Not started | Compose can run the API service and optionally a one-shot training service. |
-| Should have | Detailed entrypoint logging | Partially adopted | Entrypoints follow the shared running/success/error logging lifecycle. |
-| Should have | Basic prediction request logging | Not started | Prediction requests record enough context to debug inputs, model version, and outputs without leaking secrets. |
-| Should have | Basic model evaluation report | Not started | Training writes a readable local report with the key metrics and dataset split details. |
-| Should have | BoM API 10k-record truncation guardrail | Not started | Ingestion warns when a requested window risks API truncation. |
-| Should have | README reproducible local demo | Not started | README explains the MVP flow and the commands to train, serve, and test locally. |
-| Could have | Simple CI | Not started | Tests run automatically on push or pull request. |
-| Could have | W&B sweeps or richer experiment comparison | Not started | Hyperparameter search or richer comparison is available, but not required for the MVP. |
-| Could have | Online evaluation after delayed labels arrive | Not started | Predictions can later be compared with observed labels when they become available. |
-| Could have | Drift checks | Not started | Basic feature or prediction drift checks are produced after the MVP is stable. |
-| Could have | Monitoring dashboard | Not started | A small dashboard shows predictions, metrics, or drift summaries. |
-| Could have | Hybrid regression/classification for high K-index/Kp events | Not started | The project evaluates whether combined modelling improves high-disturbance handling. |
-| Could have | Cloud deployment | Not started | The API can be deployed beyond the local machine. |
-| Won't have for MVP | Automated retraining service | Deferred | Retraining remains a manual command during the MVP. |
-| Won't have for MVP | Online learning | Deferred | The model is not updated continuously from live observations. |
-| Won't have for MVP | Airflow-style orchestration | Deferred | The MVP avoids a full workflow orchestrator. |
-| Won't have for MVP | Enterprise-grade production monitoring | Deferred | Monitoring stays lightweight and local until the core service is coherent. |
-| Won't have for MVP | Authentication, rate limiting, and multi-user API hardening | Deferred | The API is a local demo service, not a public multi-user product. |
-| Won't have for MVP | State-of-the-art space weather forecasting claims | Deferred | The model is evaluated honestly as a project artifact, not positioned as operational scientific forecasting. |
+## Roadmap
 
-## Weights & Biases Boundary
+### Now — data readiness complete
 
-Weights & Biases is a must-have for lightweight training experiment tracking only.
+- K-index ingestion with immutable run artifacts.
+- K-index audit and canonical tables with provenance and conflict handling.
+- OMNI ingestion with parameter and time-window metadata.
+- OMNI audit and canonical long tables with fill and conflict handling.
+- Native-cadence K-index and OMNI coverage reporting.
+- Request-level dataset assessment, input fingerprinting, persisted evidence,
+  and human-readable summaries.
+- Contract tests and user-facing entrypoints for the implemented pipeline.
+- A public architecture diagram and read-only dashboard demonstrating lineage
+  and readiness without API credentials.
 
-Minimum W&B tracking:
+### Next — model-ready data and feature engineering
 
-- Training config snapshot.
-- Train, validation, and test metrics.
-- Model objective and threshold, if classification is used.
-- Feature list or feature schema version.
-- Model artifact path or W&B artifact reference.
-- Run ID and timestamp.
+- Construct the wide modelling dataset for an eligible request.
+- Finalize target semantics and leakage-safe information boundaries.
+- Explore the distributions, missingness, conflicts, and relationships in the
+  candidate observations.
+- Engineer and compare K-index lag features and OMNI lookback summaries without
+  forcing minute-level observations into a premature fixed aggregation.
+- Establish a reproducible split and evaluation design suitable for ordered
+  time-series data.
 
-Not required for the MVP:
+### Later — modelling and delivery
 
-- W&B sweeps.
-- W&B model registry promotion workflow.
-- Automated retraining triggers.
-- Online production monitoring through W&B.
-- Dashboard polish beyond being able to inspect runs.
+- Select the modelling formulation using evidence from exploratory analysis.
+- Establish transparent baselines and evaluation metrics.
+- Train and compare candidate models, then track reproducible experiments.
+- Package approved model artifacts with their feature and data contracts.
+- Consider a local or deployed serving interface only after offline behavior is
+  sufficiently understood and validated.
 
-The serving API must not require W&B at prediction time. W&B belongs to training and evaluation; serving should load a saved artifact and run independently.
+## Boundaries and Claims
 
-## Maintenance Rules
+The current system does not:
 
-- Keep this document as the repo-side source of truth for project scope and MVP done-ness.
-- Keep Notion as a planning mirror or backlog unless a future decision explicitly makes Notion canonical again.
-- Use specs for feature behavior, ADRs for durable design decisions, and this vision document for priority and tiebreakers.
-- Update the MoSCoW matrix whenever a major feature changes stage or status.
-- If a new requirement becomes `Must have`, confirm that it supports the MVP flow before promoting it.
-- If a project decision changes what "production-style" means, capture the durable reasoning in an ADR and update this document.
+- train or select a machine-learning model;
+- produce K-index forecasts or operational space-weather warnings;
+- establish that the candidate OMNI parameters are predictive;
+- claim scientific validation or state-of-the-art forecasting performance; or
+- expose a public prediction service.
+
+The public dashboard uses frozen examples whose displayed numeric observations
+have been modified for demonstration. They are not historical measurements and
+must not be used for scientific analysis or operational forecasting. A separate
+constructed K-index conflict illustrates reconciliation behavior and is clearly
+identified as synthetic.
+
+The project links to the BoM Space Weather API as its K-index source but does
+not assert an unconfirmed licence for reuse. Source attribution and public
+fixture limitations belong in the README and dashboard alongside the examples.
+
+## Supporting Documentation
+
+This document is the repository's high-level source of truth for project
+direction, scope, and milestone status. Detailed behavior belongs in the
+relevant specifications:
+
+- [Coverage reporting](../specs/spec-08-coverage-reporting.md) defines the
+  native-cadence K-index and OMNI coverage contracts.
+- [Dataset assessment](../specs/spec-09-dataset-assessment.md) defines request
+  validation, sample planning, eligibility, persistence, and presentation.
+- [Public presentation bundle](../specs/spec-presentation.md) defines the
+  architecture asset, dashboard, frozen examples, disclosures, and attribution.
+
+The README should remain the concise public entry point and keep its status
+checklist aligned with the roadmap above. Specifications define feature
+contracts, ADRs record durable design decisions, and this vision guides
+priorities when future work introduces competing choices.

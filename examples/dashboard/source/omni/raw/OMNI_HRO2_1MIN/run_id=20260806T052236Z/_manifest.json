@@ -1,0 +1,51 @@
+{
+  "artifacts": {
+    "chunks": [
+      {
+        "chunk_end_utc_str": "2026-07-07T00:00:00Z",
+        "chunk_start_utc_str": "2026-07-06T00:00:00Z",
+        "file": "chunk_20260706T000000Z__20260707T000000Z.json",
+        "hapi_status_code": 1200,
+        "hapi_status_message": "OK",
+        "rows": 1440
+      }
+    ],
+    "info_file": "hapi_info.json"
+  },
+  "error": null,
+  "ingestion": {
+    "chunk_days": 10,
+    "sleep_s": 5,
+    "timeout_s": 120
+  },
+  "preflight_warnings": [],
+  "request": {
+    "effective_end_utc": "2026-07-07T00:00:00Z",
+    "effective_start_utc": "2026-07-06T00:00:00Z",
+    "parameters": [
+      "Time"
+    ],
+    "requested_end_utc": "2026-07-07T00:00:00Z",
+    "requested_start_utc": "2026-07-06T00:00:00Z",
+    "time_range_overlap_status": "subset"
+  },
+  "run": {
+    "completed_at_utc": "20260806T052238Z",
+    "created_at_utc": "20260806T052236Z",
+    "run_id": "20260806T052236Z",
+    "status": "SUCCESS"
+  },
+  "source": {
+    "base_url": "https://cdaweb.gsfc.nasa.gov/hapi",
+    "data_format": "json",
+    "dataset": "omni",
+    "dataset_id": "OMNI_HRO2_1MIN",
+    "name": "cdaweb_hapi",
+    "observed_hapi_version": "2.0",
+    "supported_hapi_version": "2.0"
+  },
+  "summary": {
+    "empty_chunk_count": 0,
+    "total_rows": 1440
+  }
+}
