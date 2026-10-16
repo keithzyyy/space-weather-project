@@ -27,6 +27,13 @@ def render_overview_page() -> None:
         # Stop this Streamlit run because the required presentation asset is absent.
         st.stop()
 
+    # Distinguish the real system design from the synthetic page walkthroughs.
+    st.info(
+        "This diagram describes the real pipeline architecture. The lineage and "
+        "assessment pages use independently generated synthetic records dated "
+        "2099; they do not display historical observations or forecasts."
+    )
+
     # Render the local SVG responsively with accessible alternative text.
     st.image(
         diagram_path,

@@ -11,12 +11,12 @@ import pandas as pd
 import streamlit as st
 
 
-HAPPY_RUN_ID = "20260307T050056Z"
-EMPTY_RUN_ID = "20260312T004356Z"
-SYNTHETIC_RUN_ID = "20261003T080000Z"
+HAPPY_RUN_ID = "20990104T000000Z"
+EMPTY_RUN_ID = "20990104T001000Z"
+CONFLICT_RUN_ID = "20990104T002000Z"
 
-NORMAL_VALID_TIME = pd.Timestamp("2025-01-01 03:00:00")
-CONFLICT_VALID_TIME = pd.Timestamp("2025-01-01 00:00:00")
+NORMAL_VALID_TIME = pd.Timestamp("2099-01-01 18:00:00")
+CONFLICT_VALID_TIME = pd.Timestamp("2099-01-01 15:00:00")
 
 
 @dataclass(frozen=True)
@@ -29,12 +29,12 @@ class KIndexPageData:
     normal_canonical: pd.DataFrame
     empty_audit: pd.DataFrame
     empty_canonical: pd.DataFrame
-    modified_conflict_record: dict[str, Any]
+    earlier_conflict_record: dict[str, Any]
     conflict_audit: pd.DataFrame
     conflict_canonical: pd.DataFrame
-    synthetic_manifest: dict[str, Any]
-    synthetic_raw_record: dict[str, Any]
-    synthetic_provenance: str
+    conflict_manifest: dict[str, Any]
+    later_conflict_record: dict[str, Any]
+    conflict_provenance: str
     audit_row_count: int
     canonical_row_count: int
 
@@ -111,8 +111,8 @@ def _select_canonical_rows(
 
 def _validate_page_data(data: KIndexPageData) -> None:
     """Fail visibly when regenerated artifacts no longer tell this story."""
-    if int(data.normal_source_record["index"]) != 3:
-        raise ValueError("Expected the modified K-index value 3")
+    if int(data.normal_source_record["index"]) != 1:
+        raise ValueError("Expected the synthetic K-index value 1")
     if len(data.normal_audit) != 1:
         raise ValueError("Expected one normal audit observation")
     if len(data.normal_canonical) != 1:
@@ -122,20 +122,22 @@ def _validate_page_data(data: KIndexPageData) -> None:
     if not data.empty_canonical.empty:
         raise ValueError("The successful-empty run unexpectedly reached canonical")
     if {
-        int(data.modified_conflict_record["index"]),
-        int(data.synthetic_raw_record["index"]),
-    } != {6, 8}:
-        raise ValueError("Expected conflicting K-index fixture values 6 and 8")
+        int(data.earlier_conflict_record["index"]),
+        int(data.later_conflict_record["index"]),
+    } != {0, 9}:
+        raise ValueError("Expected conflicting K-index fixture values 0 and 9")
     if len(data.conflict_audit) != 2:
         raise ValueError("Expected both conflicting reports in the audit table")
     if len(data.conflict_canonical) != 1:
         raise ValueError("Expected one reconciled canonical conflict row")
 
     canonical_row = data.conflict_canonical.iloc[0]
-    if int(canonical_row["kindex"]) != 8 or not bool(canonical_row["flag"]):
+    if int(canonical_row["kindex"]) != 9 or not bool(canonical_row["flag"]):
         raise ValueError(
-            "Expected the latest K-index value 8 with flag=True"
+            "Expected the latest K-index value 9 with flag=True"
         )
+    if data.audit_row_count != 12 or data.canonical_row_count != 10:
+        raise ValueError("Expected 12 audit rows and 10 canonical observations")
 
 
 @st.cache_data(show_spinner=False)
@@ -168,9 +170,9 @@ def _load_kindex_page_data(project_root_text: str) -> KIndexPageData:
     )
 
     run_dirs = {
-        "happy_path": raw_base / f"run_id={HAPPY_RUN_ID}",
-        "successful_empty": raw_base / f"run_id={EMPTY_RUN_ID}",
-        "synthetic_conflict": raw_base / f"run_id={SYNTHETIC_RUN_ID}",
+        "rows_present": raw_base / f"run_id={HAPPY_RUN_ID}",
+        "successful_no_rows": raw_base / f"run_id={EMPTY_RUN_ID}",
+        "values_disagree": raw_base / f"run_id={CONFLICT_RUN_ID}",
     }
     manifests = {
         role: _read_json(run_dir / "_manifest.json")
@@ -178,12 +180,12 @@ def _load_kindex_page_data(project_root_text: str) -> KIndexPageData:
     }
 
     happy_records = _read_run_records(
-        run_dir=run_dirs["happy_path"],
-        manifest=manifests["happy_path"],
+        run_dir=run_dirs["rows_present"],
+        manifest=manifests["rows_present"],
     )
-    synthetic_records = _read_run_records(
-        run_dir=run_dirs["synthetic_conflict"],
-        manifest=manifests["synthetic_conflict"],
+    conflict_records = _read_run_records(
+        run_dir=run_dirs["values_disagree"],
+        manifest=manifests["values_disagree"],
     )
 
     audit = pd.read_parquet(audit_path)
@@ -218,15 +220,15 @@ def _load_kindex_page_data(project_root_text: str) -> KIndexPageData:
         location="Melbourne",
     )
 
-    modified_conflict_record = _source_record(
+    earlier_conflict_record = _source_record(
         records=happy_records,
         valid_time=CONFLICT_VALID_TIME,
-        description="modified conflict",
+        description="earlier conflict",
     )
-    synthetic_raw_record = _source_record(
-        records=synthetic_records,
+    later_conflict_record = _source_record(
+        records=conflict_records,
         valid_time=CONFLICT_VALID_TIME,
-        description="synthetic conflict",
+        description="later conflict",
     )
     conflict_audit = _select_audit_rows(
         audit,
@@ -260,13 +262,13 @@ def _load_kindex_page_data(project_root_text: str) -> KIndexPageData:
         normal_canonical=normal_canonical,
         empty_audit=empty_audit,
         empty_canonical=empty_canonical,
-        modified_conflict_record=modified_conflict_record,
+        earlier_conflict_record=earlier_conflict_record,
         conflict_audit=conflict_audit,
         conflict_canonical=conflict_canonical,
-        synthetic_manifest=manifests["synthetic_conflict"],
-        synthetic_raw_record=synthetic_raw_record,
-        synthetic_provenance=(
-            run_dirs["synthetic_conflict"] / "_SYNTHETIC_FIXTURE.md"
+        conflict_manifest=manifests["values_disagree"],
+        later_conflict_record=later_conflict_record,
+        conflict_provenance=(
+            run_dirs["values_disagree"] / "_SYNTHETIC_FIXTURE.md"
         ).read_text(encoding="utf-8"),
         audit_row_count=len(audit),
         canonical_row_count=len(canonical),
@@ -280,7 +282,7 @@ def _column_config(frame: pd.DataFrame) -> dict[str, Any]:
     available: dict[str, Any] = {
         "location": st.column_config.TextColumn(
             "Location",
-            help="The location supplied with the original K-index request.",
+            help="The location assigned to this synthetic request scenario.",
         ),
         "valid_time": st.column_config.DatetimeColumn(
             "Valid time",
@@ -303,8 +305,8 @@ def _column_config(frame: pd.DataFrame) -> dict[str, Any]:
         "run_id": st.column_config.TextColumn(
             "Run ID",
             help=(
-                "An identifier assigned by this project when it saves an "
-                "ingestion run. It is not returned by BoM."
+                "An identifier assigned to a saved synthetic ingestion "
+                "scenario. It is not returned by BoM."
             ),
         ),
         "flag": st.column_config.CheckboxColumn(
@@ -358,28 +360,29 @@ def _render_stage(
 
 
 def _render_normal_example(data: KIndexPageData) -> None:
-    """Render one ordinary modified-fixture observation."""
+    """Render one ordinary synthetic observation."""
     # Phrase the scenario as the question the evidence answers.
     st.subheader("What happens when the source returns data?")
 
     # Clarify that this is one representative row, not the full source table.
     st.caption(
         "One timestamp is followed through the pipeline; the full run contains "
-        "720 observations."
+        "10 observations."
     )
 
     # Show the API-shaped record without adding project provenance fields.
     with st.container(border=True):
         # Introduce the exact source payload in active, concrete language.
-        st.subheader("1. Modified source response")
+        st.subheader("1. Synthetic source-shaped record")
 
-        # Introduce the API-shaped record without calling it a measurement.
+        # Introduce the source-shaped record without implying a live response.
         st.markdown(
-            "Assume the source returns an observation with this structure. "
-            "Its displayed K-index value has been replaced for presentation."
+            "This independently generated record uses the fields expected from "
+            "the documented K-index source interface. It was not returned by "
+            "BoM."
         )
 
-        # Render only fields present in the stored API response.
+        # Render only fields defined by the documented source contract.
         st.json(data.normal_source_record)
 
         # Define the source fields before they reappear in downstream tables.
@@ -397,8 +400,7 @@ def _render_normal_example(data: KIndexPageData) -> None:
         explanation=(
             "We store the source observation in the audit table. We attach "
             "the requested location and a `run_id` so the row can be traced "
-            "back to the ingestion that produced it. The run ID is assigned "
-            "by this project; BoM does not return it."
+            "back to the synthetic ingestion scenario that produced it."
         ),
         frame=data.normal_audit,
     )
@@ -408,14 +410,14 @@ def _render_normal_example(data: KIndexPageData) -> None:
         explanation=(
             "We treat `location` plus `valid_time` as the observation's "
             "identity, or **key**. No other run reports a different K-index "
-            "for this key, so we keep **3** and set `flag=False`."
+            "for this key, so we keep **1** and set `flag=False`."
         ),
         frame=data.normal_canonical,
     )
 
     # State the normal-path conclusion in plain language.
     st.success(
-        "The canonical value remains 3, and its audit history can still be "
+        "The canonical value remains 1, and its audit history can still be "
         "traced to the source run."
     )
 
@@ -423,12 +425,13 @@ def _render_normal_example(data: KIndexPageData) -> None:
 def _render_empty_example(data: KIndexPageData) -> None:
     """Render the successful-empty audit-sentinel behavior."""
     # Phrase the edge case as a question rather than a table label.
-    st.subheader("What happens when BoM returns no data?")
+    st.subheader("What happens when a successful run contains no rows?")
 
-    # Identify the distinct real request represented by this edge case.
+    # Identify the separate synthetic request represented by this edge case.
     st.info(
-        "I requested Melbourne K-index observations. BoM processed the "
-        "request successfully but returned zero observations."
+        "This synthetic Melbourne request is marked successful but contains "
+        "zero observations. It demonstrates that completion and row presence "
+        "are separate facts."
     )
 
     empty_source = pd.DataFrame.from_records(
@@ -478,9 +481,9 @@ def _render_conflict_example(data: KIndexPageData) -> None:
     """Render the deliberately constructed canonical-conflict behavior."""
     # Keep the synthetic nature of this demonstration permanently visible.
     st.warning(
-        "Constructed conflict: the later value 8 was deliberately created to "
-        "disagree with the modified demonstration value 6. Neither value is "
-        "presented as a historical measurement."
+        "Constructed conflict: two independently generated records deliberately "
+        "report 0 and 9 for the same key. Neither value is a historical "
+        "measurement or a forecast."
     )
 
     # Phrase the reconciliation case as the question being answered.
@@ -499,24 +502,24 @@ def _render_conflict_example(data: KIndexPageData) -> None:
             "raw payload."
         )
 
-        # Place the modified and synthetic reports beside each other.
-        modified_col, synthetic_col = st.columns(2)
+        # Place the earlier and later synthetic reports beside each other.
+        earlier_col, later_col = st.columns(2)
 
-        with modified_col:
-            # Identify the modified API-shaped record and its storage context.
-            st.markdown("**Modified demonstration response**")
+        with earlier_col:
+            # Identify the earlier source-shaped record and its storage context.
+            st.markdown("**Earlier synthetic record**")
             st.caption(f"Recorded in ingestion run `{HAPPY_RUN_ID}`")
 
-            # Render the exact API-shaped modified record.
-            st.json(data.modified_conflict_record)
+            # Render the exact earlier source-shaped record.
+            st.json(data.earlier_conflict_record)
 
-        with synthetic_col:
-            # Keep the constructed record visibly distinct from source data.
-            st.markdown("**Synthetic demonstration**")
-            st.caption(f"Recorded in ingestion run `{SYNTHETIC_RUN_ID}`")
+        with later_col:
+            # Identify the later source-shaped record and its storage context.
+            st.markdown("**Later synthetic record**")
+            st.caption(f"Recorded in ingestion run `{CONFLICT_RUN_ID}`")
 
-            # Render the exact API-shaped synthetic record.
-            st.json(data.synthetic_raw_record)
+            # Render the exact later source-shaped record.
+            st.json(data.later_conflict_record)
 
     _render_stage(
         number=2,
@@ -532,8 +535,8 @@ def _render_conflict_example(data: KIndexPageData) -> None:
         title="Canonical table",
         explanation=(
             "Both rows have the same key: `Australian region` plus "
-            "`2025-01-01 00:00:00`. The later run reports **8**, so we select "
-            "**8** and set `flag=True`."
+            "`2099-01-01 15:00:00`. The later run reports **9**, so we select "
+            "**9** and set `flag=True`."
         ),
         frame=data.conflict_canonical,
     )
@@ -546,15 +549,15 @@ def _render_conflict_example(data: KIndexPageData) -> None:
     )
 
     # Keep verbose synthetic evidence available without dominating the story.
-    with st.expander("Inspect the synthetic source fixture"):
+    with st.expander("Inspect the constructed conflict fixture"):
         # Render the explicit provenance note stored beside the fixture.
-        st.markdown(data.synthetic_provenance)
+        st.markdown(data.conflict_provenance)
 
         # Show the one fabricated API-shaped record exactly as stored.
-        st.json(data.synthetic_raw_record)
+        st.json(data.later_conflict_record)
 
         # Show its manifest, including the synthetic-fixture declaration.
-        st.json(data.synthetic_manifest)
+        st.json(data.conflict_manifest)
 
 
 def render_kindex_page(*, project_root: Path) -> None:
@@ -568,17 +571,17 @@ def render_kindex_page(*, project_root: Path) -> None:
         "or pipeline stage is executed by this dashboard."
     )
 
-    # Keep the fixture limitation visible without exposing transformation details.
+    # Keep the synthetic-fixture limitation visible on this page.
     st.warning(
-        "Modified demonstration fixture: displayed K-index values are not "
-        "historical measurements and must not be used for scientific analysis "
-        "or operational forecasting."
+        "Fully synthetic demonstration: every displayed record and value was "
+        "independently generated. The 2099 dates are fictional scenario dates, "
+        "not historical observations or forecasts."
     )
 
-    # State the concrete source request that anchors the primary example.
+    # State the synthetic request scenario that anchors the primary example.
     st.info(
-        "I want to ingest K-index observations for the Australian region from "
-        "1 January to 1 April 2025."
+        "Suppose I want to ingest K-index observations for the Australian "
+        "region over [1 January 2099 15:00, 2 January 2099 21:00)."
     )
 
     try:
@@ -592,8 +595,8 @@ def render_kindex_page(*, project_root: Path) -> None:
 
     # Explain the three local pipeline terms without relying on the overview page.
     st.markdown(
-        "The modified happy-path fixture contains 720 three-hour observations. "
-        "We save each fetch as an **ingestion run**. The **audit table** "
+        "The primary synthetic fixture contains 10 three-hour observations. "
+        "We save each fixture as an **ingestion run**. The **audit table** "
         "preserves what each successful run contained, while the **canonical "
         "table** produces one downstream observation for each location and "
         "valid time."
@@ -605,8 +608,8 @@ def render_kindex_page(*, project_root: Path) -> None:
     with source_col:
         # Define the first stage in ordinary language.
         with st.container(border=True):
-            st.markdown("**Modified response**")
-            st.caption("An API-shaped observation with a replaced K-index value.")
+            st.markdown("**Synthetic source record**")
+            st.caption("An independently generated record using the source schema.")
 
     with audit_definition_col:
         # Define the audit stage before any audit rows appear.
@@ -621,19 +624,19 @@ def render_kindex_page(*, project_root: Path) -> None:
             st.caption("One selected observation for each location and valid time.")
 
     # Present only facts belonging to the primary Australian-region request.
-    location_col, start_col, end_col, returned_col = st.columns(4)
+    location_col, start_col, end_col, rows_col = st.columns(4)
 
-    # Show the primary real request's canonical location.
+    # Show the primary synthetic request's canonical location.
     location_col.metric("Location", "Australian region")
 
     # Show the inclusive beginning of the requested source interval.
-    start_col.metric("Start UTC", "1 Jan 2025")
+    start_col.metric("Start UTC", "1 Jan 2099 15:00")
 
     # Show the exclusive end of the requested source interval.
-    end_col.metric("End UTC (exclusive)", "1 Apr 2025")
+    end_col.metric("End UTC (exclusive)", "2 Jan 2099 21:00")
 
-    # Show how many observations the primary source request returned.
-    returned_col.metric("Rows returned", 720)
+    # Show how many observations the primary synthetic run contains.
+    rows_col.metric("Rows present", 10)
 
     # Explain the combined row counts separately so their wider scope is clear.
     st.caption(
@@ -647,16 +650,16 @@ def render_kindex_page(*, project_root: Path) -> None:
 
     # Describe each saved example so tab switching requires no prior knowledge.
     st.markdown(
-        "The examples below show what happens when **data is returned**, when "
-        "a request succeeds but returns **no data**, and when two saved runs "
+        "The examples below show what happens when **rows are present**, when "
+        "a run succeeds but contains **no rows**, and when two saved runs "
         "report **different values** for the same observation."
     )
 
     # Let visitors explore three small, conceptually distinct scenarios.
     normal_tab, empty_tab, conflict_tab = st.tabs(
         [
-            "Data returned",
-            "No data returned",
+            "Rows present",
+            "No rows",
             "Values disagree",
         ]
     )
