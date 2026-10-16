@@ -12,7 +12,7 @@ import pandas as pd
 import streamlit as st
 
 
-ASSESSMENT_ID = "20261006T070041353715Z"
+ASSESSMENT_ID = "20261008T011546870304Z"
 
 _ARTIFACT_KEYS = [
     "sample_plan",
@@ -421,7 +421,7 @@ def _column_config(frame: pd.DataFrame) -> dict[str, Any]:
         ),
         "forecast_origin": st.column_config.DatetimeColumn(
             "Forecast origin",
-            help="The time from which the target and historical inputs are defined.",
+            help="The time from which the target and preceding inputs are defined.",
             format="YYYY-MM-DD HH:mm:ss",
         ),
         "target_start": st.column_config.DatetimeColumn(
@@ -804,12 +804,11 @@ def render_assessment_page(*, project_root: Path) -> None:
         "does not rerun coverage checks or eligibility evaluation."
     )
 
-    # Disclose that readiness was recomputed from modified presentation values.
+    # Keep the synthetic-fixture limitation visible on this page.
     st.warning(
-        "This assessment was regenerated from modified demonstration fixtures. "
-        "Their timestamps, missingness, source fills, and conflict relationships "
-        "are retained, but their numeric observations must not be interpreted "
-        "as historical measurements."
+        "Fully synthetic demonstration: this saved assessment uses independently "
+        "generated records dated 2099. The dates are fictional scenario dates, "
+        "not historical observations or forecasts."
     )
 
     try:
@@ -868,13 +867,13 @@ def render_assessment_page(*, project_root: Path) -> None:
             st.caption("One forecast origin and its three-hour K-index target.")
 
     with lag_col:
-        # Define the historical K-index requirement.
+        # Define the preceding K-index requirement.
         with st.container(border=True):
             st.markdown("**K-index lag**")
             st.caption("A previous three-hour K-index value required as input.")
 
     with lookback_col:
-        # Define the historical OMNI requirement.
+        # Define the preceding OMNI requirement.
         with st.container(border=True):
             st.markdown("**OMNI lookback**")
             st.caption("Minute-level predictor observations before an origin.")
@@ -900,7 +899,7 @@ def render_assessment_page(*, project_root: Path) -> None:
         f"{lag_count} lag / {lag_count * 3} hours",
     )
 
-    # Show the historical predictor interval for every forecast origin.
+    # Show the preceding predictor interval for every forecast origin.
     lookback_metric_col.metric("OMNI lookback", f"{lookback_minutes} minutes")
 
     kindex_expected = int(data.kindex_summary.iloc[0]["expected_slot_count"])
@@ -920,8 +919,16 @@ def render_assessment_page(*, project_root: Path) -> None:
     # Prevent readiness from being interpreted as scientific model validation.
     st.caption(
         "Ready describes data construction under the current coverage contract. "
-        "It does not assert that every OMNI value is numeric, that these are the "
-        "final features, or that a future model will perform well."
+        "It does not make the synthetic observations scientifically representative, "
+        "assert that every OMNI value is numeric, select final features, or say "
+        "that a future model will perform well."
+    )
+
+    # Explain why readiness does not contradict the lineage conflict example.
+    st.caption(
+        "The constructed K-index conflict shown on the lineage page occurs at "
+        "2099-01-01 15:00 UTC, outside this assessment's lag-expanded required "
+        "interval. It therefore does not block this request."
     )
 
     # Explain the difference between execution and eligibility status.

@@ -1,0 +1,56 @@
+{
+  "run": {
+    "run_id": "20990104T004000Z",
+    "status": "SUCCESS",
+    "created_at_utc": "20990104T004000Z",
+    "completed_at_utc": "20990104T004100Z"
+  },
+  "source": {
+    "name": "synthetic_hapi_fixture",
+    "dataset": "omni",
+    "dataset_id": "OMNI_HRO2_1MIN",
+    "base_url": null,
+    "data_format": "json",
+    "supported_hapi_version": "2.0",
+    "observed_hapi_version": "2.0"
+  },
+  "request": {
+    "requested_start_utc": "2099-01-03T00:00:00.000Z",
+    "requested_end_utc": "2099-01-03T00:05:00.000Z",
+    "effective_start_utc": "2099-01-03T00:00:00.000Z",
+    "effective_end_utc": "2099-01-03T00:05:00.000Z",
+    "time_range_overlap_status": "subset",
+    "parameters": [
+      "Time"
+    ]
+  },
+  "ingestion": {
+    "chunk_days": 1,
+    "sleep_s": 0,
+    "timeout_s": null
+  },
+  "artifacts": {
+    "info_file": "hapi_info.json",
+    "chunks": [
+      {
+        "file": "chunk_20990103T000000Z__20990103T000500Z.json",
+        "chunk_start_utc_str": "2099-01-03T00:00:00.000Z",
+        "chunk_end_utc_str": "2099-01-03T00:05:00.000Z",
+        "hapi_status_code": 1200,
+        "hapi_status_message": "OK",
+        "rows": 5
+      }
+    ]
+  },
+  "summary": {
+    "total_rows": 5,
+    "empty_chunk_count": 0
+  },
+  "preflight_warnings": [],
+  "error": null,
+  "fixture": {
+    "kind": "independently_generated",
+    "contains_historical_observations": false,
+    "external_request_performed": false
+  }
+}

@@ -16,8 +16,9 @@ def render_data_sources_page() -> None:
 
     # Make the dashboard's read-only boundary immediately visible.
     st.info(
-        "This dashboard reads committed demonstration artifacts. It makes no "
-        "live requests to either source and does not execute the data pipeline."
+        "This dashboard reads committed, independently generated synthetic "
+        "artifacts. It makes no live requests to either source and does not "
+        "execute the data pipeline."
     )
 
     # Attribute the source interface used by the K-index pipeline.
@@ -27,16 +28,16 @@ def render_data_sources_page() -> None:
 
         # Link to the official interface documentation without asserting a licence.
         st.markdown(
-            "The K-index response structure, field definitions, locations, and "
-            "three-hour intervals demonstrated here are based on the "
+            "The real pipeline's K-index interface and the synthetic fixture's "
+            "field names and three-hour cadence are informed by the "
             "[Australian Bureau of Meteorology Space Weather API]"
             "(https://sws-data.sws.bom.gov.au/api-docs)."
         )
 
         # State the conservative attribution boundary explicitly.
         st.caption(
-            "This project attributes the source but does not claim a specific "
-            "licence for observations returned by the API."
+            "No BoM observations are redistributed in this dashboard, and this "
+            "project does not claim a specific licence for API observations."
         )
 
     # Attribute the exact NASA dataset used by the OMNI pipeline.
@@ -62,24 +63,26 @@ def render_data_sources_page() -> None:
             "[data-use policy](https://spdf.gsfc.nasa.gov/data_use_policy.html)."
         )
 
-    # Distinguish altered source-derived fixtures from wholly constructed evidence.
+    # Explain exactly how the public examples relate to the documented sources.
     st.subheader("What is demonstrated here?")
 
-    # Summarize provenance without revealing the replacement mechanics.
+    # Summarize the fully synthetic provenance in plain language.
     st.markdown(
-        "- **Modified fixtures:** Numeric K-index and OMNI values were changed "
-        "for public presentation. The dashboard does not present them as "
-        "historical observations.\n"
-        "- **Constructed conflict:** One additional K-index source record was "
-        "created specifically to show how the pipeline handles two disagreeing "
-        "reports. It was not supplied by the Bureau of Meteorology."
+        "- **Independent examples:** The displayed timestamps, rows, and numeric "
+        "values were generated for this project. They were not copied, shifted, "
+        "permuted, or transformed from historical observations.\n"
+        "- **Source-shaped contracts:** Field names, units, dataset identifiers, "
+        "and fill conventions follow the interfaces expected by the real "
+        "pipeline.\n"
+        "- **Constructed conflict:** Two synthetic K-index records deliberately "
+        "disagree so the dashboard can show canonical conflict handling."
     )
 
     # Keep the intended use limitation prominent at the end of the page.
     st.warning(
-        "The displayed values are educational demonstration data. They must not "
-        "be used for historical research, scientific analysis, operational space-"
-        "weather decisions, or forecasting."
+        "The 2099 dates are fictional scenario dates, not forecasts. The "
+        "displayed records must not be used for historical research, scientific "
+        "analysis, operational space-weather decisions, or forecasting."
     )
 
 

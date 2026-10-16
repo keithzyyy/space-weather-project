@@ -1,0 +1,28 @@
+{
+  "HAPI": "2.0",
+  "status": {
+    "code": 1200,
+    "message": "OK"
+  },
+  "startDate": "2099-01-01T00:00:00.000Z",
+  "stopDate": "2099-01-04T00:00:00.000Z",
+  "parameters": [
+    {
+      "name": "Time",
+      "type": "isotime",
+      "units": "UTC"
+    },
+    {
+      "name": "BX_GSE",
+      "type": "double",
+      "units": "nT",
+      "fill": 9999.99
+    },
+    {
+      "name": "BZ_GSE",
+      "type": "double",
+      "units": "nT",
+      "fill": 9999.99
+    }
+  ]
+}

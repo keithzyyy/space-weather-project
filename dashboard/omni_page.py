@@ -13,12 +13,12 @@ import streamlit as st
 
 
 DATASET_ID = "OMNI_HRO2_1MIN"
-HAPPY_RUN_ID = "20260801T021300Z"
-EMPTY_RUN_ID = "20260806T052236Z"
+HAPPY_RUN_ID = "20990104T003000Z"
+TIME_ONLY_RUN_ID = "20990104T004000Z"
 PARAMETERS = ["BX_GSE", "BZ_GSE"]
 
-FILL_TIME = pd.Timestamp("2025-01-01 00:00:00")
-NUMERIC_TIME = pd.Timestamp("2025-01-01 00:01:00")
+FILL_TIME = pd.Timestamp("2099-01-01 21:00:00")
+NUMERIC_TIME = pd.Timestamp("2099-01-01 21:01:00")
 
 _AUDIT_COLUMNS = [
     "dataset_id",
@@ -60,7 +60,7 @@ WHERE (
             FROM UNNEST($parameters) AS requested(parameter)
         )
     )
-    OR run_id = $empty_run_id
+    OR run_id = $time_only_run_id
 ORDER BY
     run_id,
     observation_time_utc,
@@ -84,7 +84,7 @@ WHERE (
             FROM UNNEST($parameters) AS requested(parameter)
         )
     )
-    OR selected_run_id = $empty_run_id
+    OR selected_run_id = $time_only_run_id
 ORDER BY
     observation_time_utc,
     parameter_name
@@ -117,9 +117,9 @@ class OmniPageData:
     fill_source_excerpt: dict[str, Any]
     fill_audit: pd.DataFrame
     fill_canonical: pd.DataFrame
-    empty_source: pd.DataFrame
-    empty_audit: pd.DataFrame
-    empty_canonical: pd.DataFrame
+    time_only_source: pd.DataFrame
+    time_only_audit: pd.DataFrame
+    time_only_canonical: pd.DataFrame
     audit_row_count: int
     canonical_row_count: int
 
@@ -221,7 +221,7 @@ def _query_presentation_slices(
                 **parameters,
                 "path": audit_path.as_posix(),
                 "happy_run_id": HAPPY_RUN_ID,
-                "empty_run_id": EMPTY_RUN_ID,
+                "time_only_run_id": TIME_ONLY_RUN_ID,
             },
         ).fetchdf()
         canonical = connection.execute(
@@ -229,7 +229,7 @@ def _query_presentation_slices(
             {
                 **parameters,
                 "path": canonical_path.as_posix(),
-                "empty_run_id": EMPTY_RUN_ID,
+                "time_only_run_id": TIME_ONLY_RUN_ID,
             },
         ).fetchdf()
         counts = connection.execute(
@@ -249,14 +249,14 @@ def _query_presentation_slices(
 
 def _validate_page_data(data: OmniPageData) -> None:
     """Fail visibly when regenerated artifacts no longer tell this story."""
-    if data.audit_row_count != 1_874_881:
+    if data.audit_row_count != 2_521:
         raise ValueError("Expected the happy-run audit plus one sentinel")
-    if data.canonical_row_count != 1_874_880:
+    if data.canonical_row_count != 2_520:
         raise ValueError("Expected only happy-run parameter-minute rows")
 
     if data.numeric_source[PARAMETERS].iloc[0].to_dict() != {
-        "BX_GSE": -8.03,
-        "BZ_GSE": -0.56,
+        "BX_GSE": -8.0,
+        "BZ_GSE": -7.0,
     }:
         raise ValueError("Expected the selected numeric OMNI source values")
 
@@ -272,7 +272,7 @@ def _validate_page_data(data: OmniPageData) -> None:
         raise ValueError("Expected two numeric parameter rows in each table")
     if len(data.fill_audit) != 2 or len(data.fill_canonical) != 2:
         raise ValueError("Expected two source-fill parameter rows in each table")
-    if len(data.empty_audit) != 1 or not data.empty_canonical.empty:
+    if len(data.time_only_audit) != 1 or not data.time_only_canonical.empty:
         raise ValueError("Expected one audit sentinel and no canonical rows")
 
     if data.numeric_audit["is_source_fill"].fillna(True).any():
@@ -293,11 +293,13 @@ def _validate_page_data(data: OmniPageData) -> None:
     if data.fill_canonical["has_conflict"].fillna(True).any():
         raise ValueError("Source-fill example unexpectedly contains conflicts")
 
-    empty_row = data.empty_audit.iloc[0]
-    if pd.notna(empty_row["observation_time_utc"]):
+    time_only_row = data.time_only_audit.iloc[0]
+    if pd.notna(time_only_row["observation_time_utc"]):
         raise ValueError("Expected a null timestamp in the audit sentinel")
-    if pd.notna(empty_row["parameter_name"]):
+    if pd.notna(time_only_row["parameter_name"]):
         raise ValueError("Expected a null parameter in the audit sentinel")
+    if int(data.time_only_source.iloc[0]["source_time_rows"]) != 5:
+        raise ValueError("Expected five source rows in the Time-only run")
 
 
 @st.cache_data(show_spinner=False)
@@ -335,9 +337,9 @@ def _load_omni_page_data(project_root_text: str) -> OmniPageData:
     )
 
     happy_run_dir = raw_base / f"run_id={HAPPY_RUN_ID}"
-    empty_run_dir = raw_base / f"run_id={EMPTY_RUN_ID}"
+    time_only_run_dir = raw_base / f"run_id={TIME_ONLY_RUN_ID}"
     happy_manifest = _read_json(happy_run_dir / "_manifest.json")
-    empty_manifest = _read_json(empty_run_dir / "_manifest.json")
+    time_only_manifest = _read_json(time_only_run_dir / "_manifest.json")
     info = _read_json(happy_run_dir / "hapi_info.json")
 
     happy_chunk_names = [
@@ -354,15 +356,15 @@ def _load_omni_page_data(project_root_text: str) -> OmniPageData:
     }
     required_names = {"Time", *PARAMETERS}
     if not required_names.issubset(positions):
-        raise ValueError("OMNI source response lacks a displayed parameter")
+        raise ValueError("Synthetic HAPI fixture lacks a displayed parameter")
 
     fill_row = _find_source_row(
         rows=first_chunk["data"],
-        timestamp_text="2025-01-01T00:00:00.000Z",
+        timestamp_text="2099-01-01T21:00:00.000Z",
     )
     numeric_row = _find_source_row(
         rows=first_chunk["data"],
-        timestamp_text="2025-01-01T00:01:00.000Z",
+        timestamp_text="2099-01-01T21:01:00.000Z",
     )
 
     metadata_by_name = {
@@ -404,8 +406,8 @@ def _load_omni_page_data(project_root_text: str) -> OmniPageData:
         & (audit["observation_time_utc"] == FILL_TIME),
         _AUDIT_COLUMNS,
     ].copy().reset_index(drop=True)
-    empty_audit = audit.loc[
-        audit["run_id"] == EMPTY_RUN_ID,
+    time_only_audit = audit.loc[
+        audit["run_id"] == TIME_ONLY_RUN_ID,
         _AUDIT_COLUMNS,
     ].copy().reset_index(drop=True)
 
@@ -417,8 +419,8 @@ def _load_omni_page_data(project_root_text: str) -> OmniPageData:
         canonical["observation_time_utc"] == FILL_TIME,
         _CANONICAL_COLUMNS,
     ].copy().reset_index(drop=True)
-    empty_canonical = canonical.loc[
-        canonical["selected_run_id"] == EMPTY_RUN_ID,
+    time_only_canonical = canonical.loc[
+        canonical["selected_run_id"] == TIME_ONLY_RUN_ID,
         _CANONICAL_COLUMNS,
     ].copy().reset_index(drop=True)
 
@@ -428,7 +430,7 @@ def _load_omni_page_data(project_root_text: str) -> OmniPageData:
                 _manifest_row(role="happy path", manifest=happy_manifest),
                 _manifest_row(
                     role="Time-only example",
-                    manifest=empty_manifest,
+                    manifest=time_only_manifest,
                 ),
             ]
         ),
@@ -455,18 +457,18 @@ def _load_omni_page_data(project_root_text: str) -> OmniPageData:
         ),
         fill_audit=fill_audit,
         fill_canonical=fill_canonical,
-        empty_source=pd.DataFrame.from_records(
+        time_only_source=pd.DataFrame.from_records(
             [
                 {
-                    "status": empty_manifest["run"]["status"],
+                    "status": time_only_manifest["run"]["status"],
                     "requested_fields": "Time",
-                    "source_time_rows": empty_manifest["summary"]["total_rows"],
+                    "source_time_rows": time_only_manifest["summary"]["total_rows"],
                     "predictor_parameters": 0,
                 }
             ]
         ),
-        empty_audit=empty_audit,
-        empty_canonical=empty_canonical,
+        time_only_audit=time_only_audit,
+        time_only_canonical=time_only_canonical,
         audit_row_count=audit_count,
         canonical_row_count=canonical_count,
     )
@@ -500,11 +502,11 @@ def _column_config(frame: pd.DataFrame) -> dict[str, Any]:
         ),
         "parameter_name": st.column_config.TextColumn(
             "Parameter",
-            help="The measured OMNI variable; it is part of the canonical key.",
+            help="The OMNI variable represented by the row; it is part of the canonical key.",
         ),
         "raw_value": st.column_config.NumberColumn(
             "Raw value",
-            help="The value stored in the source HAPI response.",
+            help="The value stored in the synthetic HAPI-shaped fixture.",
         ),
         "BX_GSE": st.column_config.NumberColumn(
             "BX_GSE",
@@ -516,7 +518,7 @@ def _column_config(frame: pd.DataFrame) -> dict[str, Any]:
         ),
         "source_fill_value": st.column_config.NumberColumn(
             "Source fill value",
-            help="The placeholder NASA documents for a missing measurement.",
+            help="The documented placeholder represented in the fixture metadata.",
         ),
         "value": st.column_config.NumberColumn(
             "Canonical value",
@@ -529,8 +531,8 @@ def _column_config(frame: pd.DataFrame) -> dict[str, Any]:
         "run_id": st.column_config.TextColumn(
             "Run ID",
             help=(
-                "An identifier assigned by this project when it saves an "
-                "ingestion run. It is not returned by NASA."
+                "An identifier assigned to a saved synthetic ingestion "
+                "scenario. It is not returned by NASA."
             ),
         ),
         "selected_run_id": st.column_config.TextColumn(
@@ -547,11 +549,11 @@ def _column_config(frame: pd.DataFrame) -> dict[str, Any]:
         ),
         "status": st.column_config.TextColumn(
             "Status",
-            help="SUCCESS means the source request completed without an error.",
+            help="SUCCESS marks a completed synthetic ingestion scenario.",
         ),
         "source_time_rows": st.column_config.NumberColumn(
             "Source time rows",
-            help="The number of timestamp rows stored in the raw HAPI response.",
+            help="The number of timestamp rows stored in the HAPI-shaped fixture.",
             format="%d",
         ),
         "predictor_parameters": st.column_config.NumberColumn(
@@ -625,17 +627,17 @@ def _render_source_stage(
     # Group the readable projection and raw-format evidence together.
     with st.container(border=True):
         # Introduce the source boundary first in the lineage sequence.
-        st.subheader("1. HAPI response")
+        st.subheader("1. Synthetic HAPI-shaped record")
 
-        # Explain that the compact table is a view of a positional response.
+        # Explain that the compact table is a view of a positional fixture.
         st.markdown(explanation)
 
         _render_frame(frame)
 
         # Prevent the readable projection from being mistaken for literal JSON.
         st.caption(
-            "This table projects three positions from the larger HAPI response; "
-            "the source format uses parameter definitions and matching "
+            "This table projects three positions from the HAPI-shaped fixture; "
+            "the documented source format uses parameter definitions and matching "
             "positional arrays."
         )
 
@@ -646,13 +648,13 @@ def _render_source_stage(
 
 
 def _render_numeric_example(data: OmniPageData) -> None:
-    """Render one minute containing modified numeric observations."""
+    """Render one minute containing synthetic numeric values."""
     # Phrase the scenario as the question the evidence answers.
     st.subheader("What happens when the source contains numeric values?")
 
     _render_source_stage(
         explanation=(
-            "At `2025-01-01 00:01 UTC`, the modified fixture contains numeric "
+            "At `2099-01-01 21:01 UTC`, the synthetic fixture contains numeric "
             "values for both displayed parameters."
         ),
         frame=data.numeric_source,
@@ -689,12 +691,12 @@ def _render_numeric_example(data: OmniPageData) -> None:
 def _render_fill_example(data: OmniPageData) -> None:
     """Render one minute represented with documented source fills."""
     # Phrase the missing-measurement case as the question being answered.
-    st.subheader("What happens when NASA uses a missing-value placeholder?")
+    st.subheader("What happens when the source uses a missing-value placeholder?")
 
     _render_source_stage(
         explanation=(
-            "At `2025-01-01 00:00 UTC`, both selected values are `9999.99`. "
-            "The parameter metadata identifies that number as a source fill, "
+            "At `2099-01-01 21:00 UTC`, both synthetic values are `9999.99`. "
+            "The fixture metadata identifies that number as a source fill, "
             "not a physical magnetic-field measurement."
         ),
         frame=data.fill_source,
@@ -704,9 +706,9 @@ def _render_fill_example(data: OmniPageData) -> None:
         number=2,
         title="Audit table",
         explanation=(
-            "We preserve the original `9999.99` values and their documented fill "
-            "value. `is_source_fill=True` records how the source represented the "
-            "missing measurements."
+            "We preserve the fixture's `9999.99` placeholders and declared fill "
+            "value. `is_source_fill=True` records that the cells represent "
+            "missing values."
         ),
         frame=data.fill_audit,
     )
@@ -715,7 +717,7 @@ def _render_fill_example(data: OmniPageData) -> None:
         title="Canonical table",
         explanation=(
             "We convert the placeholders to null so they cannot be mistaken for "
-            "measurements. The rows and source-fill flags remain, and there is no "
+            "numeric values. The rows and source-fill flags remain, and there is no "
             "cross-run disagreement in this example."
         ),
         frame=data.fill_canonical,
@@ -723,20 +725,20 @@ def _render_fill_example(data: OmniPageData) -> None:
 
     # Distinguish represented missingness from an absent parameter-minute row.
     st.success(
-        "NASA represented both parameter-minute cells, but supplied no numeric "
-        "measurements. This is different from an absent canonical row."
+        "The fixture represents both parameter-minute cells without numeric "
+        "values. This is different from an absent canonical row."
     )
 
 
-def _render_empty_example(data: OmniPageData) -> None:
+def _render_time_only_example(data: OmniPageData) -> None:
     """Render the successful Time-only audit-sentinel behavior."""
     # Phrase the edge case without implying that the HTTP response was empty.
     st.subheader("What happens when a successful run has no predictor values?")
 
     # Explain exactly why this run has no non-time observations.
     st.info(
-        "This separate run requested only `Time`. The source returned 1,440 "
-        "timestamps, but there were no non-time predictor parameters to place "
+        "This separate synthetic run requested only `Time`. It contains five "
+        "timestamps, but there are no non-time predictor parameters to place "
         "in the long observation table."
     )
 
@@ -745,9 +747,9 @@ def _render_empty_example(data: OmniPageData) -> None:
         title="Source run",
         explanation=(
             "`SUCCESS` means the request completed. Here, it does not mean that "
-            "the run contains predictor measurements."
+            "the run contains predictor values."
         ),
-        frame=data.empty_source,
+        frame=data.time_only_source,
     )
     _render_stage(
         number=2,
@@ -756,7 +758,7 @@ def _render_empty_example(data: OmniPageData) -> None:
             "One null-timestamp, null-parameter sentinel preserves evidence that "
             "the successful Time-only run was processed."
         ),
-        frame=data.empty_audit,
+        frame=data.time_only_audit,
     )
     _render_stage(
         number=3,
@@ -765,7 +767,7 @@ def _render_empty_example(data: OmniPageData) -> None:
             "The sentinel is provenance rather than a parameter observation, so "
             "canonicalization excludes it."
         ),
-        frame=data.empty_canonical,
+        frame=data.time_only_canonical,
     )
 
     # Summarize why retaining the audit sentinel is useful.
@@ -786,17 +788,17 @@ def render_omni_page(*, project_root: Path) -> None:
         "or pipeline stage is executed by this dashboard."
     )
 
-    # Keep the fixture limitation visible without exposing transformation details.
+    # Keep the synthetic-fixture limitation visible on this page.
     st.warning(
-        "Modified demonstration fixture: displayed OMNI values are not "
-        "historical measurements and must not be used for scientific analysis "
-        "or operational forecasting."
+        "Fully synthetic demonstration: every displayed record and value was "
+        "independently generated. The 2099 dates are fictional scenario dates, "
+        "not historical observations or forecasts."
     )
 
     # State the focused preparation goal without misrepresenting the wider run.
     st.info(
         "I want to prepare minute-by-minute `BX_GSE` and `BZ_GSE` predictors "
-        "from the January 2025 OMNI ingestion run."
+        "over [1 January 2099 21:00, 2 January 2099 18:00)."
     )
 
     try:
@@ -816,9 +818,10 @@ def render_omni_page(*, project_root: Path) -> None:
 
     # Explain the source and two table roles without relying on the overview page.
     st.markdown(
-        "NASA's OMNI HAPI response stores many parameters for each minute. We "
-        "save each fetch as an **ingestion run**. The **audit table** reshapes "
-        "each minute into parameter rows while preserving stored fixture values. The "
+        "The documented OMNI HAPI format stores parameter values for each minute. "
+        "This compact synthetic fixture contains `Time`, `BX_GSE`, and `BZ_GSE`. "
+        "We save each fixture as an **ingestion run**. The **audit table** reshapes "
+        "each minute into parameter rows while preserving stored values. The "
         "**canonical table** selects one downstream row for each dataset, minute, "
         "and parameter."
     )
@@ -829,7 +832,7 @@ def render_omni_page(*, project_root: Path) -> None:
     with source_col:
         # Define the HAPI source format in ordinary language.
         with st.container(border=True):
-            st.markdown("**HAPI response**")
+            st.markdown("**Synthetic HAPI fixture**")
             st.caption("Minute rows whose values match a parameter-definition list.")
 
     with audit_definition_col:
@@ -859,25 +862,26 @@ def render_omni_page(*, project_root: Path) -> None:
 
         _render_frame(data.parameter_metadata)
 
-    # Present facts belonging to the primary January happy-path run.
+    # Present facts belonging to the primary synthetic run.
     dataset_col, interval_col, cadence_col, parameters_col = st.columns(4)
 
     # Identify the exact CDAWeb dataset used by the example.
     dataset_col.metric("Dataset", DATASET_ID)
 
     # Show the half-open primary source interval compactly.
-    interval_col.metric("Interval", "[1 Jan, 1 Feb 2025)")
+    interval_col.metric("Interval", "[1 Jan 21:00, 2 Jan 18:00)")
 
     # State the native source observation cadence.
     cadence_col.metric("Cadence", "1 minute")
 
-    # Scope the visible parameter subset relative to the complete run.
-    parameters_col.metric("Parameters shown", "2 of 42")
+    # Scope the two predictor parameters present in this compact fixture.
+    parameters_col.metric("Synthetic predictors", 2)
 
     # Explain the wide-to-long row multiplication and combined artifact counts.
     st.caption(
-        "The happy run contains 44,640 minute rows. Expanding 42 non-time "
-        "parameters produces 1,874,880 parameter-minute audit rows. Across both "
+        "The primary run contains 1,260 minute rows. Expanding two non-time "
+        "parameters produces 2,520 parameter-minute audit rows. The Time-only "
+        "run adds one audit sentinel. Across both "
         f"demonstration runs, the audit contains {data.audit_row_count:,} rows "
         f"and canonicalization produces {data.canonical_row_count:,} rows."
     )
@@ -887,13 +891,13 @@ def render_omni_page(*, project_root: Path) -> None:
 
     # Describe the scenarios so visitors need no prior pipeline knowledge.
     st.markdown(
-        "The examples below show an ordinary **numeric measurement**, a minute "
+        "The examples below show an ordinary **numeric value**, a minute "
         "where the source supplies a **source-fill placeholder**, and a successful "
         "run containing **no predictor values**."
     )
 
     # Let visitors explore three small, conceptually distinct scenarios.
-    numeric_tab, fill_tab, empty_tab = st.tabs(
+    numeric_tab, fill_tab, time_only_tab = st.tabs(
         [
             "Numeric readings",
             "Source says missing",
@@ -907,8 +911,8 @@ def render_omni_page(*, project_root: Path) -> None:
     with fill_tab:
         _render_fill_example(data)
 
-    with empty_tab:
-        _render_empty_example(data)
+    with time_only_tab:
+        _render_time_only_example(data)
 
     # Keep run-level request metadata available through progressive disclosure.
     with st.expander("Inspect the two run summaries"):
